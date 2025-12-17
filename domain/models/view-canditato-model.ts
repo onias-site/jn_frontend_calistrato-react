@@ -1,0 +1,23 @@
+export type ViewCandidatoModel = {
+    id: string,
+    sobreMim: string,
+    empresasExcluidas: string,
+    vagaExclusivaPCD: string,
+    cargoRecenteAtual: string,
+    cargoDesejado: string,
+    experiencia: string,
+    estadoSelecionadoId: string,
+    pcd: boolean,
+    clt: boolean,
+    pj: boolean,
+    btc: boolean,
+    remoto: boolean,
+    hibrido: boolean,
+    presencial: boolean,
+    pagamentopj: string,
+    pagamentoclt: string,
+    pagamentobtc: string,
+    pretensaoPJ: string,
+    pretensaoCLT: string,
+}
+

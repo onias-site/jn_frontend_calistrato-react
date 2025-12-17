@@ -1,0 +1,567 @@
+{
+  "candidatos": [
+    {
+      "id": "89cf",
+      "sobreMim": "                        Sou um desenvolvedor de software altamente motivado e confiável, com formação em tecnologias da informação e mais de 8 anos de vasta experiência em desenvolvimento front-end e\n                        diversas linguagens e tecnologias de programação. Minha experiência reside no desenvolvimento de aplicações web escaláveis ​​e de alto desempenho usando as mais recentes\n                        ferramentas e metodologias. Com profundo conhecimento em HTML, CSS e JavaScript, tenho experiência em aproveitar frameworks como Bootstrap e Zurb. Minha experiência se estende\n                        a bibliotecas e estruturas JavaScript avançadas, principalmente ReactJS, Angular e NextJS. Tenho habilidade em priorizar clientes e ajustar minha agenda para ser eficiente e\n                        atender às necessidades do cliente. Tenho uma forte ética de trabalho, organização, comunicação e habilidades de resolução de problemas. Além disso, sou cofundador de um\n                        estúdio de web design. Então se precisar de ajuda com seu site fique à vontade para conferir nossa página e entrar em contato conosco 2mwebstudio.com. Minhas habilidades entre\n                        outras: 1) JavaScript 2) Angular 3) Reaja 4) Texto datilografado 5) HTML5 6) CSS3 7) Atrevido 8)jQuery 9) Jasmim 10) Git Além de tudo isso, sou criador de conteúdo (Code with\n                        Sloba) e consegui construir uma grande comunidade de desenvolvedores em três mídias sociais (+200K). Investi uma década da minha vida para me tornar um desenvolvedor sênior e\n                        agora estou ajudando desenvolvedores juniores a se tornarem um desenvolvedor sênior em meses. Canal do Youtube: https://youtube.com/c/codewithsloba Site:\n                        https://codewithsloba.com Instagram: https://www.instagram.com/codewithsloba/ Portfólio: https://bobangajicsm.github.io/portfolio/ Se você quiser se conectar e saber mais,\n                        fique à vontade para me seguir! Como tenho no máximo 30k conexões",
+      "empresasExcluidas": "Google, Stefanini",
+      "vagaExclusivaPCD": false,
+      "cargoRecenteAtual": "Desenvolvedor Júnior",
+      "cargoDesejado": "Desenvolvedor Pleno",
+      "experiencia": "2",
+      "estadoSelecionadoId": [
+        {
+          "id": "1",
+          "nome": "Acre",
+          "selected": true
+        },
+        {
+          "id": "2",
+          "nome": "Alagoas",
+          "selected": false
+        },
+        {
+          "id": "3",
+          "nome": "Amapá",
+          "selected": false
+        },
+        {
+          "id": "4",
+          "nome": "Amazonas",
+          "selected": false
+        },
+        {
+          "id": "5",
+          "nome": "Bahia",
+          "selected": false
+        }
+      ],
+      "clt": false,
+      "pj": true,
+      "btc": false,
+      "remoto": true,
+      "hibrido": false,
+      "presencial": false,
+      "pretensaoPJ": "8150.00 - 12820.00",
+      "pretensaoCLT": "7180.00 - 10500.00"
+    },
+    {
+      "id": "7d1a",
+      "sobreMim": "Desenvolvedor Pleno com forter habilidade react e node, querendo uma oportunidade em uma grande emprasa.",
+      "empresasExcluidas": "google",
+      "vagaExclusivaPCD": false,
+      "cargoRecenteAtual": "Desenvolvedor Pleno Node",
+      "cargoDesejado": "Desenvolvedor FullStack Node/React",
+      "experiencia": "2",
+      "estadoSelecionadoId": [
+        {
+          "id": "1",
+          "nome": "Acre",
+          "selected": true
+        },
+        {
+          "id": "2",
+          "nome": "Alagoas",
+          "selected": false
+        },
+        {
+          "id": "3",
+          "nome": "Amapá",
+          "selected": false
+        },
+        {
+          "id": "4",
+          "nome": "Amazonas",
+          "selected": false
+        },
+        {
+          "id": "5",
+          "nome": "Bahia",
+          "selected": false
+        }
+      ],
+      "clt": false,
+      "pj": true,
+      "btc": false,
+      "remoto": true,
+      "hibrido": false,
+      "presencial": false,
+      "pretensaoPJ": "6000 - 40"
+    },
+    {
+      "id": "a82f",
+      "sobreMim": "desenvolvedor pleno teste aqui e agora",
+      "empresasExcluidas": "google 2",
+      "vagaExclusivaPCD": true,
+      "cargoRecenteAtual": "Desenvolvedor Pleno",
+      "cargoDesejado": "Desenvolvedor Senior",
+      "experiencia": "3",
+      "estadoSelecionadoId": [
+        {
+          "id": "1",
+          "nome": "Acre",
+          "selected": true
+        },
+        {
+          "id": "2",
+          "nome": "Alagoas",
+          "selected": false
+        },
+        {
+          "id": "3",
+          "nome": "Amapá",
+          "selected": false
+        },
+        {
+          "id": "4",
+          "nome": "Amazonas",
+          "selected": false
+        },
+        {
+          "id": "5",
+          "nome": "Bahia",
+          "selected": false
+        }
+      ],
+      "clt": true,
+      "pj": true,
+      "btc": true,
+      "remoto": false,
+      "hibrido": true,
+      "presencial": false,
+      "pretensaoCLT": "6500 - 9500"
+    },
+    {
+      "id": "",
+      "empresasExcluidas": [
+        "google"
+      ],
+      "vagaExclusivaPCD": "true",
+      "cargoRecenteAtual": "dddddd",
+      "cargoDesejado": "ssssss",
+      "experiencia": "2",
+      "estadoSelecionadoId": "1",
+      "sobremim": "ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "remoto": false,
+      "hibrido": true,
+      "presencial": false,
+      "pcd": false,
+      "clt": true,
+      "pj": false,
+      "btc": true,
+      "pagamentopj": "",
+      "pagamentoclt": "",
+      "pagamentobtc": "",
+      "pretensaoPJ": 0,
+      "pretensaoCLT": 0,
+      "estados": [
+        {
+          "id": "1",
+          "nome": "Acre",
+          "selected": true
+        },
+        {
+          "id": "2",
+          "nome": "Alagoas",
+          "selected": false
+        },
+        {
+          "id": "3",
+          "nome": "Amapá",
+          "selected": false
+        },
+        {
+          "id": "4",
+          "nome": "Amazonas",
+          "selected": false
+        },
+        {
+          "id": "5",
+          "nome": "Bahia",
+          "selected": false
+        }
+      ]
+    },
+    {
+      "id": "",
+      "empresasExcluidas": [
+        "google"
+      ],
+      "vagaExclusivaPCD": "true",
+      "cargoRecenteAtual": "Dev senior",
+      "cargoDesejado": "Dev pleno",
+      "experiencia": "2",
+      "estadoSelecionadoId": "1",
+      "sobremim": "Testeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "remoto": false,
+      "hibrido": false,
+      "presencial": true,
+      "pcd": false,
+      "clt": true,
+      "pj": false,
+      "btc": true,
+      "pagamentopj": "",
+      "pagamentoclt": "",
+      "pagamentobtc": "",
+      "pretensaoPJ": "",
+      "pretensaoCLT": "6500 - 9200",
+      "estados": [
+        {
+          "id": "1",
+          "nome": "Acre",
+          "selected": true
+        },
+        {
+          "id": "2",
+          "nome": "Alagoas",
+          "selected": false
+        },
+        {
+          "id": "3",
+          "nome": "Amapá",
+          "selected": false
+        },
+        {
+          "id": "4",
+          "nome": "Amazonas",
+          "selected": false
+        },
+        {
+          "id": "5",
+          "nome": "Bahia",
+          "selected": false
+        }
+      ]
+    }
+  ],
+  "vagas": [
+    {
+      "id": "1",
+      "vaga": "Tech Leader na Empresa Nestle",
+      "datelimite": "2026-12-25",
+      "descricao": "Descrição da empresa\nO Sistema Inteegra é uma plataforma 100% brasileira que permite alto grau de customização. Nossos softwares processaram em 2020 cerca de 100.000 eventos, com um volume de spend superior a R$1 BI. Somos uma plataforma totalmente estabilizada e pronta para atender sua demanda.\n\nSomos pioneiros, líderes de mercado e entendemos nosso mercado de ferramentas de gestão em eventos como ninguém.\n\nAtividades e Responsabilidades\nDescrição da empresa\nO Sistema Inteegra é uma plataforma 100% brasileira que permite alto grau de customização. Nossos softwares processaram em 2020 cerca de 100.000 eventos, com um volume de spend superior a R$1 BI. Somos uma plataforma totalmente estabilizada e pronta para atender sua demanda.\n\nSomos pioneiros, líderes de mercado e entendemos nosso mercado de ferramentas de gestão em eventos como ninguém.\n\nAtividades e Responsabilidades\n* Atividades e Responsabilidades\n- Manutenção e implementação de novos recursos na aplicação web e mobile desenvolvidos em React Native/JS\n\nInformações:\n- Tipo de contratação: PJ\n- Horário de trabalho: 09:00 às 18:00 seg/sex\n- 100% remoto, porém temos um local na paulista caso interessado queira trabalhar da empresa.\n\nRequisitos\nConhecimentos obrigatório:\n- Mínimo 5 anos como front-end\n- Expertise React Native/JS, HTML5, javascript, css e git\n- Boas práticas de desenvolvimento WEB.\n- Expertise em consumir Api rest.\n- Expertise no gitflow\n- Trabalhar em equipe e se comunicar bem.",
+      "pagamentopj": "22.000",
+      "status": "ativo",
+      "pagamentoclt": "",
+      "pagamentobtc": "",
+      "remoto": true,
+      "clt": false,
+      "pj": true,
+      "btc": false,
+      "statusDaVaga": {
+        "id": 1,
+        "nome": "Ativo"
+      },
+      "estados": [
+        {
+          "id": "1",
+          "nome": "Acre",
+          "selected": false
+        },
+        {
+          "id": "2",
+          "nome": "Alagoas",
+          "selected": false
+        },
+        {
+          "id": "3",
+          "nome": "Amapá",
+          "selected": false
+        },
+        {
+          "id": "4",
+          "nome": "Amazonas",
+          "selected": false
+        },
+        {
+          "id": "5",
+          "nome": "Bahia",
+          "selected": false
+        }
+      ],
+      "pcd": false,
+      "obrigatorios": [
+        {
+          "id": 1,
+          "text": "react",
+          "chosen": false,
+          "selected": false
+        }
+      ],
+      "desejaveis": [
+        {
+          "id": 2,
+          "text": "javascript",
+          "chosen": false,
+          "selected": false
+        }
+      ],
+      "sortable": [
+        {
+          "id": 2,
+          "text": "Pretensão Pj",
+          "chosen": false,
+          "selected": false
+        },
+        {
+          "id": 1,
+          "text": "Senioridade",
+          "chosen": false,
+          "selected": false
+        },
+        {
+          "id": 5,
+          "text": "Dias de disponibilidade",
+          "chosen": false,
+          "selected": false
+        },
+        {
+          "id": 3,
+          "text": "Pretensão Clt",
+          "chosen": false,
+          "selected": false
+        },
+        {
+          "id": 7,
+          "text": "Reputação geral",
+          "chosen": false,
+          "selected": false
+        },
+        {
+          "id": 6,
+          "text": "Requisitos desejaveis",
+          "chosen": false,
+          "selected": false
+        },
+        {
+          "id": 4,
+          "text": "Pretensao Btc",
+          "chosen": false,
+          "selected": false
+        }
+      ],
+      "presencial": false,
+      "hibrido": false,
+      "idVaga": "1"
+    },
+    {
+      "id": "b5ef",
+      "vaga": "Daniel teste",
+      "datelimite": "2024-05-30",
+      "descricao": "Descrição da empresa\nO Sistema Inteegra é uma plataforma 100% brasileira que permite alto grau de customização. Nossos softwares processaram em 2020 cerca de 100.000 eventos, com um volume de spend superior a R$1 BI. Somos uma plataforma totalmente estabilizada e pronta para atender sua demanda.\n\nSomos pioneiros, líderes de mercado e entendemos nosso mercado de ferramentas de gestão em eventos como ninguém.\n\nAtividades e Responsabilidades\nDescrição da empresa\nO Sistema Inteegra é uma plataforma 100% brasileira que permite alto grau de customização. Nossos softwares processaram em 2020 cerca de 100.000 eventos, com um volume de spend superior a R$1 BI. Somos uma plataforma totalmente estabilizada e pronta para atender sua demanda.\n\nSomos pioneiros, líderes de mercado e entendemos nosso mercado de ferramentas de gestão em eventos como ninguém.\n\nAtividades e Responsabilidades\n* Atividades e Responsabilidades\n- Manutenção e implementação de novos recursos na aplicação web e mobile desenvolvidos em React Native/JS\n\nInformações:\n- Tipo de contratação: PJ\n- Horário de trabalho: 09:00 às 18:00 seg/sex\n- 100% remoto, porém temos um local na paulista caso interessado queira trabalhar da empresa.\n\nRequisitos\nConhecimentos obrigatório:\n- Mínimo 5 anos como front-end\n- Expertise React Native/JS, HTML5, javascript, css e git\n- Boas práticas de desenvolvimento WEB.\n- Expertise em consumir Api rest.\n- Expertise no gitflow\n- Trabalhar em equipe e se comunicar bem.",
+      "pagamentopj": "12000",
+      "pagamentoclt": "",
+      "pagamentobtc": "",
+      "status": "inativo",
+      "remoto": false,
+      "presencial": false,
+      "hibrido": true,
+      "estados": [
+        {
+          "id": "1",
+          "nome": "Acre",
+          "selected": false
+        },
+        {
+          "id": "2",
+          "nome": "Alagoas",
+          "selected": false
+        },
+        {
+          "id": "3",
+          "nome": "Amapá",
+          "selected": true
+        },
+        {
+          "id": "4",
+          "nome": "Amazonas",
+          "selected": false
+        },
+        {
+          "id": "5",
+          "nome": "Bahia",
+          "selected": false
+        }
+      ],
+      "pcd": false,
+      "clt": false,
+      "pj": true,
+      "btc": false,
+      "obrigatorios": [
+        {
+          "id": 1,
+          "text": "react",
+          "chosen": false,
+          "selected": false
+        }
+      ],
+      "desejaveis": [
+        {
+          "id": 2,
+          "text": "javascript",
+          "chosen": false,
+          "selected": false
+        }
+      ],
+      "sortable": [
+        {
+          "id": 1,
+          "text": "Senioridade",
+          "chosen": false,
+          "selected": false
+        },
+        {
+          "id": 2,
+          "text": "Pretensão Pj",
+          "chosen": false,
+          "selected": false
+        },
+        {
+          "id": 3,
+          "text": "Pretensão Clt",
+          "chosen": false,
+          "selected": false
+        },
+        {
+          "id": 4,
+          "text": "Pretensao Btc",
+          "chosen": false,
+          "selected": false
+        },
+        {
+          "id": 5,
+          "text": "Dias de disponibilidade",
+          "chosen": false,
+          "selected": false
+        },
+        {
+          "id": 6,
+          "text": "Requisitos desejaveis",
+          "chosen": false,
+          "selected": false
+        },
+        {
+          "id": 7,
+          "text": "Reputação geral",
+          "chosen": false,
+          "selected": false
+        }
+      ],
+      "idVaga": "b5ef"
+    },
+    {
+      "id": "",
+      "vaga": "Desenvolvedor Pleno Vaio",
+      "datelimite": "2024-07-10",
+      "descricao": "Vaga: Desenvolvedor Pleno\nLocal: Empresa XYZ\nDescrição da Empresa:\nA Empresa XYZ é uma líder no setor de tecnologia, especializada em soluções inovadoras para o mercado financeiro. Com uma equipe altamente qualificada, buscamos sempre a excelência em nossos produtos e serviços.\nAtividades e Responsabilidades:\nDesenvolvimento e manutenção de aplicações web utilizando ReactJS e Node.js.\nColaboração com equipes de design e produto para criar interfaces de usuário intuitivas.\nImplementação de APIs RESTful.\nParticipação em revisões de código e garantia de boas práticas de desenvolvimento.\nInformações:\nTipo de contratação: CLT\nHorário de trabalho: 09:00 às 18:00 seg/sex\nModelo de trabalho: Híbrido (2 dias no escritório, 3 dias remoto)\nRequisitos:\nMínimo 3 anos de experiência com desenvolvimento front-end.\nExpertise em ReactJS, HTML5, CSS3 e JavaScript.\nExperiência com Node.js e Express.\nConhecimento em Git e controle de versão.\nBoas práticas de desenvolvimento e testes automatizados.\nHabilidade de trabalhar em equipe e boa comunicação.\nDiferenciais:\nExperiência com TypeScript.\nConhecimento em Docker e Kubernetes.\nExperiência com metodologias ágeis (Scrum/Kanban).\nBenefícios:\nPlano de saúde e odontológico.\nVale refeição/alimentação.\nAuxílio home office.\nPrograma de bônus anual.\nComo se Candidatar:\nSe você é apaixonado por tecnologia e busca um ambiente desafiador e colaborativo, envie seu currículo para recrutamento@xyz.com.",
+      "pagamentopj": "",
+      "pagamentoclt": "10200",
+      "pagamentobtc": "",
+      "remoto": true,
+      "presencial": false,
+      "hibrido": false,
+      "estados": [
+        {
+          "id": "1",
+          "nome": "Acre",
+          "selected": false
+        },
+        {
+          "id": "2",
+          "nome": "Alagoas",
+          "selected": false
+        },
+        {
+          "id": "3",
+          "nome": "Amapá",
+          "selected": false
+        },
+        {
+          "id": "4",
+          "nome": "Amazonas",
+          "selected": false
+        },
+        {
+          "id": "5",
+          "nome": "Bahia",
+          "selected": false
+        }
+      ],
+      "pcd": false,
+      "clt": true,
+      "pj": false,
+      "btc": false,
+      "obrigatorios": [
+        {
+          "id": 3,
+          "text": "typescript",
+          "chosen": false,
+          "selected": false
+        },
+        {
+          "id": 1,
+          "text": "node",
+          "chosen": false,
+          "selected": false
+        },
+        {
+          "id": 2,
+          "text": "javascript",
+          "chosen": false,
+          "selected": false
+        }
+      ],
+      "desejaveis": [
+        {
+          "id": 4,
+          "text": "docker",
+          "chosen": false,
+          "selected": false
+        }
+      ],
+      "sortable": [
+        {
+          "id": 3,
+          "text": "Pretensão Clt",
+          "chosen": false,
+          "selected": false
+        },
+        {
+          "id": 1,
+          "text": "Senioridade",
+          "chosen": false,
+          "selected": false
+        },
+        {
+          "id": 6,
+          "text": "Requisitos desejaveis",
+          "chosen": false,
+          "selected": false
+        },
+        {
+          "id": 2,
+          "text": "Pretensão Pj",
+          "chosen": false,
+          "selected": false
+        },
+        {
+          "id": 4,
+          "text": "Pretensao Btc",
+          "chosen": false,
+          "selected": false
+        },
+        {
+          "id": 5,
+          "text": "Dias de disponibilidade",
+          "chosen": false,
+          "selected": false
+        },
+        {
+          "id": 7,
+          "text": "Reputação geral",
+          "chosen": false,
+          "selected": false
+        }
+      ]
+    }
+  ]
+}

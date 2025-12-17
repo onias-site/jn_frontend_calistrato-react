@@ -1,0 +1,5 @@
+export * from './remote-cadastro-vagas'
+export * from './remote-deletar-vagas'
+export * from './remote-edit-vagas'
+export * from './remote-inativar-vagas'
+export * from './remote-view-vagas'

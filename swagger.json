@@ -1,0 +1,1296 @@
+{
+    "openapi": "3.0.1",
+    "info": {
+      "title": "OpenAPI definition",
+      "version": "v0"
+    },
+    "servers": [
+      {
+        "url": "http://localhost:8080",
+        "description": "Generated server url"
+      }
+    ],
+    "tags": [
+      {
+        "name": "Login",
+        "description": "Controles de login para cadastro de token, senha, senha fraca, pre registro, alem de controles de bloqueios diversos tais como: token, senha, senha de desbloqueio de token"
+      },
+      {
+        "name": "Support",
+        "description": "API que disponibiliza serviços para o time de suporte do JobsNow"
+      },
+      {
+        "name": "AsyncTask",
+        "description": "Tarefas assíncronas, aquelas que são executadas em segundo plano"
+      }
+    ],
+    "paths": {
+      "/support/{chatId}/token/{email}/unlock": {
+        "post": {
+          "tags": [
+            "Support"
+          ],
+          "summary": "Criar senha temporária para usuário desbloquear token",
+          "description": "Quando ocorre? Quando usuário bloqueia o token e solicita desbloqueio deste token, o sistema envia por mensagem instantânea esta solicitação que nomomento em que vai atender a esta solicitação, evoca este endpoint. <br/><br/>Para que serve? Para enviar por e-mail ao usuário, a senha temporária que se corretamente digitada, lhe desbloqueará o token.",
+          "operationId": "answerUnlockTokenRequest",
+          "parameters": [
+            {
+              "name": "chatId",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "email",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Status: 'Senha temporária enviada com sucesso' <br/><br/> Quando ocorre? Quando o operador tem permissão para atender a solicitação, quando existe uma solicitação de desbloqueio de token, quando o token está de fato bloqueado e quando esta solicitação ainda não foi respondida.",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "string",
+                    "example": "{'asyncTaskId':'ticketDaFilaSha1EmBase64'}"
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Status: 'Email inválido' <br/><br/> Quando ocorre? Quando a url path recebe um conjunto de caracteres que não representa um e-mail válido.<br/><br/>Qual comportamento esperado do front end? Apresentar erro genérico de sistema para o usuário.",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "string",
+                    "example": { }
+                  }
+                }
+              }
+            },
+            "401": {
+              "description": "Status: 'Operador sem permissão para atender esta solicitação' <br/><br/> Quando ocorre? Quando o operador não está cadastrado na tabela correta para atender este tipo de solicitação.",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "string",
+                    "example": { }
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Status: 'Token não encontrado' <br/><br/> Quando ocorre? Quando o token do usuário não é encontrado.",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "string",
+                    "example": { }
+                  }
+                }
+              }
+            },
+            "409": {
+              "description": "Status: 'Solicitação já respondida' <br/><br/> Quando ocorre? Quando a solicitação consta na tabela de solicitações (deste tipo) respondidas.",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "string",
+                    "example": { }
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Status: 'Solicitação inexistente' <br/><br/> Quando ocorre? Quando a solicitação não existe.",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "string",
+                    "example": { }
+                  }
+                }
+              }
+            },
+            "500": {
+              "description": "Internal Server Error",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/support/{chatId}/token/{email}/resending": {
+        "post": {
+          "tags": [
+            "Support"
+          ],
+          "summary": "Reenvio de token ao usuário",
+          "description": "Quando ocorre? Quando o usuário solicita reenvio de token<br/><br/>Para que serve? Para que o suporte JobsNow possa enviar por e-mail ao usuário, o token caso ele não tenha recebido, geralmente pelo fornecedor de API de e-mail do JobsNow ser bloqueado pelo provedor de quem está recebendo e-mail.",
+          "operationId": "resentTokenToTheUser",
+          "parameters": [
+            {
+              "name": "chatId",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "email",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Status: 'Senha temporária enviada com sucesso' <br/><br/> Quando ocorre? Quando o operador tem permissão para atender a solicitação, quando existe uma solicitação de desbloqueio de token, quando o token está de fato bloqueado e quando esta solicitação ainda não foi respondida.",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "string",
+                    "example": "{'asyncTaskId':'ticketDaFilaSha1EmBase64'}"
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Status: 'Email inválido' <br/><br/> Quando ocorre? Quando a url path recebe um conjunto de caracteres que não representa um e-mail válido.<br/><br/>Qual comportamento esperado do front end? Apresentar erro genérico de sistema para o usuário.",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "string",
+                    "example": { }
+                  }
+                }
+              }
+            },
+            "401": {
+              "description": "Status: 'Operador sem permissão para atender esta solicitação' <br/><br/> Quando ocorre? Quando o operador não está cadastrado na tabela correta para atender este tipo de solicitação.",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "string",
+                    "example": { }
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Status: 'Token não encontrado' <br/><br/> Quando ocorre? Quando o token do usuário não é encontrado.",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "string",
+                    "example": { }
+                  }
+                }
+              }
+            },
+            "409": {
+              "description": "Status: 'Solicitação já respondida' <br/><br/> Quando ocorre? Quando a solicitação consta na tabela de solicitações (deste tipo) respondidas.",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "string",
+                    "example": { }
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Status: 'Solicitação inexistente' <br/><br/> Quando ocorre? Quando a solicitação não existe.",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "string",
+                    "example": { }
+                  }
+                }
+              }
+            },
+            "500": {
+              "description": "Internal Server Error",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/login/{email}": {
+        "get": {
+          "tags": [
+            "Login"
+          ],
+          "operationId": "teste",
+          "parameters": [
+            {
+              "name": "email",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "OK",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Unprocessable Entity",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            },
+            "500": {
+              "description": "Internal Server Error",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "tags": [
+            "Login"
+          ],
+          "summary": "Executar Login",
+          "description": "Quando ocorre? Logo após o usuário digitar sua senha. Para que serve? Serve para o usuário executar login no sistema, gerando um token que será a prova  (nas próximas requisições) que o requisitante (frontend), merece ter leitura ou escrita de certos recursos deste bando de dados. O parametro words hash é informado pelo front end (ou nao) por query parameter, se acaso ele for informado e estiver igual ao que o back end tem, o wordsHash não será devolvido na response desse método. Caso este parâmetro não for informado, ou se não for o mesmo que está no back end, então a lista do wordsHash é retornada juntamente com o novo wordsHash e o front deverá salvar no application storage (memória de longa duração do navegador)<br/><br/>Passo anterior: 'Verificação de e-mail'",
+          "operationId": "executeLogin",
+          "parameters": [
+            {
+              "name": "email",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "wordsHash",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "example": {
+                    "password": "Jobsnow1!"
+                  }
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "description": "Status: 'Usuário logado com sucesso' <br/><br/> Quando ocorre? Quando o usuário digita senha e e-mail corretos e não está com senha ou token bloqueado ou pendência de desbloqueio de token<br/><br/>Qual comportamento esperado do front end? Que ele remova o modal de login e guarde o 'sessionToken' contido no json retornado por este endpoint",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "string",
+                    "example": {
+                      "sessionToken": "{valorDoToken}",
+                      "wordsHash": "{wordsHash}",
+                      "words": [
+                        {
+                          "word": "java",
+                          "type": "IT"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "201": {
+              "description": "Status: 'O cadastro de Pre registro está pendente' <br/><br/> Quando ocorre? Quando o usuário deixou de cadastrar dados do pré registro<br/><br/>Qual comportamento esperado do front end? Redirecionamento para a tela de cadastro do pré registro.",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "string",
+                    "example": {
+                      "sessionToken": "{valorDoToken}",
+                      "wordsHash": "{wordsHash}",
+                      "words": [
+                        {
+                          "word": "java",
+                          "type": "IT"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "202": {
+              "description": "Status: 'O cadastro de  senha está pendente' <br/><br/> Quando ocorre? Quando o usuário deixou cadastrar senha<br/><br/>Qual comportamento esperado do front end? Redirecionamento para a tela de cadastro da senha.",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "string",
+                    "example": {
+                      "sessionToken": "{valorDoToken}",
+                      "wordsHash": "{wordsHash}",
+                      "words": [
+                        {
+                          "word": "java",
+                          "type": "IT"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Status: 'Email inválido' <br/><br/> Quando ocorre? Quando a url path recebe um conjunto de caracteres que não representa um e-mail válido.<br/><br/>Qual comportamento esperado do front end? Apresentar erro genérico de sistema para o usuário."
+            },
+            "401": {
+              "description": "Status: 'Senha pendente de desbloqueio' <br/><br/> Quando ocorre? Quando o usuário, anteriormente tentou logar várias vezes com a mesma senha incorreta.<br/><br/>Qual comportamento esperado do front end? Redirecionar o usuário para a tela de alteração de senha."
+            },
+            "403": {
+              "description": "Status: 'Token bloqueado' <br/><br/> Quando ocorre? Quando o usuário, anteriormente tentou várias vezes alterar sua senha fazendo uso de token incorreto.<br/><br/>Qual comportamento esperado do front end? Redirecionar o usuário para a tela de requisição de desbloqueio de token."
+            },
+            "404": {
+              "description": "Status: 'Usuário novo no sistema' <br/><br/> Quando ocorre? Quando o e-mail do usuário é desconhecido por este banco de dados. <br/><br/>Qual comportamento esperado do front end? Redirecionar o usuário para a tela de confirmação de e-mail."
+            },
+            "409": {
+              "description": "Status: 'Usuário já logado' <br/><br/> Quando ocorre? Quando já está registrada uma sessão corrente para o usuário que está tentando fazer login neste sistema. <br/><br/>Qual comportamento esperado do front end? Redirecionar o usuário para a tela de alteração de senha."
+            },
+            "420": {
+              "description": "Status: 'Token pendente de desbloqueio' <br/><br/> Quando ocorre? Quando o usuário bloqueou o token (digitando-o incorretamente por várias vezes na tela de alteração de senha) e então requisita desbloqueio de token, porém o suporte ainda não o atendeu. <br/><br/>Qual comportamento esperado do front end? Exibir uma mensagem de que em breve o suporte do JobsNow entrará em contato com ele por meio dos contatos informados e redirecioná-lo para a tela de desbloqueio de token."
+            },
+            "421": {
+              "description": "Status: 'Senha de desbloqueio de token está bloqueada' <br/><br/> Quando ocorre? Quando o usuário, na tela de desbloqueio de token, por diversas vezes errou a digitação da senha de desbloqueio de token. <br/><br/>Qual comportamento esperado do front end? Informar ao usuário que ele está temporariamente bloqueado no acesso ao sistema e redirecioná-lo para a primeira tela do fluxo de login, para o caso de ele querer tentar com outro e-mail."
+            },
+            "422": {
+              "description": "Unprocessable Entity",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            },
+            "423": {
+              "description": "Status: 'Senha digitada incorretamente' <br/><br/> Quando ocorre? Quando o usuário, digitou incorretamente a senha, mas ainda não excedeu o máximo de tentativas de senhas incorretas. <br/><br/>Qual comportamento esperado do front end? Exibir mensagem de erro informando o número de tentativas incorretas de digitação de senha."
+            },
+            "429": {
+              "description": "Status: 'Senha recém bloqueada <br/><br/> Quando ocorre? No exato momento em que o usuário digitou incorretamente a senha, e acaba exceder o máximo de tentativas de senhas incorretas. <br/><br/>Qual comportamento esperado do front end? Redirecionar o usuário à tela de recadastro de senha."
+            },
+            "500": {
+              "description": "Internal Server Error",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "delete": {
+          "tags": [
+            "Login"
+          ],
+          "summary": "Executar logout no sistema",
+          "description": "Quando ocorre? Quando por qualquer razão, o usuário quis não mais ter acesso a informações onde ele precisava estar devidamente identificado (logado) neste sistema. Para que serve? Serve para o usuário previamente se desassociar das próximas ações que serão feitas por este front end.",
+          "operationId": "executeLogout",
+          "parameters": [
+            {
+              "name": "email",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Status: 'Usuário executou logout com sucesso' <br/><br/> Quando ocorre? Quando o usuário de fato estavacom sessão ativa (logado) neste sistema<br/><br/>Qual comportamento esperado do front end? Encerramento do modal de login."
+            },
+            "400": {
+              "description": "Status: 'Email inválido' <br/><br/> Quando ocorre? Quando a url path recebe um conjunto de caracteres que não representa um e-mail válido.<br/><br/>Qual comportamento esperado do front end? Apresentar erro genérico de sistema para o usuário."
+            },
+            "404": {
+              "description": "Status: 'Usuário não logado no sistema' <br/><br/> Quando ocorre? Quando o o usuário não está com sessão ativa neste sistema. <br/><br/>Qual comportamento esperado do front end? Encerramento do modal de login."
+            },
+            "422": {
+              "description": "Unprocessable Entity",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            },
+            "500": {
+              "description": "Internal Server Error",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/login/{email}/token/language/{language}": {
+        "post": {
+          "tags": [
+            "Login"
+          ],
+          "summary": "Criar token para gerenciamento de senha",
+          "description": "Quando ocorre? Logo após ser constatado que é primeiro acesso deste usuário e ele confirmar o e-mail. Para que serve? Serve para o usuário requisitar envio de token para o seu e-mail e ele poder usar esse token para cadastrar senha.  (nas próximas requisições) que o requisitante (frontend), merece ter leitura ou escrita de certos recursos deste bando de dados. Passo anterior: 'Verificação de e-mail'.",
+          "operationId": "createLoginToken",
+          "parameters": [
+            {
+              "name": "email",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "language",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Status: 'Senha já cadastrada, usuário sem pendências de cadastro' <br/><br/> Quando ocorre? Quando o usuário previamente cadastrou todos os dados de pre requisitos (token, senha e pré registro)<br/><br/>Qual comportamento esperado do front end? Redirecionamento para a tela que pede senha para executar login."
+            },
+            "201": {
+              "description": "Status: 'O cadastro de Pre registro está pendente' <br/><br/> Quando ocorre? Quando o usuário deixou de cadastrar dados do pré registro<br/><br/>Qual comportamento esperado do front end? Redirecionamento para a tela de cadastro do pré registro."
+            },
+            "202": {
+              "description": "Status: 'Token para cadastro de senha enviado ao e-mail do usuário' <br/><br/> Quando ocorre? Quando o usuário acaba de requisitar com sucesso, o cadastro de senha<br/><br/>Qual comportamento esperado do front end? Redirecionamento para a tela de cadastro da senha.",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "string",
+                    "example": {
+                      "asyncTaskId": "-484333a30ec794b6c5490290cfda0486e7c31c89"
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Status: 'Email inválido' <br/><br/> Quando ocorre? Quando a url path recebe um conjunto de caracteres que não representa um e-mail válido.<br/><br/>Qual comportamento esperado do front end? Apresentar erro genérico de sistema para o usuário."
+            },
+            "401": {
+              "description": "Status: 'Senha pendente de desbloqueio' <br/><br/> Quando ocorre? Quando o usuário, anteriormente tentou logar várias vezes com a mesma senha incorreta.<br/><br/>Qual comportamento esperado do front end? Redirecionar o usuário para a tela de alteração de senha."
+            },
+            "403": {
+              "description": "Status: 'Token bloqueado' <br/><br/> Quando ocorre? Quando o usuário, anteriormente tentou várias vezes alterar sua senha fazendo uso de token incorreto.<br/><br/>Qual comportamento esperado do front end? Redirecionar o usuário para a tela de requisição de desbloqueio de token."
+            },
+            "409": {
+              "description": "Status: 'Usuário já logado' <br/><br/> Quando ocorre? Quando já está registrada uma sessão corrente para o usuário que está tentando fazer login neste sistema. <br/><br/>Qual comportamento esperado do front end? Redirecionar o usuário para a tela de alteração de senha."
+            },
+            "420": {
+              "description": "Status: 'Token pendente de desbloqueio' <br/><br/> Quando ocorre? Quando o usuário bloqueou o token (digitando-o incorretamente por várias vezes na tela de alteração de senha) e então requisita desbloqueio de token, porém o suporte ainda não o atendeu. <br/><br/>Qual comportamento esperado do front end? Exibir uma mensagem de que em breve o suporte do JobsNow entrará em contato com ele por meio dos contatos informados e redirecioná-lo para a tela de desbloqueio de token."
+            },
+            "421": {
+              "description": "Status: 'Senha de desbloqueio de token está bloqueada' <br/><br/> Quando ocorre? Quando o usuário, na tela de desbloqueio de token, por diversas vezes errou a digitação da senha de desbloqueio de token. <br/><br/>Qual comportamento esperado do front end? Informar ao usuário que ele está temporariamente bloqueado no acesso ao sistema e redirecioná-lo para a primeira tela do fluxo de login, para o caso de ele querer tentar com outro e-mail."
+            },
+            "422": {
+              "description": "Unprocessable Entity",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            },
+            "500": {
+              "description": "Internal Server Error",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/login/{email}/token/language/{language}/unlocking": {
+        "post": {
+          "tags": [
+            "Login"
+          ],
+          "summary": "Solicitação para desbloqueio de token",
+          "description": "Quando ocorre? Logo após o usuário se bloquear seu token e então solicitar o desbloqueio. Para que serve? Serve para o sistema notificar o suporte para avaliar a solicitação de desbloqueio de token e, se for o caso, passar ao usuário uma senha temporária para que este possa fazer o desbloqueio de seu token.",
+          "operationId": "requestUnlockToken",
+          "parameters": [
+            {
+              "name": "email",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "language",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Status: 'Solicitação de desbloqueio de token executada com sucesso' <br/><br/> Quando ocorre? Quando o usuário previamente cadastrou todos os dados de pre requisitos (token, senha e pré registro)<br/><br/>Qual comportamento esperado do front end? Redirecionamento para a tela que pede senha para executar login.",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "string",
+                    "example": "{\r\n    \"asyncTaskId\": \"790bd2e7fb0e02164944adffb60f3f96c65d929e\",\r\n}\r\n"
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Status: 'Email inválido' <br/><br/> Quando ocorre? Quando a url path recebe um conjunto de caracteres que não representa um e-mail válido.<br/><br/>Qual comportamento esperado do front end? Apresentar erro genérico de sistema para o usuário."
+            },
+            "404": {
+              "description": "Status: 'Usuário novo no sistema' <br/><br/> Quando ocorre? Quando o e-mail do usuário é desconhecido por este banco de dados. <br/><br/>Qual comportamento esperado do front end? Redirecionar o usuário para a tela de confirmação de e-mail."
+            },
+            "409": {
+              "description": "Status: 'Aguardando atendimento do suporte' <br/><br/> Quando ocorre? Quando o usuário acaba de solicitar com sucesso o seus desbloqueio de token, porém o suporte ainda não atendeu.<br/><br/>Qual comportamento esperado do front end? Apresentar mensagem de aviso ao usuário, sugerindo-o que aguarde resposta do suporte."
+            },
+            "421": {
+              "description": "Status: 'Senha de desbloqueio de token está bloqueada' <br/><br/> Quando ocorre? Quando o usuário, na tela de desbloqueio de token, por diversas vezes errou a digitação da senha de desbloqueio de token. <br/><br/>Qual comportamento esperado do front end? Informar ao usuário que ele está temporariamente bloqueado no acesso ao sistema e redirecioná-lo para a primeira tela do fluxo de login, para o caso de ele querer tentar com outro e-mail."
+            },
+            "422": {
+              "description": "Unprocessable Entity",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            },
+            "500": {
+              "description": "Internal Server Error",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/login/{email}/token/language/{language}/request/again": {
+        "post": {
+          "tags": [
+            "Login"
+          ],
+          "summary": "Ressolicitação de envio de token",
+          "description": "Quando ocorre? Quando o usuário, alegando não ter recebido o token de gerenciamento de senha, pede reenvio, por e-mail deste token. Para que serve? Serve para acionar o suporte do sistema para que manualmente entre em contato com o usuário, na intenção de lhe enviar corretamente o token.",
+          "operationId": "requestTokenAgain",
+          "parameters": [
+            {
+              "name": "email",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "language",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Status: 'Solicitação de reenvio de token executada com sucesso' <br/><br/> Quando ocorre? Quando o usuário consegue, com sucesso, solicitar o reenvio de token.<br/><br/>Qual comportamento esperado do front end? Redirecionamento para a tela que de cadastro de senha.",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "string",
+                    "example": "{\r\n    \"asyncTaskId\": \"790bd2e7fb0e02164944adffb60f3f96c65d929e\",\r\n}\r\n"
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Status: 'Email inválido' <br/><br/> Quando ocorre? Quando a url path recebe um conjunto de caracteres que não representa um e-mail válido.<br/><br/>Qual comportamento esperado do front end? Apresentar erro genérico de sistema para o usuário."
+            },
+            "404": {
+              "description": "Status: 'Usuário novo no sistema' <br/><br/> Quando ocorre? Quando o e-mail do usuário é desconhecido por este banco de dados. <br/><br/>Qual comportamento esperado do front end? Redirecionar o usuário para a tela de confirmação de e-mail."
+            },
+            "409": {
+              "description": "Status: 'Aguardando atendimento do suporte' <br/><br/> Quando ocorre? Quando o usuário acaba de solicitar com sucesso o seus desbloqueio de token, porém o suporte ainda não atendeu.<br/><br/>Qual comportamento esperado do front end? Apresentar mensagem de aviso ao usuário, sugerindo-o que aguarde resposta do suporte."
+            },
+            "420": {
+              "description": "Status: 'Token pendente de desbloqueio' <br/><br/> Quando ocorre? Quando o usuário bloqueou o token (digitando-o incorretamente por várias vezes na tela de alteração de senha) e então requisita desbloqueio de token, porém o suporte ainda não o atendeu. <br/><br/>Qual comportamento esperado do front end? Exibir uma mensagem de que em breve o suporte do JobsNow entrará em contato com ele por meio dos contatos informados e redirecioná-lo para a tela de desbloqueio de token."
+            },
+            "421": {
+              "description": "Status: 'Senha de desbloqueio de token está bloqueada' <br/><br/> Quando ocorre? Quando o usuário, na tela de desbloqueio de token, por diversas vezes errou a digitação da senha de desbloqueio de token. <br/><br/>Qual comportamento esperado do front end? Informar ao usuário que ele está temporariamente bloqueado no acesso ao sistema e redirecioná-lo para a primeira tela do fluxo de login, para o caso de ele querer tentar com outro e-mail."
+            },
+            "422": {
+              "description": "Unprocessable Entity",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            },
+            "500": {
+              "description": "Internal Server Error",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/login/{email}/pre-registration": {
+        "post": {
+          "tags": [
+            "Login"
+          ],
+          "summary": "Salvar pré registro",
+          "description": "Quando ocorre? Logo após o usuário tentar executar login e o sistema constatar ausência de dados de pré registro. Para que serve? Serve para o usuário cadadtrar dados de pré registro.",
+          "operationId": "savePreRegistration",
+          "parameters": [
+            {
+              "name": "email",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "example": {
+                    "goal": "jobs",
+                    "channel": "linkedin"
+                  }
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "description": "Status: 'Usuário sem pendências de cadastro' <br/><br/> Quando ocorre? Quando o usuário previamente cadastrou todos os dados de pre requisitos (token, senha e pré registro)<br/><br/>Qual comportamento esperado do front end? Redirecionamento para a tela que pede senha para executar login."
+            },
+            "202": {
+              "description": "Status: 'O cadastro de  senha está pendente' <br/><br/> Quando ocorre? Quando o usuário deixou cadastrar senha<br/><br/>Qual comportamento esperado do front end? Redirecionamento para a tela de cadastro da senha.",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "string",
+                    "example": "{'sessionToken': 'tokengeradoaleatoriamente'}"
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Status: 'Email inválido' <br/><br/> Quando ocorre? Quando a url path recebe um conjunto de caracteres que não representa um e-mail válido.<br/><br/>Qual comportamento esperado do front end? Apresentar erro genérico de sistema para o usuário."
+            },
+            "401": {
+              "description": "Status: 'Senha pendente de desbloqueio' <br/><br/> Quando ocorre? Quando o usuário, anteriormente tentou logar várias vezes com a mesma senha incorreta.<br/><br/>Qual comportamento esperado do front end? Redirecionar o usuário para a tela de alteração de senha."
+            },
+            "403": {
+              "description": "Status: 'Token bloqueado' <br/><br/> Quando ocorre? Quando o usuário, anteriormente tentou várias vezes alterar sua senha fazendo uso de token incorreto.<br/><br/>Qual comportamento esperado do front end? Redirecionar o usuário para a tela de requisição de desbloqueio de token."
+            },
+            "404": {
+              "description": "Status: 'Usuário novo no sistema' <br/><br/> Quando ocorre? Quando o e-mail do usuário é desconhecido por este banco de dados. <br/><br/>Qual comportamento esperado do front end? Redirecionar o usuário para a tela de confirmação de e-mail."
+            },
+            "409": {
+              "description": "Status: 'Usuário já logado' <br/><br/> Quando ocorre? Quando já está registrada uma sessão corrente para o usuário que está tentando fazer login neste sistema. <br/><br/>Qual comportamento esperado do front end? Redirecionar o usuário para a tela de alteração de senha."
+            },
+            "420": {
+              "description": "Status: 'Token pendente de desbloqueio' <br/><br/> Quando ocorre? Quando o usuário bloqueou o token (digitando-o incorretamente por várias vezes na tela de alteração de senha) e então requisita desbloqueio de token, porém o suporte ainda não o atendeu. <br/><br/>Qual comportamento esperado do front end? Exibir uma mensagem de que em breve o suporte do JobsNow entrará em contato com ele por meio dos contatos informados e redirecioná-lo para a tela de desbloqueio de token."
+            },
+            "421": {
+              "description": "Status: 'Senha de desbloqueio de token está bloqueada' <br/><br/> Quando ocorre? Quando o usuário, na tela de desbloqueio de token, por diversas vezes errou a digitação da senha de desbloqueio de token. <br/><br/>Qual comportamento esperado do front end? Informar ao usuário que ele está temporariamente bloqueado no acesso ao sistema e redirecioná-lo para a primeira tela do fluxo de login, para o caso de ele querer tentar com outro e-mail."
+            },
+            "422": {
+              "description": "Unprocessable Entity",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            },
+            "500": {
+              "description": "Internal Server Error",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/login/{email}/password": {
+        "post": {
+          "tags": [
+            "Login"
+          ],
+          "summary": "Salvamento de senha",
+          "description": "Quando ocorre? Logo após o sistema constatar que o usuário está com senha bloqueada ou faltando, login já em uso ou se o usuário quer alterar senha. Para que serve? Serve para o usuário cadastrar senha de acesso no sistema. O parametro words hash é informado pelo front end (ou nao) por query parameter, se acaso ele for informado e estiver igual ao que o back end tem, o wordsHash não será devolvido na response desse método. Caso este parâmetro não for informado, ou se não for o mesmo que está no back end, então a lista do wordsHash é retornada juntamente com o novo wordsHash e o front deverá salvar no application storage (memória de longa duração do navegador)",
+          "operationId": "updatePassword",
+          "parameters": [
+            {
+              "name": "email",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "wordsHash",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "example": {
+                    "password": "Jobsnow1!",
+                    "token": "RA48JRFM"
+                  }
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "description": "Status: 'Usuário sem pendências de cadastro' <br/><br/> Quando ocorre? Quando o usuário previamente cadastrou todos os dados de pre requisitos (token, senha e pré registro)<br/><br/>Qual comportamento esperado do front end? Redirecionamento para a tela que pede senha para executar login.",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "string",
+                    "example": {
+                      "sessionToken": "{valorDoToken}",
+                      "wordsHash": "{wordsHash}",
+                      "words": [
+                        {
+                          "word": "java",
+                          "type": "IT"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "201": {
+              "description": "Status: 'O cadastro de Pre registro está pendente' <br/><br/> Quando ocorre? Quando o usuário deixou de cadastrar dados do pré registro<br/><br/>Qual comportamento esperado do front end? Redirecionamento para a tela de cadastro do pré registro.",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "string",
+                    "example": {
+                      "sessionToken": "{valorDoToken}",
+                      "wordsHash": "{wordsHash}",
+                      "words": [
+                        {
+                          "word": "java",
+                          "type": "IT"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Status: 'Email inválido' <br/><br/> Quando ocorre? Quando a url path recebe um conjunto de caracteres que não representa um e-mail válido.<br/><br/>Qual comportamento esperado do front end? Apresentar erro genérico de sistema para o usuário."
+            },
+            "401": {
+              "description": "Status: 'Token digitado incorretamente' <br/><br/> Quando ocorre? Quando o usuário, digitou incorretamente o token, mas ainda não excedeu o máximo de tentativas de senhas incorretas. <br/><br/>Qual comportamento esperado do front end? Exibir mensagem de erro informando o número de tentativas incorretas de digitação de token."
+            },
+            "403": {
+              "description": "Status: 'Token bloqueado' <br/><br/> Quando ocorre? Quando o usuário, anteriormente tentou várias vezes alterar sua senha fazendo uso de token incorreto.<br/><br/>Qual comportamento esperado do front end? Redirecionar o usuário para a tela de requisição de desbloqueio de token."
+            },
+            "404": {
+              "description": "Status: 'Usuário novo no sistema' <br/><br/> Quando ocorre? Quando o e-mail do usuário é desconhecido por este banco de dados. <br/><br/>Qual comportamento esperado do front end? Redirecionar o usuário para a tela de confirmação de e-mail."
+            },
+            "420": {
+              "description": "Status: 'Token pendente de desbloqueio' <br/><br/> Quando ocorre? Quando o usuário bloqueou o token (digitando-o incorretamente por várias vezes na tela de alteração de senha) e então requisita desbloqueio de token, porém o suporte ainda não o atendeu. <br/><br/>Qual comportamento esperado do front end? Exibir uma mensagem de que em breve o suporte do JobsNow entrará em contato com ele por meio dos contatos informados e redirecioná-lo para a tela de desbloqueio de token."
+            },
+            "421": {
+              "description": "Status: 'Senha de desbloqueio de token está bloqueada' <br/><br/> Quando ocorre? Quando o usuário, na tela de desbloqueio de token, por diversas vezes errou a digitação da senha de desbloqueio de token. <br/><br/>Qual comportamento esperado do front end? Informar ao usuário que ele está temporariamente bloqueado no acesso ao sistema e redirecioná-lo para a primeira tela do fluxo de login, para o caso de ele querer tentar com outro e-mail."
+            },
+            "422": {
+              "description": "Unprocessable Entity",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            },
+            "423": {
+              "description": "Status: 'A senha não cumpre requisitos para ser uma senha forte' <br/><br/> Quando ocorre? Quando a combinação de caracteres digitadas pelo usuário, não cumpre os requisitos para ser considerada uma senha forte. <br/><br/>Qual comportamento esperado do front end? Redirecionar o usuário para tela de confirmação de senha fraca."
+            },
+            "500": {
+              "description": "Internal Server Error",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/login/{email}/password/weak": {
+        "post": {
+          "tags": [
+            "Login"
+          ],
+          "summary": "Confirmação de salvamento de senha fraca",
+          "description": "Quando ocorre? Logo após o usuário tentar cadastrar uma senha e ela ser constatada como fraca (de simples inferência). Para que serve? Serve para o usuário confirmar o cadastro e assumir o risco em cadastrar de uma senha fraca.",
+          "operationId": "saveWeakPassword",
+          "parameters": [
+            {
+              "name": "email",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Status: 'Usuário sem pendências de cadastro' <br/><br/> Quando ocorre? Quando o usuário previamente cadastrou todos os dados de pre requisitos (token, senha e pré registro)<br/><br/>Qual comportamento esperado do front end? Que o modal de login desapareça, retornando o token da sessão."
+            },
+            "201": {
+              "description": "Status: 'O cadastro de Pre registro está pendente' <br/><br/> Quando ocorre? Quando o usuário deixou de cadastrar dados do pré registro<br/><br/>Qual comportamento esperado do front end? Redirecionamento para a tela de cadastro do pré registro."
+            },
+            "400": {
+              "description": "Status: 'Email inválido' <br/><br/> Quando ocorre? Quando a url path recebe um conjunto de caracteres que não representa um e-mail válido.<br/><br/>Qual comportamento esperado do front end? Apresentar erro genérico de sistema para o usuário."
+            },
+            "401": {
+              "description": "Status: 'Senha pendente de desbloqueio' <br/><br/> Quando ocorre? Quando o usuário, anteriormente tentou logar várias vezes com a mesma senha incorreta.<br/><br/>Qual comportamento esperado do front end? Redirecionar o usuário para a tela de alteração de senha."
+            },
+            "403": {
+              "description": "Status: 'Token bloqueado' <br/><br/> Quando ocorre? Quando o usuário, anteriormente tentou várias vezes alterar sua senha fazendo uso de token incorreto.<br/><br/>Qual comportamento esperado do front end? Redirecionar o usuário para a tela de requisição de desbloqueio de token."
+            },
+            "404": {
+              "description": "Status: 'Usuário novo no sistema' <br/><br/> Quando ocorre? Quando o e-mail do usuário é desconhecido por este banco de dados. <br/><br/>Qual comportamento esperado do front end? Redirecionar o usuário para a tela de confirmação de e-mail."
+            },
+            "420": {
+              "description": "Status: 'Token pendente de desbloqueio' <br/><br/> Quando ocorre? Quando o usuário bloqueou o token (digitando-o incorretamente por várias vezes na tela de alteração de senha) e então requisita desbloqueio de token, porém o suporte ainda não o atendeu. <br/><br/>Qual comportamento esperado do front end? Exibir uma mensagem de que em breve o suporte do JobsNow entrará em contato com ele por meio dos contatos informados e redirecioná-lo para a tela de desbloqueio de token."
+            },
+            "421": {
+              "description": "Status: 'Senha de desbloqueio de token está bloqueada' <br/><br/> Quando ocorre? Quando o usuário, na tela de desbloqueio de token, por diversas vezes errou a digitação da senha de desbloqueio de token. <br/><br/>Qual comportamento esperado do front end? Informar ao usuário que ele está temporariamente bloqueado no acesso ao sistema e redirecioná-lo para a primeira tela do fluxo de login, para o caso de ele querer tentar com outro e-mail."
+            },
+            "422": {
+              "description": "Unprocessable Entity",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            },
+            "500": {
+              "description": "Internal Server Error",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/login/{email}/token/lock": {
+        "patch": {
+          "tags": [
+            "Login"
+          ],
+          "summary": "Desbloqueio de token",
+          "description": "Quando ocorre? Logo após o usuário se bloquear seu token, então solicitar o desbloqueio, receber do susporte do sistema a senha para desbloqueio de token e então, desbloquear o token. Para que serve? Desbloquear token de gerenciamento de senha.",
+          "operationId": "unlockToken",
+          "parameters": [
+            {
+              "name": "email",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "example": {
+                    "password": "6S1EZ7OA"
+                  }
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "description": "Status: 'Desbloqueio executado com sucesso' <br/><br/> Quando ocorre? Quando há o desbloqueio do token de gerenciamento de senhas<br/><br/>Qual comportamento esperado do front end? Redirecionamento para a tela de cadastro de senhas."
+            },
+            "202": {
+              "description": "Status: 'Aguardando atendimento do suporte' <br/><br/> Quando ocorre? Quando o usuário acaba de solicitar com sucesso o seus desbloqueio de token, porém o suporte ainda não atendeu.<br/><br/>Qual comportamento esperado do front end? Apresentar mensagem de aviso ao usuário, sugerindo-o que aguarde resposta do suporte."
+            },
+            "400": {
+              "description": "Status: 'Email inválido' <br/><br/> Quando ocorre? Quando a url path recebe um conjunto de caracteres que não representa um e-mail válido.<br/><br/>Qual comportamento esperado do front end? Apresentar erro genérico de sistema para o usuário."
+            },
+            "401": {
+              "description": "Status: 'Senha pendente de desbloqueio' <br/><br/> Quando ocorre? Quando o usuário, anteriormente tentou logar várias vezes com a mesma senha incorreta.<br/><br/>Qual comportamento esperado do front end? Redirecionar o usuário para a tela de alteração de senha."
+            },
+            "404": {
+              "description": "Status: 'Usuário novo no sistema' <br/><br/> Quando ocorre? Quando o e-mail do usuário é desconhecido por este banco de dados. <br/><br/>Qual comportamento esperado do front end? Redirecionar o usuário para a tela de confirmação de e-mail."
+            },
+            "421": {
+              "description": "Status: 'Senha de desbloqueio de token está bloqueada' <br/><br/> Quando ocorre? Quando o usuário, na tela de desbloqueio de token, por diversas vezes errou a digitação da senha de desbloqueio de token. <br/><br/>Qual comportamento esperado do front end? Informar ao usuário que ele está temporariamente bloqueado no acesso ao sistema e redirecioná-lo para a primeira tela do fluxo de login, para o caso de ele querer tentar com outro e-mail."
+            },
+            "422": {
+              "description": "Unprocessable Entity",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            },
+            "423": {
+              "description": "Status: 'Token não bloqueado' <br/><br/> Quando ocorre? Quando o usuário tenta o desbloqueio de um token que não está bloqueado. <br/><br/>Qual comportamento esperado do front end? Informar ao usuário por meio de mensagem que ele está tentando desbloquear um token que não está bloqueado."
+            },
+            "500": {
+              "description": "Internal Server Error",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/login/{email}/token": {
+        "head": {
+          "tags": [
+            "Login"
+          ],
+          "summary": "Verificação de existência deste usuário",
+          "description": "Quando ocorre? Logo após o usuário se interessar em ter acesso a informações deste sistema que ele só pode ter se estiver devidamente identificado (logado) nele. Para que serve? Serve para verificar se o usuário existe no sistema, caso ele existir, verificar se há pendências cadastrais (senha, pré registro) para ele resolver e se não existir, fazê-lo preencher todos os dados que o sistema precisa.",
+          "operationId": "existsLoginToken",
+          "parameters": [
+            {
+              "name": "email",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Status: 'Senha já cadastrada, usuário sem pendências de cadastro' <br/><br/> Quando ocorre? Quando o usuário previamente cadastrou todos os dados de pre requisitos (token, senha e pré registro)<br/><br/>Qual comportamento esperado do front end? Redirecionamento para a tela que pede senha para executar login."
+            },
+            "201": {
+              "description": "Status: 'O cadastro de Pre registro está pendente' <br/><br/> Quando ocorre? Quando o usuário deixou de cadastrar dados do pré registro<br/><br/>Qual comportamento esperado do front end? Redirecionamento para a tela de cadastro do pré registro."
+            },
+            "202": {
+              "description": "Status: 'O cadastro de  senha está pendente' <br/><br/> Quando ocorre? Quando o usuário deixou cadastrar senha<br/><br/>Qual comportamento esperado do front end? Redirecionamento para a tela de cadastro da senha."
+            },
+            "400": {
+              "description": "Status: 'Email inválido' <br/><br/> Quando ocorre? Quando a url path recebe um conjunto de caracteres que não representa um e-mail válido.<br/><br/>Qual comportamento esperado do front end? Apresentar erro genérico de sistema para o usuário."
+            },
+            "401": {
+              "description": "Status: 'Senha pendente de desbloqueio' <br/><br/> Quando ocorre? Quando o usuário, anteriormente tentou logar várias vezes com a mesma senha incorreta.<br/><br/>Qual comportamento esperado do front end? Redirecionar o usuário para a tela de alteração de senha."
+            },
+            "403": {
+              "description": "Status: 'Token bloqueado' <br/><br/> Quando ocorre? Quando o usuário, anteriormente tentou várias vezes alterar sua senha fazendo uso de token incorreto.<br/><br/>Qual comportamento esperado do front end? Redirecionar o usuário para a tela de requisição de desbloqueio de token."
+            },
+            "404": {
+              "description": "Status: 'Usuário novo no sistema' <br/><br/> Quando ocorre? Quando o e-mail do usuário é desconhecido por este banco de dados. <br/><br/>Qual comportamento esperado do front end? Redirecionar o usuário para a tela de confirmação de e-mail."
+            },
+            "409": {
+              "description": "Status: 'Usuário já logado' <br/><br/> Quando ocorre? Quando já está registrada uma sessão corrente para o usuário que está tentando fazer login neste sistema. <br/><br/>Qual comportamento esperado do front end? Redirecionar o usuário para a tela de alteração de senha."
+            },
+            "420": {
+              "description": "Status: 'Token pendente de desbloqueio' <br/><br/> Quando ocorre? Quando o usuário bloqueou o token (digitando-o incorretamente por várias vezes na tela de alteração de senha) e então requisita desbloqueio de token, porém o suporte ainda não o atendeu. <br/><br/>Qual comportamento esperado do front end? Exibir uma mensagem de que em breve o suporte do JobsNow entrará em contato com ele por meio dos contatos informados e redirecioná-lo para a tela de desbloqueio de token."
+            },
+            "421": {
+              "description": "Status: 'Senha de desbloqueio de token está bloqueada' <br/><br/> Quando ocorre? Quando o usuário, na tela de desbloqueio de token, por diversas vezes errou a digitação da senha de desbloqueio de token. <br/><br/>Qual comportamento esperado do front end? Informar ao usuário que ele está temporariamente bloqueado no acesso ao sistema e redirecioná-lo para a primeira tela do fluxo de login, para o caso de ele querer tentar com outro e-mail."
+            },
+            "422": {
+              "description": "Unprocessable Entity",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            },
+            "500": {
+              "description": "Internal Server Error",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/async/task/{asyncTaskId}": {
+        "get": {
+          "tags": [
+            "AsyncTask"
+          ],
+          "summary": "Obter tarefa status da tarefa assíncrona pelo id",
+          "operationId": "getAsyncTaskStatusById",
+          "parameters": [
+            {
+              "name": "asyncTaskId",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Status: 'Tarefa assíncrona encontrada'",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "string",
+                    "example": { }
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Status: 'Tarefa assíncrona não encontrada'",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "string",
+                    "example": { }
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Unprocessable Entity",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            },
+            "500": {
+              "description": "Internal Server Error",
+              "content": {
+                "*/*": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "components": { }
+  }

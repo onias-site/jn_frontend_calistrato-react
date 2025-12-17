@@ -1,0 +1,6 @@
+export * from './add-vagas'
+export * from './deletar-vagas'
+export * from './edit-vagas'
+export * from './view-vagas'
+export * from './inativar-vagas'
+export * from './view-vagas'
