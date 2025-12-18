@@ -10,7 +10,6 @@ import { AutoComplete } from "primereact/autocomplete";
 
 import RegioesComponent from '../../../../components/commons/Regioes/regioes';
 
-import { MultiSelect } from 'primereact/multiselect';
 import 'primereact/resources/primereact.min.css';
 import './formulario-candidato.css';
 
@@ -109,7 +108,7 @@ const FormularioCandidato: React.FC<FormularioCandidatoProps> = ({ candidatoId }
                             <div className="mb-5">
                                 {stepper === 1 && (
                                     <div className="mb-5">
-                                        <RegioesComponent onSelectRegiao= {e => {}}/>
+                                        <RegioesComponent/>
                                         <div className="mb-5">
                                             <label htmlFor="empresasExcluidas">Empresas que você não quer que vejam seu currículo</label>
                                             <AutoComplete field="name"  className="form-input"/>

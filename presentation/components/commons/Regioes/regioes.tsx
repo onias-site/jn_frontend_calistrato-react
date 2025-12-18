@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
 import './regioes.css';
 import { MultiSelect } from 'primereact/multiselect';
 import RegioesStore, { IRegioesStore } from './regioes-store';
 
 interface RegioesProps {
-    onSelectRegiao: void;
+
+
 }
-const RegioesComponent: React.FC<RegioesProps> = ({ onSelectRegiao }) => {
+const RegioesComponent: React.FC<RegioesProps> = () => {
     const { regioesSelecionadas, setRegioesSelecionadas } = RegioesStore((state: IRegioesStore) => ({
         ...state,
     }));
@@ -424,7 +425,6 @@ const RegioesComponent: React.FC<RegioesProps> = ({ onSelectRegiao }) => {
         const funcaoParaSerExecutada = eventoEscolhido[estaIncluindoRegiao];
         funcaoParaSerExecutada(e);
     }
-
     return (
         <div className="mb-5">
             <MultiSelect
