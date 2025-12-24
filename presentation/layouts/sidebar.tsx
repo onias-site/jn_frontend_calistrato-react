@@ -110,7 +110,7 @@ const Sidebar = () => {
                                             <Link href="/meus-dados/sobre-mim">{t('about_me')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/maintenence">{t('Me x Market')}</Link>
+                                            <Link href="/portuguese-version/como-estou-indo/ver-meu-curriculo">{t('Me x Market')}</Link>
                                         </li>
                                         <li>
                                             <Link href="/maintenence">{t('My Reputation')}</Link>
