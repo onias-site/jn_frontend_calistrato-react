@@ -1,9 +1,12 @@
+
 import React from 'react';
-import PanelCodeHighlight from '@/presentation/utils/panel-code-highlight';
-import { TabView, TabPanel } from 'primereact/tabview';
+// import PanelCodeHighlight from '@/presentation/utils/panel-code-highlight';
+import { TabView } from 'primereact/tabview';
 import "primereact/resources/themes/lara-light-cyan/theme.css";
 
 import 'primeicons/primeicons.css';
+import './SubMenuMyResume.css'
+import 'primereact/resources/primereact.min.css';
 
 import { TabFilter } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabFilter/TabFilter';
 import { TabLanguages } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabLanguages/TabLanguages';
@@ -13,7 +16,7 @@ import { TabSkills } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuM
 
 const SubMenuMyResume: React.FC<any> = ({}) => {
     return (
-        <PanelCodeHighlight title="Dados">
+        <div className="card">
             <TabView>
                 <TabResume/>
                 <TabLanguages/>
@@ -21,7 +24,7 @@ const SubMenuMyResume: React.FC<any> = ({}) => {
                 <TabFilter/>
                 <TabSalary/>
             </TabView>
-        </PanelCodeHighlight>
+        </div>
     );
 };
 

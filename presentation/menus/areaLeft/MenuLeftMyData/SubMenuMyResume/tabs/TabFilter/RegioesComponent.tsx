@@ -2,12 +2,23 @@
 import React from 'react';
 import './regioes.css';
 import { MultiSelect } from 'primereact/multiselect';
-import RegioesStore, { IRegioesStore } from './regioes-store';
+import { create } from 'zustand';
 
 interface RegioesProps {
 
 
 }
+export interface IRegioesStore {
+    regioesSelecionadas: any[]
+    setRegioesSelecionadas: (regioesSelecionadas: any[]) => void
+}
+
+export const RegioesStore = create<IRegioesStore> (set => ({
+    regioesSelecionadas: [],
+
+    setRegioesSelecionadas: (regioesSelecionadas: any[]) => set({regioesSelecionadas})
+}));
+
 const RegioesComponent: React.FC<RegioesProps> = () => {
     const { regioesSelecionadas, setRegioesSelecionadas } = RegioesStore((state: IRegioesStore) => ({
         ...state,
