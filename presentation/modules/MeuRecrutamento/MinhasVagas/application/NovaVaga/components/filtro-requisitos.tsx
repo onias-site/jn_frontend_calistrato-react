@@ -1,9 +1,5 @@
 import { ReactSortable } from 'react-sortablejs';
-import { useRecoilState, useSetRecoilState } from "recoil";
-
-// import { useFilterRequisitos } from "../hooks/useFilterRequisitos";
 import { IconTrashLines } from '@/presentation/icons';
-// import { filtroRequisitosDesejaveis, filtroRequisitosObrigatorios } from '../atom/atom';
 import useFiltroRequisitosStore from '../../../infra/store/filtro-requisitos-store';
 import { useState } from 'react';
 

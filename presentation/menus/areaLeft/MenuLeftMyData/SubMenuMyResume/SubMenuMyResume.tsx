@@ -20,7 +20,10 @@ const SubMenuMyResume: React.FC<any> = ({}) => {
             <TabView>
                 <TabResume/>
                 <TabLanguages/>
-                <TabSkills/>
+                <TabSkills skillsGroups = {[
+                    {skills:['JAVA', 'JAVA', 'JAVA', 'JAVA', 'JAVA', 'JAVA', 'JAVA', 'JAVA', 'JAVA', 'JAVA', 'JAVA', 'JAVA', 'JAVA', 'JAVA', 'JAVA', 'JAVA', 'JAVA', 'JAVA', 'JAVA', 'JAVA', 'JAVA', 'JAVA', 'JAVA', 'JAVA', 'JAVA', 'JAVA', 'JAVA'], name: 'show', title: 'Os recrutadores IRÃO me encontrar por'},
+                    {skills:[], name: 'hide', title: 'Os recrutadores NÂO vão me encontrar por'}
+                ]}/>
                 <TabFilter/>
                 <TabSalary/>
             </TabView>

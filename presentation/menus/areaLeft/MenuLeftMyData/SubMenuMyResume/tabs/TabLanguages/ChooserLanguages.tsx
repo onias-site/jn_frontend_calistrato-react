@@ -270,9 +270,10 @@ const languages = [
     },
 ];
 
+languages.sort((a,b) => a.id - b.id);
 
 export const ChooserLanguages: React.FC<any> = ({}) => {
-    const { selectedLanguages, setSelectedLanguages, language, setLanguage } = LanguagesStore((state: ILanguagesStore) => ({
+    const { selectedLanguages, setSelectedLanguages, setLanguage } = LanguagesStore((state: ILanguagesStore) => ({
         ...state,
     }));
 
