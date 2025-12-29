@@ -6,19 +6,40 @@ import React from 'react';
 import { create } from 'zustand';
 
 import { Dropdown } from 'primereact/dropdown';
+import { Checkbox } from 'primereact/checkbox';
 
 export interface ILanguagesStore {
     selectedLanguages: any[];
-    language: any
+    language: any;
+    speakOtherLanguages: boolean;
+    isInvalidSelection: () => boolean;
+    setLanguage: (language: any[]) => void;
     setSelectedLanguages: (selectedLanguages: any[]) => void;
-    setLanguage:(language: any[]) => void;
+    setSpeakOtherLanguages: (speakOtherLanguages: boolean) => void;
 }
 
-export const LanguagesStore = create<ILanguagesStore>((set) => ({
+const LanguagesStore = create<ILanguagesStore>((set, get) => ({
+    language: {},
     selectedLanguages: [],
-    language:{},
+    speakOtherLanguages: false,
     setLanguage: (language: any) => set({ language }),
     setSelectedLanguages: (selectedLanguages: any[]) => set({ selectedLanguages }),
+    setSpeakOtherLanguages: (speakOtherLanguages: boolean) => {
+        const { selectedLanguages } = get();
+        set({ speakOtherLanguages, selectedLanguages: speakOtherLanguages ? selectedLanguages : [] });
+    },
+    isInvalidSelection: () => {
+        const { speakOtherLanguages, selectedLanguages } = get();
+
+        if (!speakOtherLanguages) {
+            return false;
+        }
+
+        if (selectedLanguages.length) {
+            return false;
+        }
+        return true;
+    },
 }));
 
 const languages = [
@@ -270,16 +291,16 @@ const languages = [
     },
 ];
 
-languages.sort((a,b) => a.id - b.id);
+languages.sort((a, b) => a.id - b.id);
 
 export const ChooserLanguages: React.FC<any> = ({}) => {
-    const { selectedLanguages, setSelectedLanguages, setLanguage } = LanguagesStore((state: ILanguagesStore) => ({
+    const { selectedLanguages, setSelectedLanguages, setLanguage, setSpeakOtherLanguages, speakOtherLanguages } = LanguagesStore((state: ILanguagesStore) => ({
         ...state,
     }));
 
     const selectLanguages = (e: any) => {
         const language = languages.filter((x) => x.id == e.selectedOption.id)[0];
-        if(language){
+        if (language) {
             language.level = 1;
             setLanguage(language);
         }
@@ -292,12 +313,12 @@ export const ChooserLanguages: React.FC<any> = ({}) => {
         return (
             <div>
                 <div className="flex-column flex">
-                    <label  htmlFor="lastJob" style={{ width: '30%', marginTop:"10px" }} className="letraPequena">
-                       Meu nível em idioma {language.name} é:
+                    <label htmlFor="lastJob" style={{ width: '30%', marginTop: '10px' }} className="letraPequena">
+                        Meu nível em idioma {language.name} é:
                     </label>
 
                     <Dropdown
-                        key = {language.id}
+                        key={language.id}
                         value={language.level}
                         onChange={(e) => {
                             language.level = e.value;
@@ -305,7 +326,10 @@ export const ChooserLanguages: React.FC<any> = ({}) => {
                         }}
                         options={[
                             { name: 'Intermediário (Leio e escrevo bem, entendo parte do que me dizem, porém, tenho lentidão ao expressar idéias neste idioma)', level: 1 },
-                            { name: 'Fluente (Leio e escrevo com quase a mesma velocidade do meu idioma nativo, me expresso bem neste idioma e entendo os regionalismos em parte ou totalmente)', level: 2 },
+                            {
+                                name: 'Fluente (Leio e escrevo com quase a mesma velocidade do meu idioma nativo, me expresso bem neste idioma e entendo os regionalismos em parte ou totalmente)',
+                                level: 2,
+                            },
                         ]}
                         optionLabel="name"
                         optionValue="level"
@@ -322,19 +346,28 @@ export const ChooserLanguages: React.FC<any> = ({}) => {
 
     return (
         <div>
-            <MultiSelect
-                selectAll={false}
-                style={{ borderStyle: 'solid', borderColor: 'black' }}
-                value={selectedLanguages}
-                onChange={selectLanguages}
-                options={languages}
-                selectedItemsLabel="{label} Idiomas selecionados"
-                optionLabel="name"
-                optionValue="id"
-                placeholder="Selecione os idiomas em que você possui algum nível de conhecimento"
-                maxSelectedLabels={10}
-                className="form-input"
-            />
+            <div className="mb-5 text-center">
+                <div className="align-items-center flex">
+                    <Checkbox onChange={(e) => setSpeakOtherLanguages(e.checked)} checked={speakOtherLanguages} name="doNotSpeakAnyLanguage" />
+                    <label htmlFor="ingredient3" className="letraPequena ml-2">
+                        Tenho conhecimento em outro(s) idioma(s) além do meu idioma nativo
+                    </label>
+                </div>
+            </div>
+            {speakOtherLanguages && (
+                <MultiSelect
+                    style={{ borderStyle: 'solid', borderColor: 'black' }}
+                    value={selectedLanguages}
+                    onChange={selectLanguages}
+                    options={languages}
+                    selectedItemsLabel="{label} Idiomas selecionados"
+                    optionLabel="name"
+                    optionValue="id"
+                    placeholder="Selecione os idiomas em que você possui algum nível de conhecimento"
+                    maxSelectedLabels={10}
+                    className="form-input"
+                />
+            )}
             <div className="mb-5 text-center">
                 <div className="flex-column flex">&nbsp;</div>
             </div>
@@ -342,3 +375,4 @@ export const ChooserLanguages: React.FC<any> = ({}) => {
         </div>
     );
 };
+export default LanguagesStore;

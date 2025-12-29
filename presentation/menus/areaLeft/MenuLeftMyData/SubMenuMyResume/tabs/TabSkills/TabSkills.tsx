@@ -2,6 +2,7 @@ import React from 'react';
 import { TabPanel } from 'primereact/tabview';
 import { ChooserSkills, ChooserSkillsProps } from './ChooserSkills';
 export const TabSkills: React.FC<ChooserSkillsProps> = ({ skillsGroups }) => {
+
     return (
         <TabPanel header="Habilidades" leftIcon="pi pi-check mr-2">
             <ChooserSkills skillsGroups={skillsGroups} />

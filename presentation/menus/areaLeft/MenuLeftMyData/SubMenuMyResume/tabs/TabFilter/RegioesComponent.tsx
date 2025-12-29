@@ -3,6 +3,7 @@ import React from 'react';
 import './regioes.css';
 import { MultiSelect } from 'primereact/multiselect';
 import { create } from 'zustand';
+import LanguagesStore, { ChooserLanguages, ILanguagesStore } from '../TabLanguages/ChooserLanguages';
 
 interface RegioesProps {
 
@@ -23,7 +24,10 @@ const RegioesComponent: React.FC<RegioesProps> = () => {
     const { regioesSelecionadas, setRegioesSelecionadas } = RegioesStore((state: IRegioesStore) => ({
         ...state,
     }));
-
+    const { isInvalidSelection } = LanguagesStore((state: ILanguagesStore) => ({
+        ...state,
+    }));
+    alert(isInvalidSelection());
     const estados = [
         {
             "id": "0",
