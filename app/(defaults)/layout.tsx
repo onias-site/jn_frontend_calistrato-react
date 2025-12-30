@@ -1,3 +1,4 @@
+'use client';
 import ContentAnimation from '@/presentation/layouts/content-animation';
 import Footer from '@/presentation/layouts/footer';
 import Header from '@/presentation/layouts/header';

@@ -18,7 +18,7 @@ export interface ILanguagesStore {
     setSpeakOtherLanguages: (speakOtherLanguages: boolean) => void;
 }
 
-const LanguagesStore = create<ILanguagesStore>((set, get) => ({
+export const LanguagesStore = create<ILanguagesStore>((set, get) => ({
     language: {},
     selectedLanguages: [],
     speakOtherLanguages: false,
@@ -30,6 +30,7 @@ const LanguagesStore = create<ILanguagesStore>((set, get) => ({
     },
     isInvalidSelection: () => {
         const { speakOtherLanguages, selectedLanguages } = get();
+
 
         if (!speakOtherLanguages) {
             return false;
@@ -294,7 +295,7 @@ const languages = [
 languages.sort((a, b) => a.id - b.id);
 
 export const ChooserLanguages: React.FC<any> = ({}) => {
-    const { selectedLanguages, setSelectedLanguages, setLanguage, setSpeakOtherLanguages, speakOtherLanguages } = LanguagesStore((state: ILanguagesStore) => ({
+    const {selectedLanguages, setSelectedLanguages, setLanguage, setSpeakOtherLanguages, speakOtherLanguages } = LanguagesStore((state: ILanguagesStore) => ({
         ...state,
     }));
 
@@ -368,7 +369,7 @@ export const ChooserLanguages: React.FC<any> = ({}) => {
                     className="form-input"
                 />
             )}
-            <div className="mb-5 text-center">
+              <div className="mb-5 text-center">
                 <div className="flex-column flex">&nbsp;</div>
             </div>
             {selectedLanguages.map((id: any) => getLanguageLevelCombobox(id))}

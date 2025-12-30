@@ -7,6 +7,7 @@ import { InputText } from 'primereact/inputtext';
 
 import React from 'react';
 
+
 interface SkillsListProps {
     moveBetweenLists: (item: any) => void;
     name: string;
@@ -223,13 +224,13 @@ export const ChooserSkills: React.FC<ChooserSkillsProps> = () => {
             setSkillsGroups(skillsGroups);
         }
     };
-    // console.log('ChooserSkillsStore', 'oooooooooooooooooi');
-
     return (
-        <div className="flex-column flex" style={{ maxHeight: '1000px' }}>
-            {skillsGroups.map((skillsGroup: ChooserSkillsModel, index: number) => (
-                <SkillsList key={index} name={skillsGroup.name} moveBetweenLists={(evt) => moveBetweenLists(skillsGroup.name, evt)} />
-            ))}
+        <div>
+            <div className="flex-column flex" style={{ maxHeight: '1000px' }}>
+                {skillsGroups.map((skillsGroup: ChooserSkillsModel, index: number) => (
+                    <SkillsList key={index} name={skillsGroup.name} moveBetweenLists={(evt) => moveBetweenLists(skillsGroup.name, evt)} />
+                ))}
+            </div>
         </div>
     );
 };

@@ -1,6 +1,5 @@
 'use client'
 import React from 'react';
-import './regioes.css';
 import { MultiSelect } from 'primereact/multiselect';
 import { create } from 'zustand';
 

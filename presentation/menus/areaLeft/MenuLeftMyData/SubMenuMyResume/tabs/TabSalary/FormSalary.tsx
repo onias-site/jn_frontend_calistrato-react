@@ -26,23 +26,11 @@ export const FormSalaryStore = create<IFormSalaryStore>((set) => ({
 }));
 
 export const FormSalary: React.FC<FormSalaryProps> = ({}) => {
-    const { pj, clt, btc, setPj, setClt, setBtc} = FormSalaryStore((state: IFormSalaryStore) => ({ ...state }));
+    const { pj, clt, btc, setPj, setClt, setBtc } = FormSalaryStore((state: IFormSalaryStore) => ({ ...state }));
     return (
         <div>
-            <IntegerFieldComponent
-                textFieldLabel="Minha pretensão CLT"
-                checkBoxLabel="Não analiso propostas CLT"
-                defaultValue={1500}
-                setValue={(e) => setClt(e)}
-                value={clt}
-            />
-            <IntegerFieldComponent
-                textFieldLabel="Minha pretensão PJ"
-                checkBoxLabel="Não analiso propostas PJ"
-                defaultValue={2500}
-                setValue={(e) => setPj(e)}
-                value={pj}
-            />
+            <IntegerFieldComponent textFieldLabel="Minha pretensão CLT" checkBoxLabel="Não analiso propostas CLT" defaultValue={1500} setValue={(e) => setClt(e)} value={clt} />
+            <IntegerFieldComponent textFieldLabel="Minha pretensão PJ" checkBoxLabel="Não analiso propostas PJ" defaultValue={2500} setValue={(e) => setPj(e)} value={pj} />
             <IntegerFieldComponent
                 textFieldLabel="Minha pretensão em bitcoin (Valor equivalente em reais)"
                 checkBoxLabel="Não analiso freelancer em bitcoin"

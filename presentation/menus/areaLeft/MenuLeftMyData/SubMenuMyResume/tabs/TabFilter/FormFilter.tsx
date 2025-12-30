@@ -4,7 +4,7 @@ import React from 'react';
 import { create } from 'zustand';
 import { Checkbox } from 'primereact/checkbox';
 import RegioesComponent from './RegioesComponent';
-import {IntegerFieldComponent} from '@/presentation/components/source/IntegerFieldComponent';
+import { IntegerFieldComponent } from '@/presentation/components/source/IntegerFieldComponent';
 
 export interface FormFilterProps {}
 
@@ -53,10 +53,7 @@ export const FormFilterComponent: React.FC<FormFilterProps> = ({}) => {
             <div className="flex flex-row gap-8">
                 <div className="mb-5 text-center">
                     <div className="align-items-center flex">
-                        <Checkbox
-                            checked = {negotiableClaim}
-                            onChange = {e => setNegotiableClaim(e.checked)}
-                        />
+                        <Checkbox checked={negotiableClaim} onChange={(e) => setNegotiableClaim(e.checked)} />
                         <label htmlFor="ingredient3" className="letraPequena ml-2">
                             Negocio minhas pretensões salariais
                         </label>
@@ -67,10 +64,7 @@ export const FormFilterComponent: React.FC<FormFilterProps> = ({}) => {
 
                 <div className="mb-5 text-center">
                     <div className="align-items-center flex">
-                        <Checkbox
-                            checked = {pcd}
-                            onChange = {e => setPcd(e.checked)}
-                        />
+                        <Checkbox checked={pcd} onChange={(e) => setPcd(e.checked)} />
                         <label htmlFor="ingredient3" className="letraPequena">
                             Possuo necessidades especiais (PCD)
                         </label>

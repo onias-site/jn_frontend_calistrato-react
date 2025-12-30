@@ -4,7 +4,6 @@ import React from 'react';
 
 import { InputTextarea } from 'primereact/inputtextarea';
 import { InputText } from 'primereact/inputtext';
-import PanelCodeHighlight from '@/presentation/utils/panel-code-highlight';
 import { AutoComplete } from 'primereact/autocomplete';
 import FileResume from './FileResume';
 import { Tooltip } from 'primereact/tooltip';
@@ -39,7 +38,7 @@ export const ResumeStore = create<IResumeStore>((set) => ({
 export const FormResume: React.FC<FormResumeProps> = ({}) => {
     const { notAllowedCompanies, observations, desiredJob, lastJob, setLastJob, setDesiredJob, setObservations, setNotAllowedCompanies } = ResumeStore((state: IResumeStore) => ({ ...state }));
     return (
-        <PanelCodeHighlight>
+        <div>
             <Tooltip target="#desiredJob" content="Esta informação será visualizada pelo recrutador que filtrar o seu perfil" position="bottom" />
             <Tooltip
                 target="#lastJob"
@@ -96,16 +95,6 @@ export const FormResume: React.FC<FormResumeProps> = ({}) => {
                 </div>
             </div>
             <FileResume />
-            <div className="mb-5 text-center">
-                <div className="flex-column flex">
-                    <label htmlFor="username" style={{ width: '85%' }} className="letraPequena">
-                        &nbsp;
-                    </label>
-                    <button id="btnGoToLanguages" type="button" className="btn btn-primary ltr:ml-auto rtl:mr-auto">
-                        Adicionar idiomas
-                    </button>
-                </div>
-            </div>
-        </PanelCodeHighlight>
+        </div>
     );
 };
