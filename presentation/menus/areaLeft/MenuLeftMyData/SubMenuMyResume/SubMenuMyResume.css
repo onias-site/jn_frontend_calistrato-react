@@ -1,24 +1,32 @@
-.p-tabview-selected, .p-highlight{
+.p-highlight {
     color: red;
 }
-.letraPequena{
+.letraPequena {
     font-size: 10px;
-    width: 400px;
+    width: 300px;
     text-align: left;
     padding-left: 5px;
 }
-.p-inputtextarea, .p-inputtext, .p-checkbox {
-
+.p-inputtext,
+.p-checkbox {
     border-width: 1px;
-
+}
+.p-inputtext {
+    padding: 10px;
 }
 .p-multiselect {
     border-style: solid;
     border-width: 1px;
     width: 100%;
-
 }
-
-.p-dropdown-label{
+.p-dropdown-label {
     font-size: 10px;
+}
+.tituloDaAba {
+    text-align: center;
+    font-size: 10px;
+    color: blue;
+}
+.p-invalid {
+    border-color: #e24c4c;
 }

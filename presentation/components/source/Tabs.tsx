@@ -4,7 +4,7 @@ import PanelCodeHighlight from '@/presentation/utils/panel-code-highlight';
 import { Toast } from 'primereact/toast';
 
 export class TabsModel {
-    constructor(public label: string, public icon: string, public isValid: () => boolean = () => true, public successMessage: string = '', public errorMessage: string = '') {}
+    constructor(public title: string = '', public label: string, public icon: string, public onMoveOnFowardTabs: () => string[] = () => []) {}
 }
 
 export interface TabsProps {
@@ -23,47 +23,38 @@ export const Tabs: React.FC<TabsProps> = ({ firstButtonClick, tabs, children, la
 
     const changeTab = (index: any) => {
         if (index > activeIndex) {
-            goToNext();
+            goToNextTab();
             return;
         }
         setActiveIndex(index);
     };
 
     const goToPrevious = () => {
-        if (!activeIndex) {
-            firstButtonClick();
+        if (activeIndex) {
+            setActiveIndex(activeIndex - 1);
             return;
         }
-        setActiveIndex(activeIndex - 1);
+        firstButtonClick && firstButtonClick();
     };
-    const goToNext = () => {
-        const tab = tabs[activeIndex];
 
-        const nextTab = tabs[activeIndex + 1];
+    const tab = tabs[activeIndex];
 
-        if (!nextTab) {
-            if (!tab.isValid()) {
-                toast.current.show({ severity: 'error', summary: 'Falha!!!', detail: tab.errorMessage, life: 3000 });
-                return;
+    const goToNextTab = () => {
+        const index = activeIndex + 1;
+        const hasError = tab.onMoveOnFowardTabs && tab.onMoveOnFowardTabs();
+
+        if (hasError && hasError.length) {
+            for(let item in hasError){
+                const detail = hasError[item];
+                toast.current.show({ severity: 'error', summary: 'Falha!!!', detail, life: 10000 });
             }
-            tab.successMessage && toast.current.show({ severity: 'success', summary: 'Sucesso!!!', detail: tab.successMessage, life: 3000 });
             return;
         }
-
-        if (!tab.isValid) {
-            setActiveIndex(activeIndex + 1);
-            return;
-        }
-
-        if (!tab.isValid()) {
-            toast.current.show({ severity: 'error', summary: 'Falha!!!', detail: tab.errorMessage, life: 10000 });
-            return;
-        }
-        tab.successMessage && toast.current.show({ severity: 'success', summary: 'Sucesso!!!', detail: tab.successMessage, life: 10000 });
-        setActiveIndex(activeIndex + 1);
+        const hasNextTab = !!tabs[index];
+        setActiveIndex(hasNextTab ? index : activeIndex);
     };
     return (
-        <PanelCodeHighlight>
+        <PanelCodeHighlight title = {!tab.title? '' : '* ' + tab.title} cssClassTitle = 'tituloDaAba'>
             <Toast ref={toast} />
             <TabMenu model={tabs} activeIndex={activeIndex} onTabChange={(e) => changeTab(e.index)} />
             {children[activeIndex]}
@@ -82,7 +73,7 @@ export const Tabs: React.FC<TabsProps> = ({ firstButtonClick, tabs, children, la
                         &nbsp;
                     </label>
                     {nextLabel && (
-                        <button onClick={() => goToNext()} type="button" className="btn btn-primary ltr:ml-auto rtl:mr-auto">
+                        <button onClick={() => goToNextTab()} type="button" className="btn btn-primary ltr:ml-auto rtl:mr-auto">
                             {nextLabel}
                         </button>
                     )}

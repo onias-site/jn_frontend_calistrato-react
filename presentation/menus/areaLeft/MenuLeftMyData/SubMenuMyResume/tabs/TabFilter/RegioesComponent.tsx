@@ -5,32 +5,41 @@ import { create } from 'zustand';
 
 export interface RegioesProps {
 
-
+    labelHomeOffice: string;
+    labelOutrasRegioes: string;
+    labelTodasAsRegioes: string;
 }
 export interface IRegioesStore {
     regioesSelecionadas: any[]
+    onMoveOnFowardTabs: () => string[];
     setRegioesSelecionadas: (regioesSelecionadas: any[]) => void
 }
 
-export const RegioesStore = create<IRegioesStore> (set => ({
+export const RegioesStore = create<IRegioesStore> ((set, get) => ({
     regioesSelecionadas: [],
-
+    onMoveOnFowardTabs: () => {
+        const {regioesSelecionadas} = get();
+        if(regioesSelecionadas.length){
+            return [];
+        }
+        return ['Deve-se selecionar ao menos uma das regiões metropolitanas'];
+    },
     setRegioesSelecionadas: (regioesSelecionadas: any[]) => set({regioesSelecionadas})
 }));
 
-const RegioesComponent: React.FC<RegioesProps> = () => {
+const RegioesComponent: React.FC<RegioesProps> = ({labelTodasAsRegioes, labelOutrasRegioes, labelHomeOffice}) => {
     const { regioesSelecionadas, setRegioesSelecionadas } = RegioesStore((state: IRegioesStore) => ({
         ...state,
     }));
     const estados = [
         {
             "id": "0",
-            "nome": "Estou disponível para mudar de cidade e/ou UF",
+            "nome": labelTodasAsRegioes,
             "selected": false
         },
         {
             "id": "10",
-            "nome": "Avalia apenas homeoffice",
+            "nome": labelHomeOffice,
             "selected": false
         },
         {
@@ -370,6 +379,12 @@ const RegioesComponent: React.FC<RegioesProps> = () => {
         }
 
     ];
+    estados.forEach(x => {
+       if(x.id < 11){
+           return;
+       }
+       x.nome = labelOutrasRegioes + ' ' + x.nome;
+    });
 
     const todasAsRegioes = "0";
     const homeOffice = "10";
@@ -438,8 +453,9 @@ const RegioesComponent: React.FC<RegioesProps> = () => {
     return (
         <div className="mb-5">
             <MultiSelect
+
                 selectAll={false}
-                style={{ borderStyle: 'solid', borderColor: 'black' }}
+                style={{ borderStyle: 'solid', borderColor: regioesSelecionadas.length ?  'black': '#e24c4c' }}
                 value={regioesSelecionadas}
                 onChange={selecionarRegioes}
                 options={estados}

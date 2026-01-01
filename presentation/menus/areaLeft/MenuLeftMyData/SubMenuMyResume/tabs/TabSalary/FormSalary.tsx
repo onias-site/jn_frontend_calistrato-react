@@ -1,42 +1,85 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { create } from 'zustand';
 import { IntegerFieldComponent } from '@/presentation/components/source/IntegerFieldComponent';
+import { CheckBoxComponent } from '@/presentation/components/source/CheckBoxComponent';
 
-export interface FormSalaryProps {}
+export interface TabSalaryProps {}
 
-export interface IFormSalaryStore {
+export interface ITabSalaryStore {
     pj: number;
     clt: number;
     btc: number;
+    negotiableClaim: boolean;
 
     setPj: (pj: number) => void;
     setClt: (clt: number) => void;
     setBtc: (btc: number) => void;
+    onMoveOnFowardTabs: () => string[];
+    setNegotiableClaim: (negotiableClaim: boolean) => void;
 }
 
-export const FormSalaryStore = create<IFormSalaryStore>((set) => ({
+export const TabSalaryStore = create<ITabSalaryStore>((set, get) => ({
     pj: 0,
     clt: 0,
     btc: 0,
+    negotiableClaim: true,
     setPj: (pj: number) => set({ pj }),
     setClt: (clt: number) => set({ clt }),
     setBtc: (btc: number) => set({ btc }),
+    setNegotiableClaim: (negotiableClaim: boolean) => set({ negotiableClaim }),
+    onMoveOnFowardTabs: () => {
+        const { clt, pj } = get();
+
+        if (clt) {
+            return [];
+        }
+
+        if (pj) {
+            return [];
+        }
+
+        return ['Deve se escolher ao menos uma das pretensões (PJ ou CLT)'];
+    },
 }));
 
-export const FormSalary: React.FC<FormSalaryProps> = ({}) => {
-    const { pj, clt, btc, setPj, setClt, setBtc } = FormSalaryStore((state: IFormSalaryStore) => ({ ...state }));
+export const TabSalary: React.FC<TabSalaryProps> = ({}) => {
+    const { negotiableClaim, pj, clt, btc, setPj, setClt, setBtc, setNegotiableClaim } = TabSalaryStore((state: ITabSalaryStore) => ({ ...state }));
     return (
         <div>
-            <IntegerFieldComponent textFieldLabel="Minha pretensão CLT" checkBoxLabel="Não analiso propostas CLT" defaultValue={1500} setValue={(e) => setClt(e)} value={clt} />
-            <IntegerFieldComponent textFieldLabel="Minha pretensão PJ" checkBoxLabel="Não analiso propostas PJ" defaultValue={2500} setValue={(e) => setPj(e)} value={pj} />
             <IntegerFieldComponent
+                explanation="Caso esta opção estiver marcada, seu perfil não será selecionado para vagas de contrato CLT. Caso esta opção não estiver marcada, você deverá informar no campo de texto que será mostrado, o total em reais que te é interessante receber mensalmente."
+                maxValue={100000}
+                textFieldLabel="Minha pretensão salarial mensal CLT (número inteiro em reais)"
+                checkBoxLabel="Não aceito empregos CLT"
+                defaultValue={1500}
+                setValue={setClt}
+                value={clt}
+            />
+            <IntegerFieldComponent
+                maxValue={100000}
+                explanation="Caso esta opção estiver marcada, seu perfil não será selecionado para vagas de contrato PJ. Caso esta opção não estiver marcada, você deverá informar no campo de texto que será mostrado, o total em reais que te é interessante receber mensalmente."
+                textFieldLabel="Minha pretensão salarial mensal PJ (número inteiro em reais)"
+                checkBoxLabel="Não aceito empregos PJ"
+                defaultValue={2500}
+                setValue={setPj}
+                value={pj}
+            />
+            <IntegerFieldComponent
+                explanation="Caso esta opção estiver marcada, seu perfil não será selecionado para vagas de contratos que paguem em bitcoin. Caso esta opção não estiver marcada, você deverá informar no campo de texto que será mostrado, o total em reais que te é interessante receber mensalmente."
                 textFieldLabel="Minha pretensão em bitcoin (Valor equivalente em reais)"
-                checkBoxLabel="Não analiso freelancer em bitcoin"
+                checkBoxLabel="Não aceito eventuais freelancers em bitcoin"
                 defaultValue={1000}
-                setValue={(e) => setBtc(e)}
+                setValue={setBtc}
+                maxValue={100000}
                 value={btc}
+            />
+            <CheckBoxComponent
+                checkBoxLabel="Minhas pretensões salariais são negociáveis"
+                setValue={setNegotiableClaim}
+                value={negotiableClaim}
+                explanation="Caso esta opção estiver marcada, seu perfil estará à disposição de todos os recrutadores que tiverem vagas que buscam por perfis que negociam pretensão salarial (geralmente para baixo). Cabe ressaltar que esta opção é somente interessante, caso a oportunidade oferecida tiver benefícios (Plano de saúde, vale alimentação e varios outros) interessantes ou localização boa, ou home office ou qualquer outra coisa que compense receber salário menor."
             />
         </div>
     );

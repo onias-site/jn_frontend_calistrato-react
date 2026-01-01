@@ -14,7 +14,7 @@ interface SkillsListProps {
 }
 
 const SkillsList: React.FC<SkillsListProps> = ({ name, moveBetweenLists }) => {
-    const { skillsGroups } = ChooserSkillsStore((state: IChooserSkillsStore) => ({
+    const { skillsGroups } = TabSkillsStore((state: ITabSkillsStore) => ({
         ...state,
     }));
 
@@ -27,7 +27,7 @@ const SkillsList: React.FC<SkillsListProps> = ({ name, moveBetweenLists }) => {
         setStores(stores);
     };
 
-    const skillsGroup: ChooserSkillsModel = skillsGroups.filter((skillsGroup: ChooserSkillsModel) => skillsGroup.name == name)[0];
+    const skillsGroup: TabSkillsModel = skillsGroups.filter((skillsGroup: TabSkillsModel) => skillsGroup.name == name)[0];
 
     const width = skillsGroups.length ? 100 / skillsGroups.length + '%' : '';
     return (
@@ -139,10 +139,10 @@ const SkillsInternalList: React.FC<SkillsInternalListProps> = ({ name, moveBetwe
         setStores(stores);
     };
 
-    const { skillsGroups } = ChooserSkillsStore((state: IChooserSkillsStore) => ({
+    const { skillsGroups } = TabSkillsStore((state: ITabSkillsStore) => ({
         ...state,
     }));
-    const skillsGroup: ChooserSkillsModel = skillsGroups.filter((skillsGroup: ChooserSkillsModel) => skillsGroup.name == name)[0];
+    const skillsGroup: TabSkillsModel = skillsGroups.filter((skillsGroup: TabSkillsModel) => skillsGroup.name == name)[0];
     const skills = (skillsGroup && skillsGroup.skills) || [];
 
     if (stores[name].filtered && stores[name].filtered.length) {
@@ -182,31 +182,31 @@ const SkillsInternalList: React.FC<SkillsInternalListProps> = ({ name, moveBetwe
         </ReactSortable>
     );
 };
-export interface ChooserSkillsProps {}
+export interface TabSkillsProps {}
 
-export class ChooserSkillsModel {
+export class TabSkillsModel {
     skills: any[] = [];
     title: string = '';
     name: string = '';
     constructor() {}
 }
 
-export interface IChooserSkillsStore {
-    skillsGroups: ChooserSkillsModel[];
-    setSkillsGroups: (skillsGroups: ChooserSkillsModel[]) => void;
+export interface ITabSkillsStore {
+    skillsGroups: TabSkillsModel[];
+    setSkillsGroups: (skillsGroups: TabSkillsModel[]) => void;
 }
 
-export const ChooserSkillsStore = create<IChooserSkillsStore>((set) => ({
+export const TabSkillsStore = create<ITabSkillsStore>((set) => ({
     skillsGroups: [
         { skills: [], name: 'hide', title: 'NÃO QUERO que meu currículo seja encontrado pelas seguintes habilidades:' },
         { skills: ['JAVA', 'SPRING', 'CSS', 'C#', 'SQL', 'ANGULAR', 'ELASTICSEARCH', 'REACT'], name: 'show', title: 'QUERO que meu currículo seja encontrado pelas seguintes habilidades:' },
     ],
 
-    setSkillsGroups: (skillsGroups: ChooserSkillsModel[]) => set({ skillsGroups }),
+    setSkillsGroups: (skillsGroups: TabSkillsModel[]) => set({ skillsGroups }),
 }));
 
-export const ChooserSkills: React.FC<ChooserSkillsProps> = () => {
-    const { skillsGroups, setSkillsGroups } = ChooserSkillsStore((state: IChooserSkillsStore) => ({
+export const TabSkills: React.FC<TabSkillsProps> = () => {
+    const { skillsGroups, setSkillsGroups } = TabSkillsStore((state: ITabSkillsStore) => ({
         ...state,
     }));
 
@@ -227,7 +227,7 @@ export const ChooserSkills: React.FC<ChooserSkillsProps> = () => {
     return (
         <div>
             <div className="flex-column flex" style={{ maxHeight: '1000px' }}>
-                {skillsGroups.map((skillsGroup: ChooserSkillsModel, index: number) => (
+                {skillsGroups.map((skillsGroup: TabSkillsModel, index: number) => (
                     <SkillsList key={index} name={skillsGroup.name} moveBetweenLists={(evt) => moveBetweenLists(skillsGroup.name, evt)} />
                 ))}
             </div>

@@ -8,17 +8,17 @@ import { create } from 'zustand';
 import { Dropdown } from 'primereact/dropdown';
 import { Checkbox } from 'primereact/checkbox';
 
-export interface ILanguagesStore {
+export interface ITabLanguagesStore {
     selectedLanguages: any[];
     language: any;
     speakOtherLanguages: boolean;
-    isInvalidSelection: () => boolean;
+    onMoveOnFowardTabs: () => string[];
     setLanguage: (language: any[]) => void;
     setSelectedLanguages: (selectedLanguages: any[]) => void;
     setSpeakOtherLanguages: (speakOtherLanguages: boolean) => void;
 }
 
-export const LanguagesStore = create<ILanguagesStore>((set, get) => ({
+export const TabLanguagesStore = create<ITabLanguagesStore>((set, get) => ({
     language: {},
     selectedLanguages: [],
     speakOtherLanguages: false,
@@ -28,18 +28,18 @@ export const LanguagesStore = create<ILanguagesStore>((set, get) => ({
         const { selectedLanguages } = get();
         set({ speakOtherLanguages, selectedLanguages: speakOtherLanguages ? selectedLanguages : [] });
     },
-    isInvalidSelection: () => {
+    onMoveOnFowardTabs: () => {
         const { speakOtherLanguages, selectedLanguages } = get();
 
 
         if (!speakOtherLanguages) {
-            return false;
+            return [];
         }
 
         if (selectedLanguages.length) {
-            return false;
+            return [];
         }
-        return true;
+        return ['Favor informar ao menos um idioma'];
     },
 }));
 
@@ -294,8 +294,11 @@ const languages = [
 
 languages.sort((a, b) => a.id - b.id);
 
-export const ChooserLanguages: React.FC<any> = ({}) => {
-    const {selectedLanguages, setSelectedLanguages, setLanguage, setSpeakOtherLanguages, speakOtherLanguages } = LanguagesStore((state: ILanguagesStore) => ({
+export interface TabResumeProps{
+
+}
+export const TabLanguages: React.FC<TabResumeProps> = ({}) => {
+    const {selectedLanguages, setSelectedLanguages, setLanguage, setSpeakOtherLanguages, speakOtherLanguages } = TabLanguagesStore((state: ITabLanguagesStore) => ({
         ...state,
     }));
 
@@ -350,7 +353,7 @@ export const ChooserLanguages: React.FC<any> = ({}) => {
             <div className="mb-5 text-center">
                 <div className="align-items-center flex">
                     <Checkbox onChange={(e) => setSpeakOtherLanguages(e.checked)} checked={speakOtherLanguages} name="doNotSpeakAnyLanguage" />
-                    <label htmlFor="ingredient3" className="letraPequena ml-2">
+                    <label htmlFor="ingredient3" className="letraPequena ml-2" style={{width:'500px'}}>
                         Tenho conhecimento em outro(s) idioma(s) além do meu idioma nativo
                     </label>
                 </div>
@@ -376,4 +379,4 @@ export const ChooserLanguages: React.FC<any> = ({}) => {
         </div>
     );
 };
-export default LanguagesStore;
+export default TabLanguagesStore;
