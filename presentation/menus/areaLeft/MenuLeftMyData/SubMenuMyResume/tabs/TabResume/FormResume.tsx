@@ -62,33 +62,33 @@ export const TabResume: React.FC<TabResumeProps> = ({}) => {
         <div>
             <LabelComponent
                 explanation="Esta informação será útil para orientar o recrutador que visualizar o seu perfil a respeito do seu objetivo profissional."
+                labelValue="Função / papel / emprego / ocupação que estou buscando:"
                 property="desiredJob"
                 errors={fieldErrors}
-                labelValue="Nova função / papel / emprego que eu atuaria:"
             >
                 <InputText invalid={fieldErrors.desiredJob} id="desiredJob" style={{ width: '75%' }} value={desiredJob} onChange={(e) => setDesiredJob(e.target.value)} />
             </LabelComponent>
             <LabelComponent
                 explanation="Esta informação é uma das mais importantes aos recrutadores, porém, somente deve ser preenchida se você não estiver pleiteando estágio / primeira oportunidade."
-                property="lastJob"
+                labelValue="A última função / papel / emprego / ocupação que atuei ou que estou atuando atualmente:"
                 errors={fieldErrors}
-                labelValue="A última função / papel / emprego que eu atuei ou que estou atuando:"
+                property="lastJob"
             >
                 <InputText invalid={fieldErrors.lastJob} style={{ width: '75%' }} id="lastJob" value={lastJob} onChange={(e) => setLastJob(e.target.value)} />
             </LabelComponent>
             <LabelComponent
                 explanation="Para nos resguardar da LGPD (Lei Geral de Proteção de Dados), não guardamos o seu currículo e nem nada sobre ele (como texto, por exemplo) em nossa base de dados, sendo assim, você precisa, preferencialmente, informar seu endereço do linkedin ou de algum site que sirva como seu currículo, neste site, tem de haver um meio para te contactar (e-mail, telefone, etc). Na falta de linkedin ou de site que sirva para currículo, você deve informar neste campo, um modo para te contactar (telefone, e-mail, etc), mas, para a sua própria segurança, aconselhamos, que este campo seja usado para guardar seu endereço do linkedin."
+                labelValue="Endereço (URL) para encontrar o meu linkedin:"
                 property="linkedinAddress"
                 errors={fieldErrors}
-                labelValue="Endereço (URL) para encontrar o meu linkedin:"
             >
                 <InputText invalid={fieldErrors.linkedinAddress} style={{ width: '75%' }} value={linkedinAddress} onChange={(e) => setLinkedinAddress(e.target.value)} />
             </LabelComponent>
             <LabelComponent
                 explanation="Recrutadores cujo os domínios de e-mail das empresas / consultorias mencionados aqui neste campo não poderão ver o seu endereço de linkedin / contato. Cabe ressaltar que se o recrutador estiver logado por outro e-mail com um domínio que não estiver mencionado aqui neste campo ou se ele estiver usando e-mails pessoais (gmail, outlook e afins), este recrutador poderá ter acesso ao seu link de linkedin / contato."
+                labelValue="Empresas / consultorias que não podem receber o meu linkedin:"
                 property="notAllowedCompany"
                 errors={fieldErrors}
-                labelValue="Empresas / consultorias que não podem receber o meu linkedin:"
             >
                 <AutoComplete
                     invalid={fieldErrors.notAllowedCompany}
@@ -101,14 +101,14 @@ export const TabResume: React.FC<TabResumeProps> = ({}) => {
             </LabelComponent>
             <LabelComponent
                 explanation="Para evitar problemas com a LGPD (Lei Geral de Proteção de Dados), não guardamos o texto do seu currículo. A cada nova atualização no seu currículo, você precisará copiar o texto de dentro dele e colar aqui novamente. O texto aqui colado é usado para alimentar as listas de habilidade da aba 'Habilidades' mais à frente."
+                labelValue="Todo o texto que copiei do meu currículo:"
                 property="resumeText"
                 errors={fieldErrors}
-                labelValue="Todo o texto que copiei do meu currículo:"
             >
                 <InputTextarea
+                    placeholder="Copie o texto do seu currículo e cole aqui."
                     invalid={fieldErrors.resumeText}
                     style={{ width: '75%' }}
-                    placeholder="Copie o texto do seu currículo e cole aqui."
                     value={resumeText}
                     onChange={(e) => setResumeText(e.target.value)}
                     rows={15}

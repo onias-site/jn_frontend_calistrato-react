@@ -20,11 +20,11 @@ const SubMenuMyResume = () => {
     const stateRegioes = RegioesStore((state: IRegioesStore) => ({...state}));
 
     const tabs = [
-        { label: 'Currículo', icon: 'pi pi-file', onMoveOnFowardTabs: stateResume.onMoveOnFowardTabs},
+        { label: 'Currículo', icon: 'pi pi-file-pdf', onMoveOnFowardTabs: stateResume.onMoveOnFowardTabs},
         { label: 'Idiomas', icon: 'pi pi-language', onMoveOnFowardTabs: stateLanguage.onMoveOnFowardTabs},
-        { label: 'Habilidades', icon: 'pi pi-check', title: 'Caso as habilidades estiverem desatualizadas / incorretas, volte à aba currículo e preencha o texto do currículo, para que possamos atualizar corretamente a sua lista de habilidades'},
-        { label: 'Opções', icon: 'pi pi-filter', onMoveOnFowardTabs: stateRegioes.onMoveOnFowardTabs},
-        { label: 'Salários', icon: 'pi pi-money-bill', onMoveOnFowardTabs: stateSalary.onMoveOnFowardTabs },
+        { label: 'Habilidades', icon: 'pi pi-linkedin', title: 'Caso as habilidades estiverem desatualizadas / incorretas, volte à aba currículo e preencha o texto do currículo, para que possamos atualizar corretamente a sua lista de habilidades'},
+        { label: 'Opções', icon: 'pi pi-cog', onMoveOnFowardTabs: stateRegioes.onMoveOnFowardTabs},
+        { label: 'Salários', icon: 'pi pi-dollar', onMoveOnFowardTabs: stateSalary.onMoveOnFowardTabs },
     ];
 
     return (

@@ -50,24 +50,24 @@ export const TabSalary: React.FC<TabSalaryProps> = ({}) => {
         <div>
             <IntegerFieldComponent
                 explanation="Caso esta opção estiver marcada, seu perfil não será selecionado para vagas de contrato CLT. Caso esta opção não estiver marcada, você deverá informar no campo de texto que será mostrado, o total em reais que te é interessante receber mensalmente."
-                maxValue={100000}
                 textFieldLabel="Minha pretensão salarial mensal CLT (número inteiro em reais)"
                 checkBoxLabel="Não aceito empregos CLT"
                 defaultValue={1500}
+                maxValue={100000}
                 setValue={setClt}
                 value={clt}
             />
             <IntegerFieldComponent
-                maxValue={100000}
                 explanation="Caso esta opção estiver marcada, seu perfil não será selecionado para vagas de contrato PJ. Caso esta opção não estiver marcada, você deverá informar no campo de texto que será mostrado, o total em reais que te é interessante receber mensalmente."
                 textFieldLabel="Minha pretensão salarial mensal PJ (número inteiro em reais)"
                 checkBoxLabel="Não aceito empregos PJ"
                 defaultValue={2500}
+                maxValue={100000}
                 setValue={setPj}
                 value={pj}
             />
             <IntegerFieldComponent
-                explanation="Caso esta opção estiver marcada, seu perfil não será selecionado para vagas de contratos que paguem em bitcoin. Caso esta opção não estiver marcada, você deverá informar no campo de texto que será mostrado, o total em reais que te é interessante receber mensalmente."
+                explanation="Caso esta opção estiver marcada, seu perfil não será selecionado para vagas que paguem em bitcoin. Caso esta opção não estiver marcada, você deverá informar no campo de texto que será mostrado, o total em reais que te é interessante receber mensalmente."
                 textFieldLabel="Minha pretensão em bitcoin (Valor equivalente em reais)"
                 checkBoxLabel="Não aceito eventuais freelancers em bitcoin"
                 defaultValue={1000}
@@ -76,10 +76,10 @@ export const TabSalary: React.FC<TabSalaryProps> = ({}) => {
                 value={btc}
             />
             <CheckBoxComponent
+                explanation="Caso esta opção estiver marcada, seu perfil estará à disposição de todos os recrutadores que tiverem vagas que buscam por perfis que negociam pretensão salarial (geralmente para baixo). Cabe ressaltar que esta opção é somente interessante, caso a oportunidade oferecida tiver benefícios (Plano de saúde, vale alimentação e varios outros) interessantes ou localização boa, ou home office ou qualquer outra coisa que compense receber salário menor."
                 checkBoxLabel="Minhas pretensões salariais são negociáveis"
                 setValue={setNegotiableClaim}
                 value={negotiableClaim}
-                explanation="Caso esta opção estiver marcada, seu perfil estará à disposição de todos os recrutadores que tiverem vagas que buscam por perfis que negociam pretensão salarial (geralmente para baixo). Cabe ressaltar que esta opção é somente interessante, caso a oportunidade oferecida tiver benefícios (Plano de saúde, vale alimentação e varios outros) interessantes ou localização boa, ou home office ou qualquer outra coisa que compense receber salário menor."
             />
         </div>
     );
