@@ -1,13 +1,14 @@
 'use client';
 
 import React from 'react';
+import { create } from 'zustand';
+import { AutoComplete } from 'primereact/autocomplete';
 
 import { InputText } from 'primereact/inputtext';
-import { AutoComplete } from 'primereact/autocomplete';
-import { create } from 'zustand';
 
 import { InputTextarea } from 'primereact/inputtextarea';
 import { LabelComponent } from '@/presentation/components/source/LabelComponent';
+import {NotAllowedCompany} from './NotAllowedCompany';
 
 export interface TabResumeProps {}
 
@@ -90,13 +91,10 @@ export const TabResume: React.FC<TabResumeProps> = ({}) => {
                 property="notAllowedCompany"
                 errors={fieldErrors}
             >
-                <AutoComplete
+                <NotAllowedCompany
+                    setNotAllowedCompany={(e) => setNotAllowedCompany(e)}
                     invalid={fieldErrors.notAllowedCompany}
-                    field="name"
-                    className="form-input"
-                    style={{ width: '75%' }}
-                    value={notAllowedCompany}
-                    onChange={(e) => setNotAllowedCompany(e.value)}
+                    notAllowedCompany={notAllowedCompany}
                 />
             </LabelComponent>
             <LabelComponent

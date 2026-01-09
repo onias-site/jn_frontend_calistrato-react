@@ -12,19 +12,24 @@ import { TabResume, TabResumeStore, ITabResumeStore } from '@/presentation/menus
 import { TabSalary, TabSalaryStore, ITabSalaryStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabSalary/FormSalary';
 import { TabSkills } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabSkills/ChooserSkills';
 import { Tabs } from '@/presentation/components/source/Tabs';
+import JnAjax from '@/app/JnAjax'
 
 const SubMenuMyResume = () => {
     const stateLanguage = TabLanguagesStore((state: ITabLanguagesStore) => ({...state}));
     const stateSalary = TabSalaryStore((state: ITabSalaryStore) => ({ ...state }));
     const stateResume = TabResumeStore((state: ITabResumeStore) => ({ ...state }));
     const stateRegioes = RegioesStore((state: IRegioesStore) => ({...state}));
+    const callbacks : any = {};
+    callbacks[200] = (response:any) => alert(JSON.stringify(response));
+
+    const testeAjax = () => JnAjax.doAnAjaxRequest('companies/search/autocomplete/TRA', callbacks,'GET', {},  {}, 'http://localhost:8081');
 
     const tabs = [
         { label: 'Currículo', icon: 'pi pi-file-pdf', onMoveOnFowardTabs: stateResume.onMoveOnFowardTabs},
         { label: 'Idiomas', icon: 'pi pi-language', onMoveOnFowardTabs: stateLanguage.onMoveOnFowardTabs},
         { label: 'Habilidades', icon: 'pi pi-linkedin', title: 'Caso as habilidades estiverem desatualizadas / incorretas, volte à aba currículo e preencha o texto do currículo, para que possamos atualizar corretamente a sua lista de habilidades'},
         { label: 'Opções', icon: 'pi pi-cog', onMoveOnFowardTabs: stateRegioes.onMoveOnFowardTabs},
-        { label: 'Salários', icon: 'pi pi-dollar', onMoveOnFowardTabs: stateSalary.onMoveOnFowardTabs },
+        { label: 'Salários', icon: 'pi pi-dollar', onMoveOnFowardTabs: testeAjax},
     ];
 
     return (

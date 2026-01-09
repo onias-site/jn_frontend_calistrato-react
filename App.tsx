@@ -5,6 +5,8 @@ import { IRootState } from '@/store';
 import { toggleRTL, toggleTheme, toggleMenu, toggleLayout, toggleAnimation, toggleNavbar, toggleSemidark } from '@/store/themeConfigSlice';
 import Loading from '@/presentation/layouts/loading';
 import { getTranslation } from '@/i18n';
+import {jquery} from 'jquery';
+
 
 function App({ children }: PropsWithChildren) {
     const themeConfig = useSelector((state: IRootState) => state.themeConfig);
