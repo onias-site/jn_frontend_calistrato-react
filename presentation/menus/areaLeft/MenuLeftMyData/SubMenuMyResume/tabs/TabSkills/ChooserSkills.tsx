@@ -7,7 +7,6 @@ import { InputText } from 'primereact/inputtext';
 
 import React from 'react';
 
-
 interface SkillsListProps {
     moveBetweenLists: (item: any) => void;
     name: string;
@@ -77,9 +76,10 @@ interface SkillsInternalListProps {
     moveBetweenLists: (item: any) => void;
     name: string;
 }
-interface ISkillsInternalListStore {
+export interface ISkillsInternalListStore {
     registerStore: (name: string) => void;
     stores: any;
+    getSkills : (storeName: string) => any;
 }
 
 class SkillListStore {
@@ -114,11 +114,23 @@ class SkillListStore {
     };
 }
 
-const SkillsInternalListStore = create<ISkillsInternalListStore>((set, get) => ({
+export const SkillsInternalListStore = create<ISkillsInternalListStore>((set, get) => ({
     registerStore: (name: string) => {
         const { stores } = get();
         stores[name] = stores[name] || new SkillListStore();
     },
+
+    getSkills : (storeName: string) =>{
+        const { stores } = get();
+        const store = stores[storeName];
+        if(!store){
+            return [];
+        }
+        return store.list.map((word:any) => {
+            return {word, skill: word}
+        });
+    },
+
     setStores: (stores: any) => {
         set({ stores });
     },
@@ -196,12 +208,8 @@ export interface ITabSkillsStore {
     setSkillsGroups: (skillsGroups: TabSkillsModel[]) => void;
 }
 
-export const TabSkillsStore = create<ITabSkillsStore>((set) => ({
-    skillsGroups: [
-        { skills: [], name: 'hide', title: 'NÃO QUERO que meu currículo seja encontrado pelas seguintes habilidades:' },
-        { skills: ['JAVA', 'SPRING', 'CSS', 'C#', 'SQL', 'ANGULAR', 'ELASTICSEARCH', 'REACT'], name: 'show', title: 'QUERO que meu currículo seja encontrado pelas seguintes habilidades:' },
-    ],
-
+export const TabSkillsStore = create<ITabSkillsStore>((set, get) => ({
+    skillsGroups: [],
     setSkillsGroups: (skillsGroups: TabSkillsModel[]) => set({ skillsGroups }),
 }));
 
@@ -224,6 +232,7 @@ export const TabSkills: React.FC<TabSkillsProps> = () => {
             setSkillsGroups(skillsGroups);
         }
     };
+    console.log('sendo renderizado', skillsGroups[1].skills.length);
     return (
         <div>
             <div className="flex-column flex" style={{ maxHeight: '1000px' }}>

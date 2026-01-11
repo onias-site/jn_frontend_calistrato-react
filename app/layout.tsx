@@ -21,7 +21,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     const toast = useRef(null);
     const translate = (error: any) => {
         const translations = {};
-        return translations[error.errorName] || error.errorDescription;
+        return translations[error.errorName] || (typeof error.errorDescription === "string"
+        ?
+        error.errorDescription
+        :
+        showErrorMessages(error.errorDescription.errors)
+        );
     };
 
     useEffect(() => {
@@ -30,15 +35,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         });
     }, []);
 
-    const errors = serverResponse.errors;
-    for (let fieldName in errors) {
-        const errorsInTheField = errors[fieldName];
-        errorsInTheField.forEach((error: any) => {
-            const detail = translate(error);
-            const summary = fieldName;
-            toast.current.show({ severity: 'error', summary, detail, life: 10000 });
-        });
+    const showErrorMessages = (errors: any) => {
+        for (let fieldName in errors) {
+            const errorsInTheField = errors[fieldName];
+            errorsInTheField.forEach((error: any) => {
+                const detail = translate(error);
+                const summary = fieldName;
+                toast.current.show({ severity: 'error', summary, detail, life: 10000 });
+            });
+        }
+
     }
+
+    showErrorMessages(serverResponse.errors);
     delete serverResponse.errors;
     return (
         <QueryProvider>
