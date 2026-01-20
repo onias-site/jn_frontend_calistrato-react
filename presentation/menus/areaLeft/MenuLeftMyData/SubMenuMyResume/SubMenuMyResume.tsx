@@ -13,6 +13,8 @@ import { TabSalary, TabSalaryStore, ITabSalaryStore } from '@/presentation/menus
 import { TabSkills, SkillsInternalListStore, ISkillsInternalListStore, TabSkillsStore, ITabSkillsStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabSkills/ChooserSkills';
 import { Tabs } from '@/presentation/components/source/Tabs';
 import JnAjax from '@/app/JnAjax';
+import {TabSkills2} from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabSkills/TabSkills'
+
 
 const skillsFromText = (response: any, skills: any, stateSkills: any) => {
     const skillsGroups = [
@@ -67,7 +69,7 @@ const SubMenuMyResume = () => {
             <Tabs tabs={tabs} lastButtonLabel="Salvar dados">
                 <TabResume />
                 <TabLanguages />
-                <TabSkills />
+                <TabSkills2 groups = {[]} />
                 <TabOptions />
                 <TabSalary />
             </Tabs>
