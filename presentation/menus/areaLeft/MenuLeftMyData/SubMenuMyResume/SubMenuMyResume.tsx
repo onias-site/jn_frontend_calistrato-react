@@ -13,47 +13,19 @@ import { TabSalary, TabSalaryStore, ITabSalaryStore } from '@/presentation/menus
 import { TabSkills, SkillsInternalListStore, ISkillsInternalListStore, TabSkillsStore, ITabSkillsStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabSkills/ChooserSkills';
 import { Tabs } from '@/presentation/components/source/Tabs';
 import JnAjax from '@/app/JnAjax';
-import {TabSkills2} from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabSkills/TabSkills'
-
-
-const skillsFromText = (response: any, skills: any, stateSkills: any) => {
-    const skillsGroups = [
-        { skills, name: 'hide', title: 'NÃO QUERO que meu currículo seja encontrado pelas seguintes habilidades:' },
-        { skills: response.skill.map((x:any) => x.word), name: 'show', title: 'QUERO que meu currículo seja encontrado pelas seguintes habilidades:' },
-    ];
-    console.log('vindo quentinho do java', skillsGroups[1].skills.length);
-    stateSkills.setSkillsGroups(skillsGroups);
-}
-
+import {TabSkills2, TabSkillStore, ITabSkillStore} from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabSkills/TabSkills'
 
 const SubMenuMyResume = () => {
-    const stateSkills = SkillsInternalListStore((state: ISkillsInternalListStore) => ({ ...state }));
+    const stateSkills = TabSkillStore((state: ITabSkillStore) => ({
+        ...state,
+    }));
     const stateLanguage = TabLanguagesStore((state: ITabLanguagesStore) => ({ ...state }));
-    const stateSkills2 = TabSkillsStore((state: ITabSkillsStore) => ({ ...state }));
     const stateSalary = TabSalaryStore((state: ITabSalaryStore) => ({ ...state }));
     const stateResume = TabResumeStore((state: ITabResumeStore) => ({ ...state }));
     const stateRegioes = RegioesStore((state: IRegioesStore) => ({ ...state }));
-    const callbacks: any = {};
-
-    const excludedSkill = stateSkills.getSkills('hide');
-
-    callbacks[200] = (response: any) => skillsFromText(response, excludedSkill, stateSkills2);
-
-    const getSkillsFromText = () =>
-        JnAjax.doAnAjaxRequest(
-            'skills/fromText',
-            callbacks,
-            'POST',
-            {
-                text: stateResume.resumeText,
-                excludedSkill,
-            },
-            {},
-            'http://localhost:8081'
-        );
 
     const tabs = [
-        { label: 'Currículo', icon: 'pi pi-file-pdf', onMoveOnFowardTabs: getSkillsFromText },
+        { label: 'Currículo', icon: 'pi pi-file-pdf', onMoveOnFowardTabs:  () => loadSkillsFromBackEnd(stateResume, stateSkills) },
         { label: 'Idiomas', icon: 'pi pi-language', onMoveOnFowardTabs: stateLanguage.onMoveOnFowardTabs },
         {
             label: 'Habilidades',
@@ -69,12 +41,64 @@ const SubMenuMyResume = () => {
             <Tabs tabs={tabs} lastButtonLabel="Salvar dados">
                 <TabResume />
                 <TabLanguages />
-                <TabSkills2 groups = {[]} />
+                <TabSkills2 />
                 <TabOptions />
                 <TabSalary />
             </Tabs>
         </div>
     );
 };
+
+const loadSkillsFromBackEnd = (stateResume: any, stateSkills: any) => {
+    console.log('stateResume', stateResume);
+    const callbacks: any = {};
+    callbacks[200] = (responseFromBackEnd: any) => putSkillsInStore(responseFromBackEnd, stateSkills);
+
+    const requestSkillsToBackEnd = createRequestSkillsToBackEnd(stateResume, stateSkills);
+
+    JnAjax.doAnAjaxRequest(
+        'skills/fromText',
+        callbacks,
+        'POST',
+        requestSkillsToBackEnd,
+        {},
+        'http://localhost:8081'
+    );
+
+}
+
+const createRequestSkillsToBackEnd = (stateResume: any, stateSkills: any) => {
+
+    const excludedSkill = stateSkills.getWordsFromGroup('excludedSkillFromResume');
+    const text = stateResume.resumeText;
+
+    const requestSkillsToBackEnd = {
+        excludedSkill,
+        text
+    };
+
+    return requestSkillsToBackEnd;
+}
+
+const putSkillsInStore = (responseFromBackEnd: any, stateSkills: any) => {
+    const excludedSkillsFromResume = {
+        title: 'Habilidades pelas quais eu NÃO quero que o meu currículo seja encontrado',
+        list: responseFromBackEnd.excludedSkill,
+        name: 'excludedSkillsFromResume'
+    };
+
+    const skillsFromResume = {
+        title: 'Habilidades pelas quais eu quero que o meu currículo seja ENCONTRADO',
+        list: responseFromBackEnd.skill,
+        name: 'skillsFromResume'
+    };
+
+    const groups = [excludedSkillsFromResume, skillsFromResume];
+
+    stateSkills.setGroups(groups);
+}
+
+
+
 
 export default SubMenuMyResume;

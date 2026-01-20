@@ -8,17 +8,42 @@ import { InputText } from 'primereact/inputtext';
 import React from 'react';
 
 export interface TabSkillsProps {
-    groups: SkillListModel[];
 }
 
 export class SkillListModel {
-    constructor(filter: string,  title: string, name: string, list: any[] = [], setFilter: (str: string) => void, setList: (list: any[]) => void ){
+    constructor(
+        filter: string = '',
+        list: any[] = [],
+        title: string,
+        name: string
+        ){
 
     }
 }
+export interface ITabSkillStore{
+    setGroups: (groups: SkillListModel[]) => void;
+    getWordsFromGroup: (name: string) => string[];
+    groups: SkillListModel[];
+}
 
-export const TabSkills2: React.FC<TabSkillsProps> = ({groups}) => {
+export const TabSkillStore = create<ITabSkillStore>((set, get) => ({
+    setGroups:(groups: SkillListModel[]) => {
+        set({groups});
+    },
 
+    getWordsFromGroup: (name: string) =>{
+        const {groups} = get();
+
+        return groups.filter((x:any) => x.name == name).map((x:any) => x.label);
+    },
+    groups: []
+
+}));
+
+export const TabSkills2: React.FC<TabSkillsProps> = () => {
+    const {groups, setGroups} = TabSkillStore((state: ITabSkillStore) => ({
+        ...state,
+    }));
 
     const transferToAnotherList = (name: string, item: any) => {
         for(let index in groups){
@@ -30,23 +55,32 @@ export const TabSkills2: React.FC<TabSkillsProps> = ({groups}) => {
                 continue;
             }
 
-            group.setList(group.list.filter(x => x.label != x.label));
-
+            group.setList(group.list.filter((x: any) => x.label != item.label));
         }
+        setGroups(groups);
     };
+
+    const setValue = (name: string, field: string, value: any) =>{
+        groups.filter((group: any) => group.name == name)[0][field] = value;
+        setGroups(groups);
+    };
+
+
+
     const width = groups.length ? 100 / groups.length + '%' : '';
 
     return (
         <div className="flex-column flex" style={{ maxHeight: '1000px' }}>
             {
-                groups.map((group) =>
+                groups.map((group: any) =>
                 <SkillList
                     transferToAnotherList = {(item: any) => transferToAnotherList(group.name, item)}
-                    setList = {(list:any[]) => group.setList(list)}
-                    setFilter = {group.setFilter}
+                    setFilter = {obj => setValue(group.name, 'filter', obj)}
+                    setList = {obj => setValue(group.name, 'list', obj)}
                     filter = {group.filter}
                     title = {group.title}
                     list = {group.list}
+                    key = {group.name}
                     width = {width}
                 />)
             }
@@ -94,7 +128,7 @@ const SkillList: React.FC<SkillListProps> = ({ title, width, list, filter, setFi
                         >
                             {list.length ? (
                                 list
-                                    .filter((item) => item.startsWith(filter))
+                                    .filter((item) => !filter || item.startsWith(filter))
                                     .map((skill: any, id: number) => (
                                         <li key={id} className="mb-2.5 cursor-grab ">
                                             <div className="items-md-center flex flex-col rounded-md border border-white-light bg-white px-6 py-3.5 text-center dark:border-dark dark:bg-[#1b2e4b] md:flex-row ltr:md:text-left rtl:md:text-right">
