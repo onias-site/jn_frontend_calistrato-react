@@ -28,6 +28,15 @@ export interface ITabSkillStore{
 
 export const TabSkillStore = create<ITabSkillStore>((set, get) => ({
     setGroups:(groups: SkillListModel[]) => {
+
+        groups.forEach(group =>{
+
+            const sorter = (a: any, b: any) => {
+                return ('' + a.label).localeCompare('' + b.label);
+            };
+            group.list && group.list.sort(sorter);
+        });
+
         set({groups});
     },
 
@@ -45,17 +54,18 @@ export const TabSkills2: React.FC<TabSkillsProps> = () => {
         ...state,
     }));
 
+
     const transferToAnotherList = (name: string, item: any) => {
         for(let index in groups){
 
             const group = groups[index];
 
             if(group.name == name){
-                group.setList([...group.list, item]);
+                group.list = [...group.list, item];
                 continue;
             }
 
-            group.setList(group.list.filter((x: any) => x.label != item.label));
+            group.list = group.list.filter((x: any) => x.label != item.label);
         }
         setGroups(groups);
     };
@@ -128,7 +138,7 @@ const SkillList: React.FC<SkillListProps> = ({ title, width, list, filter, setFi
                         >
                             {list.length ? (
                                 list
-                                    .filter((item) => !filter || item.startsWith(filter))
+                                    .filter((item) => !filter || item.label.toUpperCase().startsWith(filter.toUpperCase()))
                                     .map((skill: any, id: number) => (
                                         <li key={id} className="mb-2.5 cursor-grab ">
                                             <div className="items-md-center flex flex-col rounded-md border border-white-light bg-white px-6 py-3.5 text-center dark:border-dark dark:bg-[#1b2e4b] md:flex-row ltr:md:text-left rtl:md:text-right">
