@@ -7,95 +7,106 @@ import { InputText } from 'primereact/inputtext';
 
 import React from 'react';
 
-export interface TabSkillsProps {
-}
+import { ScrollPanel } from 'primereact/scrollpanel';
+
+import { Accordion, AccordionTab } from 'primereact/accordion';
+
+import { Panel } from 'primereact/panel';
 
 export class SkillListModel {
-    constructor(
-        filter: string = '',
-        list: any[] = [],
-        title: string,
-        name: string
-        ){
-
-    }
+    constructor(main: boolean = false, filter: string = '', list: any[] = [], title: string, name: string) {}
 }
-export interface ITabSkillStore{
-    setGroups: (groups: SkillListModel[]) => void;
+export interface ITabSkillStore {
+    setAccordionList: (accordionList: any[]) => void;
+    setGroups: (groups: SkillListModel[], getAccordionList: (group: any) => any[]) => void;
     getWordsFromGroup: (name: string) => string[];
     groups: SkillListModel[];
+    accordionList: any[];
 }
+const getSorter = (fieldName: string) => {
+    const sorter = (a: any, b: any) => {
+        return ('' + a[fieldName]).localeCompare('' + b[fieldName]);
+    };
+    return sorter;
+};
 
 export const TabSkillStore = create<ITabSkillStore>((set, get) => ({
-    setGroups:(groups: SkillListModel[]) => {
-
-        groups.forEach(group =>{
-
-            const sorter = (a: any, b: any) => {
-                return ('' + a.label).localeCompare('' + b.label);
-            };
-            group.list && group.list.sort(sorter);
+    setGroups: (groups: SkillListModel[], getAccordionList: (group: any) => any[]) => {
+        groups.forEach((group) => {
+            group.list && group.list.sort(getSorter('label'));
         });
 
-        set({groups});
+        const accordionList = getAccordionList(groups.filter((group) => group.main)[0]);
+
+        accordionList.sort(getSorter('skill'));
+
+        set({ groups, accordionList });
     },
 
-    getWordsFromGroup: (name: string) =>{
-        const {groups} = get();
-
-        return groups.filter((x:any) => x.name == name).map((x:any) => x.label);
+    getWordsFromGroup: (name: string) => {
+        const { groups } = get();
+        const found = groups.filter((x: any) => x.name == name)[0];
+        return (found && found.list) || [];
     },
-    groups: []
-
+    groups: [],
+    accordionList: [],
+    setAccordionList: (accordionList: any[]) => {
+        set({ accordionList });
+    },
 }));
+export interface TabSkillsProps {
+    getAccordionList: (group: any) => any[];
+}
 
-export const TabSkills2: React.FC<TabSkillsProps> = () => {
-    const {groups, setGroups} = TabSkillStore((state: ITabSkillStore) => ({
+export const TabSkills2: React.FC<TabSkillsProps> = ({ getAccordionList }) => {
+    const { groups, setGroups } = TabSkillStore((state: ITabSkillStore) => ({
         ...state,
     }));
 
-
     const transferToAnotherList = (name: string, item: any) => {
-        for(let index in groups){
+        let allItems: any[] = [];
 
+        for (let index in groups) {
             const group = groups[index];
+            allItems = [...allItems, ...group.list];
+        }
 
-            if(group.name == name){
-                group.list = [...group.list, item];
+        const obj = allItems.filter((x) => x.label == item)[0];
+
+        for (let index in groups) {
+            const group = groups[index];
+            if (group.name == name) {
+                group.list = [...group.list, obj];
                 continue;
             }
 
-            group.list = group.list.filter((x: any) => x.label != item.label);
+            group.list = group.list.filter((x: any) => x.label != obj.label);
         }
-        setGroups(groups);
+        setGroups(groups, getAccordionList);
     };
 
-    const setValue = (name: string, field: string, value: any) =>{
+    const setValue = (name: string, field: string, value: any) => {
         groups.filter((group: any) => group.name == name)[0][field] = value;
-        setGroups(groups);
+        setGroups(groups, getAccordionList);
     };
 
-
-
-    const width = groups.length ? 100 / groups.length + '%' : '';
+    const width = groups.length ? 100 / (groups.length + 1) + '%' : '';
 
     return (
         <div className="flex-column flex" style={{ maxHeight: '1000px' }}>
-            {
-                groups.map((group: any) =>
+            <AccordionList width={width} />
+            {groups.map((group: any) => (
                 <SkillList
-                    transferToAnotherList = {(item: any) => transferToAnotherList(group.name, item)}
-                    setFilter = {obj => setValue(group.name, 'filter', obj)}
-                    setList = {obj => setValue(group.name, 'list', obj)}
-                    filter = {group.filter}
-                    title = {group.title}
-                    list = {group.list}
-                    key = {group.name}
-                    width = {width}
-                />)
-            }
-
-
+                    transferToAnotherList={(item: any) => transferToAnotherList(group.name, item)}
+                    setFilter={(obj) => setValue(group.name, 'filter', obj)}
+                    setList={(obj) => setValue(group.name, 'list', obj)}
+                    filter={group.filter}
+                    title={group.title}
+                    list={group.list}
+                    key={group.name}
+                    width={width}
+                />
+            ))}
         </div>
     );
 };
@@ -111,10 +122,13 @@ interface SkillListProps {
 }
 
 const SkillList: React.FC<SkillListProps> = ({ title, width, list, filter, setFilter, setList, transferToAnotherList }) => {
+    // const originalList = [...list];
+
+    const filtro = (item: any) => !filter || item.label.toUpperCase().startsWith(filter.toUpperCase());
     return (
-        <div style={{ width, padding: '10px' }}>
+        <ScrollPanel style={{ width, padding: '10px' }}>
             <div className="mb-5" style={{ fontSize: '10px' }}>
-                <label>{title}</label>
+                <label>{`${title} (${list.length})`}</label>
                 {list.length >= 7 && (
                     <InputText
                         style={{ padding: '10px', width: '100%' }}
@@ -128,8 +142,8 @@ const SkillList: React.FC<SkillListProps> = ({ title, width, list, filter, setFi
                 <div className="gap-x-12 sm:grid-cols-2">
                     <ul>
                         <ReactSortable
-                            list={list}
-                            setList={(myList) => setList(myList)}
+                            list={list.filter(filtro)}
+                            setList={(myList) => setList(myList.filter(filtro))}
                             animation={200}
                             delay={1}
                             ghostClass="gu-transit"
@@ -137,19 +151,17 @@ const SkillList: React.FC<SkillListProps> = ({ title, width, list, filter, setFi
                             onAdd={(evt) => transferToAnotherList(evt.item.textContent)}
                         >
                             {list.length ? (
-                                list
-                                    .filter((item) => !filter || item.label.toUpperCase().startsWith(filter.toUpperCase()))
-                                    .map((skill: any, id: number) => (
-                                        <li key={id} className="mb-2.5 cursor-grab ">
-                                            <div className="items-md-center flex flex-col rounded-md border border-white-light bg-white px-6 py-3.5 text-center dark:border-dark dark:bg-[#1b2e4b] md:flex-row ltr:md:text-left rtl:md:text-right">
-                                                <div className="flex flex-1 flex-col items-center justify-between md:flex-row">
-                                                    <div className="my-3 font-semibold md:my-0 ">
-                                                        <div className="text-base text-dark dark:text-[#bfc9d4]">{skill.label}</div>
-                                                    </div>
+                                list.filter(filtro).map((skill: any, id: number) => (
+                                    <li key={id} className="mb-2.5 cursor-grab ">
+                                        <div className="items-md-center flex flex-col rounded-md border border-white-light bg-white px-6 py-3.5 text-center dark:border-dark dark:bg-[#1b2e4b] md:flex-row ltr:md:text-left rtl:md:text-right">
+                                            <div className="flex flex-1 flex-col items-center justify-between md:flex-row">
+                                                <div className="my-3 font-semibold md:my-0 ">
+                                                    <div className="text-base text-dark dark:text-[#bfc9d4]">{skill.label}</div>
                                                 </div>
                                             </div>
-                                        </li>
-                                    ))
+                                        </div>
+                                    </li>
+                                ))
                             ) : (
                                 <li className="mb-2.5 cursor-grab">
                                     <div className="flex items-center justify-center md:flex-row">
@@ -163,6 +175,35 @@ const SkillList: React.FC<SkillListProps> = ({ title, width, list, filter, setFi
                     </ul>
                 </div>
             </div>
-        </div>
+        </ScrollPanel>
+    );
+};
+interface AccordionListProps {
+    width: string;
+}
+const AccordionList: React.FC<AccordionListProps> = ({ width }) => {
+    const { accordionList } = TabSkillStore((state: ITabSkillStore) => ({
+        ...state,
+    }));
+
+    return (
+        <ScrollPanel style={{ width, padding: '10px' }}>
+            <div className="mb-5" style={{ fontSize: '10px' }}>
+                <label>Meus conhecimentos implícitos ({accordionList.length})</label>
+                <Panel>
+                    <Accordion>
+                        {accordionList.map((item: any, id: any) => (
+                            <AccordionTab key={id} header={`${item.skill} (${item.children.length})`}>
+                                {item.children.map((child: any) => (
+                                    <p className="m-0" key={child.label}>
+                                        {child.label}
+                                    </p>
+                                ))}
+                            </AccordionTab>
+                        ))}
+                    </Accordion>
+                </Panel>
+            </div>
+        </ScrollPanel>
     );
 };

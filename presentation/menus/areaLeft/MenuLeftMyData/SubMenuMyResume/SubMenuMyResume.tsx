@@ -14,6 +14,7 @@ import { TabSkills, SkillsInternalListStore, ISkillsInternalListStore, TabSkills
 import { Tabs } from '@/presentation/components/source/Tabs';
 import JnAjax from '@/app/JnAjax';
 import {TabSkills2, TabSkillStore, ITabSkillStore} from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabSkills/TabSkills'
+import { items } from '@/presentation/modules/MeuRecrutamento/MinhasVagas/application/NovaVaga/utils/itens-ordenacao';
 
 const SubMenuMyResume = () => {
     const stateSkills = TabSkillStore((state: ITabSkillStore) => ({
@@ -41,7 +42,7 @@ const SubMenuMyResume = () => {
             <Tabs tabs={tabs} lastButtonLabel="Salvar dados">
                 <TabResume />
                 <TabLanguages />
-                <TabSkills2 />
+                <TabSkills2 getAccordionList = {getImplicitSkills}/>
                 <TabOptions />
                 <TabSalary />
             </Tabs>
@@ -50,7 +51,6 @@ const SubMenuMyResume = () => {
 };
 
 const loadSkillsFromBackEnd = (stateResume: any, stateSkills: any) => {
-    console.log('stateResume', stateResume);
     const callbacks: any = {};
     callbacks[200] = (responseFromBackEnd: any) => putSkillsInStore(responseFromBackEnd, stateSkills);
 
@@ -69,7 +69,7 @@ const loadSkillsFromBackEnd = (stateResume: any, stateSkills: any) => {
 
 const createRequestSkillsToBackEnd = (stateResume: any, stateSkills: any) => {
 
-    const excludedSkill = stateSkills.getWordsFromGroup('excludedSkillFromResume');
+    const excludedSkill = stateSkills.getWordsFromGroup('excludedSkillsFromResume');
     const text = stateResume.resumeText;
 
     const requestSkillsToBackEnd = {
@@ -90,15 +90,38 @@ const putSkillsInStore = (responseFromBackEnd: any, stateSkills: any) => {
     const skillsFromResume = {
         title: 'Habilidades pelas quais eu quero que o meu currículo seja ENCONTRADO',
         list: responseFromBackEnd.skill,
-        name: 'skillsFromResume'
+        name: 'skillsFromResume',
+        main: true
     };
 
     const groups = [excludedSkillsFromResume, skillsFromResume];
 
-    stateSkills.setGroups(groups);
+    stateSkills.setGroups(groups, getImplicitSkills);
+    stateSkills.setAccordionList(responseFromBackEnd.implicitSkills);
 }
 
+const getImplicitSkills = (group: any): any[] =>{
+    let allParents : any[] = [];
+    group.list.forEach((item: any) =>{
+        allParents = [...allParents, ...item.parent];
 
+    });
+
+    const skills = group.list.map((item: any) => item.skill);
+
+    const filteredParents = allParents.filter((parent: any) =>  !skills.includes(parent));
+
+    const set = new Set(filteredParents);
+
+    const array = [...set].map((parent: any) => {
+        const children = group.list.filter((skill: any) => skill.parent.includes(parent));
+        const skill = parent;
+        const response = {children, skill};
+        return response;
+    });
+
+    return array;
+}
 
 
 export default SubMenuMyResume;

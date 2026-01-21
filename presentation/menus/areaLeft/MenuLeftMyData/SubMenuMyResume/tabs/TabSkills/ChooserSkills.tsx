@@ -232,7 +232,6 @@ export const TabSkills: React.FC<TabSkillsProps> = () => {
             setSkillsGroups(skillsGroups);
         }
     };
-    console.log('sendo renderizado', skillsGroups[1].skills.length);
     return (
         <div>
             <div className="flex-column flex" style={{ maxHeight: '1000px' }}>
