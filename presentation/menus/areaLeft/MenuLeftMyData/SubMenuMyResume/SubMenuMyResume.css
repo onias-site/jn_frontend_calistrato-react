@@ -19,7 +19,7 @@
     border-width: 1px;
     width: 100%;
 }
-.p-dropdown-label {
+.p-dropdown-label,.p-accordion-header, li {
     font-size: 10px;
 }
 .tituloDaAba {

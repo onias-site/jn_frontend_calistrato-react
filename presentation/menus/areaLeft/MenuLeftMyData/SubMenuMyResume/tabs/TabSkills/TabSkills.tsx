@@ -194,9 +194,10 @@ const AccordionList: React.FC<AccordionListProps> = ({ width }) => {
                     <Accordion>
                         {accordionList.map((item: any, id: any) => (
                             <AccordionTab key={id} header={`${item.skill} (${item.children.length})`}>
-                                {item.children.map((child: any) => (
+                               <h1 style={{fontSize: "7px"}}>Habilidades associadas a {item.skill}:</h1>
+                                {item.children.map((child: any, counter: any) => (
                                     <p className="m-0" key={child.label}>
-                                        {child.label}
+                                        {(counter + 1)+': ' + child.label}
                                     </p>
                                 ))}
                             </AccordionTab>
