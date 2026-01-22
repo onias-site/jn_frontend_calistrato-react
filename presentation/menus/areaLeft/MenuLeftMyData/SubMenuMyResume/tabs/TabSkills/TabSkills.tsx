@@ -189,10 +189,10 @@ const AccordionList: React.FC<AccordionListProps> = ({ width }) => {
     return (
         <ScrollPanel style={{ width, padding: '10px' }}>
             <div className="mb-5" style={{ fontSize: '10px' }}>
-                <label>Meus conhecimentos implícitos ({accordionList.length})</label>
+                <label>Meus conhecimentos implícitos ({accordionList ? accordionList.length : 0})</label>
                 <Panel>
                     <Accordion>
-                        {accordionList.map((item: any, id: any) => (
+                        {accordionList && accordionList.map((item: any, id: any) => (
                             <AccordionTab key={id} header={`${item.skill} (${item.children.length})`}>
                                <h1 style={{fontSize: "7px"}}>Habilidades associadas a {item.skill}:</h1>
                                 {item.children.map((child: any, counter: any) => (
