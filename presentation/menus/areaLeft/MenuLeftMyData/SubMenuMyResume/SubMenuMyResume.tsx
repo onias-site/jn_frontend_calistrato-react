@@ -14,7 +14,6 @@ import { TabSkills, SkillsInternalListStore, ISkillsInternalListStore, TabSkills
 import { Tabs } from '@/presentation/components/source/Tabs';
 import JnAjax from '@/app/JnAjax';
 import {TabSkills2, TabSkillStore, ITabSkillStore} from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabSkills/TabSkills'
-import { items } from '@/presentation/modules/MeuRecrutamento/MinhasVagas/application/NovaVaga/utils/itens-ordenacao';
 
 const SubMenuMyResume = () => {
     const stateSkills = TabSkillStore((state: ITabSkillStore) => ({

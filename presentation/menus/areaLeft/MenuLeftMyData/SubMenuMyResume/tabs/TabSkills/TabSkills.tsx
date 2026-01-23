@@ -5,16 +5,20 @@ import { ReactSortable } from 'react-sortablejs';
 
 import { InputText } from 'primereact/inputtext';
 
-import React from 'react';
+import React, { useState } from 'react';
 
 import { ScrollPanel } from 'primereact/scrollpanel';
 
 import { Accordion, AccordionTab } from 'primereact/accordion';
 
-import { Panel } from 'primereact/panel';
+import { Tooltip } from 'primereact/tooltip';
+import { Button } from 'primereact/button';
+import { Dialog } from 'primereact/dialog';
+import { InputTextarea } from 'primereact/inputtextarea';
+import { LabelComponent } from '@/presentation/components/source/LabelComponent';
 
 export class SkillListModel {
-    constructor(main: boolean = false, filter: string = '', list: any[] = [], title: string, name: string) {}
+    constructor(main: boolean = false, filter: string = '', list: any[] = [], originalList: any[] = [], title: string, name: string) {}
 }
 export interface ITabSkillStore {
     setAccordionList: (accordionList: any[]) => void;
@@ -34,6 +38,7 @@ export const TabSkillStore = create<ITabSkillStore>((set, get) => ({
     setGroups: (groups: SkillListModel[], getAccordionList: (group: any) => any[]) => {
         groups.forEach((group) => {
             group.list && group.list.sort(getSorter('label'));
+            group.originalList = [...group.list];
         });
 
         const accordionList = getAccordionList(groups.filter((group) => group.main)[0]);
@@ -90,6 +95,11 @@ export const TabSkills2: React.FC<TabSkillsProps> = ({ getAccordionList }) => {
         setGroups(groups, getAccordionList);
     };
 
+    const setFilter = (name: string, filter: any) => {
+        const group = groups.filter((group: any) => group.name == name)[0];
+        group.filter = filter;
+    };
+
     const width = groups.length ? 100 / (groups.length + 1) + '%' : '';
 
     return (
@@ -103,6 +113,7 @@ export const TabSkills2: React.FC<TabSkillsProps> = ({ getAccordionList }) => {
                     filter={group.filter}
                     title={group.title}
                     list={group.list}
+                    main={group.main}
                     key={group.name}
                     width={width}
                 />
@@ -118,18 +129,19 @@ interface SkillListProps {
     filter: string;
     title: string;
     width: string;
+    main: boolean;
     list: any[];
 }
 
-const SkillList: React.FC<SkillListProps> = ({ title, width, list, filter, setFilter, setList, transferToAnotherList }) => {
-    // const originalList = [...list];
-
-    const filtro = (item: any) => !filter || item.label.toUpperCase().startsWith(filter.toUpperCase());
+const SkillList: React.FC<SkillListProps> = ({ title, width, list, filter, setFilter, setList, transferToAnotherList, main }) => {
+    const [skill, setSkill] = useState('');
+    const filtro = (item: any) => !filter || item.label.toUpperCase().startsWith(filter.trim().toUpperCase());
     return (
         <ScrollPanel style={{ width, padding: '10px' }}>
             <div className="mb-5" style={{ fontSize: '10px' }}>
                 <label>{`${title} (${list.length})`}</label>
-                {list.length >= 7 && (
+
+                {(list.length >= 7 || filter) && (
                     <InputText
                         style={{ padding: '10px', width: '100%' }}
                         placeholder="Digite a habilidade para filtrar da listagem abaixo"
@@ -137,13 +149,27 @@ const SkillList: React.FC<SkillListProps> = ({ title, width, list, filter, setFi
                         onChange={(e) => setFilter(e.target.value)}
                     />
                 )}
+                {main ? (
+                    <LinkModal
+                        onSave={() => {}}
+                        headerModal="Descreva a habilidade técnica que CONSTA no texto do seu currículo e que deixamos de listar aqui"
+                        labelText={``}
+                        linkText="Deixamos de listar alguma habilidade?"
+                    >
+                        <InputText placeholder="" style={{ width: '75%' }} value={skill} onChange={(e) => setSkill(e.target.value)} rows={10} cols={100} />
+                    </LinkModal>
+                ) : (
+                    <div>
+                        <br />
+                    </div>
+                )}
             </div>
             <div className="panel mb-3" style={{ maxHeight: '400px', overflow: 'auto', boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.2)' }}>
                 <div className="gap-x-12 sm:grid-cols-2">
                     <ul>
                         <ReactSortable
-                            list={list.filter(filtro)}
-                            setList={(myList) => setList(myList.filter(filtro))}
+                            list={list}
+                            setList={(myList: any[]) => setList(myList)}
                             animation={200}
                             delay={1}
                             ghostClass="gu-transit"
@@ -185,26 +211,97 @@ const AccordionList: React.FC<AccordionListProps> = ({ width }) => {
     const { accordionList } = TabSkillStore((state: ITabSkillStore) => ({
         ...state,
     }));
+    const [visible, setVisible] = useState(false);
+    const [errorImplictKnowledge, setErrorImplictKnowledge] = useState('');
 
     return (
         <ScrollPanel style={{ width, padding: '10px' }}>
-            <div className="mb-5" style={{ fontSize: '10px' }}>
-                <label>Meus conhecimentos implícitos ({accordionList ? accordionList.length : 0})</label>
-                <Panel>
-                    <Accordion>
-                        {accordionList && accordionList.map((item: any, id: any) => (
-                            <AccordionTab key={id} header={`${item.skill} (${item.children.length})`}>
-                               <h1 style={{fontSize: "7px"}}>Habilidades associadas a {item.skill}:</h1>
-                                {item.children.map((child: any, counter: any) => (
-                                    <p className="m-0" key={child.label}>
-                                        {(counter + 1)+': ' + child.label}
-                                    </p>
-                                ))}
-                            </AccordionTab>
-                        ))}
-                    </Accordion>
-                </Panel>
-            </div>
+            {accordionList && !!accordionList.length && (
+                <div>
+                    <div className="align-items-center flex">
+                        <Dialog
+                            header={'O que são conhecimentos implicitos?'}
+                            visible={visible}
+                            style={{ width: '50vw' }}
+                            onHide={() => {
+                                if (!visible) return;
+                                setVisible(false);
+                            }}
+                        >
+                            <p className="m-0">
+                                São conhecimentos que você não mencionou no seu currículo, porém subentende-se que você os tem, pois estes conhecimentos são pré requisitos para outros conhecimentos,
+                                exemplo: Não há como você saber oracle ou mysql sem saber sql.
+                            </p>
+                        </Dialog>
+                        <Tooltip target="#btnHelp" content="Clique aqui para saber o que são conhecimentos implícitos" position="bottom" />
+                        <Button icon="pi pi-question-circle" id="btnHelp" onClick={() => setVisible(true)} />
+                        <LinkModal
+                            onSave={() => {}}
+                            headerModal="Descreva o erro de associação de conhecimentos que você encontrou ou discordância com essa classificação"
+                            labelText={`Meus conhecimentos implícitos (${accordionList ? accordionList.length : 0})`}
+                            linkText="Discorda dessas associações ou encontrou algum erro?"
+                        >
+                            <InputTextarea placeholder="" style={{ width: '75%' }} value={errorImplictKnowledge} onChange={(e) => setErrorImplictKnowledge(e.target.value)} rows={10} cols={100} />
+                        </LinkModal>
+                    </div>
+                    <div className="panel mb-3" style={{ maxHeight: '400px', overflow: 'auto', boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.2)' }}>
+                        <div className="gap-x-12 sm:grid-cols-2">
+                            <Accordion>
+                                {accordionList &&
+                                    accordionList.map((item: any, id: any) => (
+                                        <AccordionTab key={id} header={`${item.skill} (${item.children.length})`}>
+                                            <h1 style={{ fontSize: '7px' }}>Habilidades associadas a {item.skill}:</h1>
+                                            {item.children.map((child: any, counter: any) => (
+                                                <p className="m-0" key={child.label}>
+                                                    {counter + 1 + ': ' + child.label}
+                                                </p>
+                                            ))}
+                                        </AccordionTab>
+                                    ))}
+                            </Accordion>
+                        </div>
+                    </div>
+                </div>
+            )}
         </ScrollPanel>
+    );
+};
+interface LinkModalProps {
+    children: React.ReactNode;
+    headerModal: string;
+    onSave: () => void;
+    labelText: string;
+    linkText: string;
+}
+const LinkModal: React.FC<LinkModalProps> = ({ onSave, labelText, linkText, headerModal, children }) => {
+    const [visible, setVisible] = useState(false);
+    return (
+        <div>
+            <label style={{ fontSize: '10px' }}>{labelText}</label>
+            <a href="#" className="linkParaAbrirModal" onClick={() => setVisible(true)}>
+                {linkText}
+            </a>
+            <Dialog
+                style={{ width: '50vw' }}
+                header={headerModal}
+                visible={visible}
+                onHide={() => {
+                    if (!visible) return;
+                    setVisible(false);
+                }}
+            >
+                <LabelComponent explanation={headerModal} labelValue="" property="resumeText" errors={{}}>
+                    {children}
+                </LabelComponent>
+
+                <div className="mb-5 text-center">
+                    <div className="flex-column flex">
+                        <button onClick={onSave} style={{ width: '15%' }} type="button" className="btn btn-danger ltr:ml-auto rtl:mr-auto">
+                            Enviar
+                        </button>
+                    </div>
+                </div>
+            </Dialog>
+        </div>
     );
 };

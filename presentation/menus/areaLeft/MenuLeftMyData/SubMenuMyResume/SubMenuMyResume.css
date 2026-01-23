@@ -1,3 +1,9 @@
+.linkParaAbrirModal{
+    font-size: 9px;
+    color: blue;
+}
+.linkParaAbrirModal:hover  {
+}
 .p-highlight {
     color: red;
 }
