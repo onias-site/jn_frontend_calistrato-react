@@ -18,6 +18,7 @@ const nunito = Nunito({
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     const [serverResponse, setServerResponse] = useState({});
+    const [infoMessage, setInfoMessage] = useState({});
     const toast = useRef(null);
     const translate = (error: any) => {
         const translations = {};
@@ -33,6 +34,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         !serverResponse.errors && PubSub.subscribe('httpStatus422', (msg: any, sr: any) => {
             !serverResponse.errors && setServerResponse(sr);
         });
+        PubSub.subscribe('showInfoMessage', (msg: any, sr: any) => {
+          sr.summary && setInfoMessage(sr);
+        });
     }, []);
 
     const showErrorMessages = (errors: any) => {
@@ -44,11 +48,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 toast.current.show({ severity: 'error', summary, detail, life: 10000 });
             });
         }
-
     }
 
+    const showInfoMessage = () => infoMessage && infoMessage.summary &&
+    toast.current.show({ severity: 'warn', life: 10000, ...infoMessage})
+    ;
+
+    showInfoMessage();
     showErrorMessages(serverResponse.errors);
     delete serverResponse.errors;
+    delete infoMessage.summary;
     return (
         <QueryProvider>
             <html lang="en">

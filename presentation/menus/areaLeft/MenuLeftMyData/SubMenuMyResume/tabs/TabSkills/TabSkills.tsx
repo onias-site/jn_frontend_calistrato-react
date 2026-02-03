@@ -16,16 +16,18 @@ import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { InputTextarea } from 'primereact/inputtextarea';
 import { LabelComponent } from '@/presentation/components/source/LabelComponent';
+import PubSub from 'pubsub-js';
 
 export class SkillListModel {
     constructor(main: boolean = false, filter: string = '', list: any[] = [], originalList: any[] = [], title: string, name: string) {}
 }
 export interface ITabSkillStore {
-    setAccordionList: (accordionList: any[]) => void;
     setGroups: (groups: SkillListModel[], getAccordionList: (group: any) => any[]) => void;
     getWordsFromGroup: (name: string) => string[];
+    setContext: (context: any) => void;
     groups: SkillListModel[];
     accordionList: any[];
+    context: any;
 }
 const getSorter = (fieldName: string) => {
     const sorter = (a: any, b: any) => {
@@ -53,11 +55,14 @@ export const TabSkillStore = create<ITabSkillStore>((set, get) => ({
         const found = groups.filter((x: any) => x.name == name)[0];
         return (found && found.list) || [];
     },
+
+    setContext: (context: any) => {
+        set({ context });
+    },
+
     groups: [],
     accordionList: [],
-    setAccordionList: (accordionList: any[]) => {
-        set({ accordionList });
-    },
+    context: {},
 }));
 export interface TabSkillsProps {
     getAccordionList: (group: any) => any[];
@@ -101,7 +106,6 @@ export const TabSkills2: React.FC<TabSkillsProps> = ({ getAccordionList }) => {
     };
 
     const width = groups.length ? 100 / (groups.length + 1) + '%' : '';
-
     return (
         <div className="flex-column flex" style={{ maxHeight: '1000px' }}>
             <AccordionList width={width} />
@@ -133,9 +137,126 @@ interface SkillListProps {
     list: any[];
 }
 
+const sendSkillSuggest = (word: string, context: any, groups: any[]) => {
+    const mainGroup = groups.filter(group => group.main)[0];
+
+    {
+        const showMessage = mainGroup.list.filter((sk: any) => sk.word.toUpperCase() == word.toUpperCase())[0];
+        if (showMessage) {
+            PubSub.publish('showInfoMessage', { detail: `A palavra '${word}' já está relacionada em sua lista de ferramentas`, summary: `Palavra já relacionada` });
+            return;
+        }
+    }
+    {
+        const showMessage = mainGroup.list.filter((sk: any) => sk.skill.toUpperCase() == word.toUpperCase())[0];
+        if (showMessage) {
+            PubSub.publish('showInfoMessage', {
+                detail: `A palavra '${word}' já está relacionada em sua lista de ferramentas porém com o nome '${showMessage.word}'`,
+                summary: `Palavra já relacionada`,
+            });
+            return;
+        }
+    }
+
+    for (let index in groups) {
+        const group = groups[index];
+
+        if (group.main) {
+            continue;
+        }
+
+        {
+            const showMessage = group.list.filter((sk: any) => sk.skill.toUpperCase() == word.toUpperCase())[0];
+            if (showMessage) {
+                PubSub.publish('showInfoMessage', { detail: `A palavra '${word}' já está relacionada em sua lista de ferramentas na lista '${group.title}'`, summary: `Palavra já relacionada` });
+                return;
+            }
+        }
+        {
+            const showMessage = group.list.filter((sk: any) => sk.word.toUpperCase() == word.toUpperCase())[0];
+            if (showMessage) {
+                PubSub.publish('showInfoMessage', {
+                    detail: `A palavra '${word}' já está relacionada em sua lista de ferramentas porém com o nome '${showMessage.word}' e na lista '${group.title}'`,
+                    summary: `Palavra já relacionada`,
+                });
+                return;
+            }
+        }
+
+        const errors = [
+            {
+                fieldName: 'isPieceOfOtherSkill',
+                summary: 'Esta ferramenta é um pedaço de outra ferramenta "{associated}" já adicionada à sua lista',
+            },
+            {
+                fieldName: 'isPieceOfOtherWord',
+                summary: 'O nome desta ferramenta é parte de uma outra palavra "{associated}" presente no texto do seu currículo',
+            },
+            {
+                fieldName: 'skillAlreadyAdded',
+                summary: 'O sinônimo ({associated}) para esta palavra já está presente em sua lista',
+            },
+        ];
+
+        for (let index in errors) {
+            const error = errors[index];
+
+            if(errorHasFound(context, error, word)){
+                return;
+            }
+        }
+
+        {
+            const showMessage = mainGroup.list.filter((sk: any) => sk.parent.includes(word.toUpperCase()));
+            if (showMessage.length) {
+                const words = showMessage.map((x: any) => x.word);
+                PubSub.publish('showInfoMessage', {
+                    detail: `A palavra '${word}' já está relacionada em sua lista de ferramentas porém como pré requisito das palavras ${JSON.stringify(words)}`,
+                    summary: `Palavra já relacionada como pré requisito de outras palavras`,
+                });
+                return;
+            }
+        }
+
+    }
+};
+
+const errorHasFound = (context: any, error: any, word: string) => {
+    const discardedSkills = context.discardedSkills;
+    const { summary, fieldName } = { ...error };
+    if (!discardedSkills) {
+        return false;
+    }
+
+    const list = discardedSkills[fieldName];
+
+    if (!list) {
+        return false;
+    }
+
+    if (!list.length) {
+        return false;
+    }
+
+    const filtered = list.filter((x: any) => x.word.toUpperCase() == word.toUpperCase())[0];
+
+    if (!filtered) {
+        return false;
+    }
+    PubSub.publish('showInfoMessage', {
+        detail: summary.replace('{associated}', filtered.associated),
+        summary : summary.replace('{associated}', filtered.associated),
+    });
+
+    return true;
+};
+
 const SkillList: React.FC<SkillListProps> = ({ title, width, list, filter, setFilter, setList, transferToAnotherList, main }) => {
     const [skill, setSkill] = useState('');
     const filtro = (item: any) => !filter || item.label.toUpperCase().startsWith(filter.trim().toUpperCase());
+    const { context, groups } = TabSkillStore((state: ITabSkillStore) => ({
+        ...state,
+    }));
     return (
         <ScrollPanel style={{ width, padding: '10px' }}>
             <div className="mb-5" style={{ fontSize: '10px' }}>
@@ -151,7 +272,7 @@ const SkillList: React.FC<SkillListProps> = ({ title, width, list, filter, setFi
                 )}
                 {main ? (
                     <LinkModal
-                        onSave={() => {}}
+                        onSave={() => sendSkillSuggest(skill, context, groups)}
                         headerModal="Descreva a habilidade técnica que CONSTA no texto do seu currículo e que deixamos de listar aqui"
                         labelText={``}
                         linkText="Deixamos de listar alguma habilidade?"

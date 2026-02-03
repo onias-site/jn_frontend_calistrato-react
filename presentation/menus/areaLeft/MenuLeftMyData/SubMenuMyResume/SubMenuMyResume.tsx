@@ -51,7 +51,7 @@ const SubMenuMyResume = () => {
 
 const loadSkillsFromBackEnd = (stateResume: any, stateSkills: any) => {
     const callbacks: any = {};
-    callbacks[200] = (responseFromBackEnd: any) => putSkillsInStore(responseFromBackEnd, stateSkills);
+    callbacks[200] = (responseFromBackEnd: any) => putSkillsInStore(responseFromBackEnd, stateSkills, requestSkillsToBackEnd);
 
     const requestSkillsToBackEnd = createRequestSkillsToBackEnd(stateResume, stateSkills);
 
@@ -79,7 +79,7 @@ const createRequestSkillsToBackEnd = (stateResume: any, stateSkills: any) => {
     return requestSkillsToBackEnd;
 }
 
-const putSkillsInStore = (responseFromBackEnd: any, stateSkills: any) => {
+const putSkillsInStore = (responseFromBackEnd: any, stateSkills: any, requestSkillsToBackEnd: any) => {
     const excludedSkillsFromResume = {
         title: 'Habilidades pelas quais eu NÃO quero que o meu currículo seja encontrado',
         list: responseFromBackEnd.excludedSkill,
@@ -96,7 +96,9 @@ const putSkillsInStore = (responseFromBackEnd: any, stateSkills: any) => {
     const groups = [excludedSkillsFromResume, skillsFromResume];
 
     stateSkills.setGroups(groups, getImplicitSkills);
-    stateSkills.setAccordionList(responseFromBackEnd.implicitSkills);
+    responseFromBackEnd.requestSkillsToBackEnd = requestSkillsToBackEnd;
+    stateSkills.setContext(responseFromBackEnd);
+ //   stateSkills.setAccordionList(responseFromBackEnd.implicitSkills);
 }
 
 const getImplicitSkills = (group: any): any[] =>{
