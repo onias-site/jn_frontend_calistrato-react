@@ -2,13 +2,15 @@
 
 import React from 'react';
 import { create } from 'zustand';
-import { AutoComplete } from 'primereact/autocomplete';
 
 import { InputText } from 'primereact/inputtext';
 
 import { InputTextarea } from 'primereact/inputtextarea';
 import { LabelComponent } from '@/presentation/components/source/LabelComponent';
-import {NotAllowedCompany} from './NotAllowedCompany';
+import { NotAllowedCompany } from './NotAllowedCompany';
+
+import { Dropdown } from 'primereact/dropdown';
+import {TabSkills2, TabSkillStore, ITabSkillStore} from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabSkills/TabSkills'
 
 export interface TabResumeProps {}
 
@@ -19,10 +21,12 @@ export interface ITabResumeStore {
     resumeText: string;
     fieldErrors: any;
     lastJob: string;
+    resumeType: number;
 
     onMoveOnFowardTabs: () => string[];
     setLastJob: (lastJob: string) => void;
     setFieldErrors: (fieldErrors: any) => void;
+    setResumeType: (resumeText: number) => void;
     setResumeText: (resumeText: string) => void;
     setDesiredJob: (desiredJob: string) => void;
     setLinkedinAddress: (linkedinAddress: string) => void;
@@ -35,30 +39,55 @@ export const TabResumeStore = create<ITabResumeStore>((set, get) => ({
     fieldErrors: {},
     desiredJob: '',
     resumeText: '',
+    resumeType: {id: 0},
     lastJob: '',
     setLastJob: (lastJob: string) => set({ lastJob }),
     setFieldErrors: (fieldErrors: any) => set({ fieldErrors }),
     setDesiredJob: (desiredJob: string) => set({ desiredJob }),
     setResumeText: (resumeText: string) => set({ resumeText }),
+    setResumeType: (resumeType: number) => set({ resumeType }),
     setLinkedinAddress: (linkedinAddress: string) => set({ linkedinAddress }),
     setNotAllowedCompany: (notAllowedCompany: string[]) => set({ notAllowedCompany }),
 
     onMoveOnFowardTabs: () => {
-        const { desiredJob, linkedinAddress, resumeText, setFieldErrors } = get();
+        const {resumeType, desiredJob, linkedinAddress, resumeText, setFieldErrors } = get();
         let errors: any = [];
         const fieldErrors = {};
         !desiredJob && (fieldErrors['desiredJob'] = true) && errors.push('Deve-se informar a função desejada');
-        !resumeText && (fieldErrors['resumeText'] = true) && errors.push('Deve-se informar a texto contido no currículo');
         !linkedinAddress && (fieldErrors['linkedinAddress'] = true) && errors.push('Deve-se informar a endereço (URL do linkedin)');
+        (!resumeType || !resumeType.id) && (fieldErrors['resumeType'] = true) && errors.push('Por favor escolha o tipo do currículo');
+        resumeType && resumeType.id == 1 && !resumeText && (fieldErrors['resumeText'] = true) && errors.push('Deve-se informar a texto contido no currículo');
         setFieldErrors(fieldErrors);
+
         return errors;
     },
+
 }));
 
 export const TabResume: React.FC<TabResumeProps> = ({}) => {
-    const { fieldErrors, linkedinAddress, resumeText, notAllowedCompany, desiredJob, lastJob, setResumeText, setLastJob, setDesiredJob, setNotAllowedCompany, setLinkedinAddress } = TabResumeStore(
-        (state: ITabResumeStore) => ({ ...state })
-    );
+    const {
+        fieldErrors,
+        resumeType,
+        linkedinAddress,
+        resumeText,
+        notAllowedCompany,
+        desiredJob,
+        lastJob,
+        setResumeText,
+        setLastJob,
+        setDesiredJob,
+        setNotAllowedCompany,
+        setLinkedinAddress,
+        setResumeType,
+    } = TabResumeStore((state: ITabResumeStore) => ({ ...state }));
+
+    const resumeTypes = [
+        { id: 1, label: 'Tecnologia da Informação (Com curso técnico ou profissionalizante ou faculdade ou simples experiência comprovada)' },
+        { id: 2, label: 'Recrutamento e seleção (Com curso técnico ou profissionalizante ou faculdade ou simples experiência comprovada)' },
+        { id: 3, label: 'Outras profissões de nível Superior (Graduação ou Pós Graduação em faculdade e/ou universidade)' },
+        { id: 4, label: 'Profissões de nível operacional (Com diploma de ensino médio ou fundamental ou sem escolaridade ou escolaridade incompleta)' },
+    ];
+
     return (
         <div>
             <LabelComponent
@@ -91,13 +120,28 @@ export const TabResume: React.FC<TabResumeProps> = ({}) => {
                 property="notAllowedCompany"
                 errors={fieldErrors}
             >
-                <NotAllowedCompany
-                    setNotAllowedCompany={(e) => setNotAllowedCompany(e)}
-                    invalid={fieldErrors.notAllowedCompany}
-                    notAllowedCompany={notAllowedCompany}
+                <NotAllowedCompany setNotAllowedCompany={(e) => setNotAllowedCompany(e)} invalid={fieldErrors.notAllowedCompany} notAllowedCompany={notAllowedCompany} />
+            </LabelComponent>
+
+            <LabelComponent
+                explanation="Se você trabalha ou tem pretensão de trabalhar na área de tecnologia da informação (TI), independentemente de você ter o nível superior (graduação ou pós graduação), selecione esta opção, nossa plataforma está mais preparada (nas primeiras versões) para este tipo de currículo. Você receberá mais vagas se seu currículo for de tecnologia, porém, precisará preencher mais informações."
+                labelValue="Tipo do currículo:"
+                property="resumeType"
+                errors={fieldErrors}
+            >
+                <Dropdown
+                    style={{ width: '75%' }}
+                    value={resumeType}
+                    invalid={fieldErrors.resumeType}
+                    onChange={(e) => setResumeType(e.value)}
+                    options={resumeTypes}
+                    optionLabel="label"
+                    placeholder="Escolha o tipo do seu currículo"
+                    className="md:w-14rem w-full"
                 />
             </LabelComponent>
-            <LabelComponent
+            {
+            resumeType.id == 1 && <LabelComponent
                 explanation="Para evitar problemas com a LGPD (Lei Geral de Proteção de Dados), não guardamos o texto do seu currículo. A cada nova atualização no seu currículo, você precisará copiar o texto de dentro dele e colar aqui novamente. O texto aqui colado é usado para alimentar as listas de habilidade da aba 'Habilidades' mais à frente."
                 labelValue="Todo o texto que copiei do meu currículo:"
                 property="resumeText"
@@ -113,6 +157,8 @@ export const TabResume: React.FC<TabResumeProps> = ({}) => {
                     cols={100}
                 />
             </LabelComponent>
+
+            }
         </div>
     );
 };

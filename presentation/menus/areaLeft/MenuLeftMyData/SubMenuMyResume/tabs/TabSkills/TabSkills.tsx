@@ -49,7 +49,6 @@ export const TabSkillStore = create<ITabSkillStore>((set, get) => ({
 
         set({ groups, accordionList });
     },
-
     getWordsFromGroup: (name: string) => {
         const { groups } = get();
         const found = groups.filter((x: any) => x.name == name)[0];
@@ -137,7 +136,67 @@ interface SkillListProps {
     list: any[];
 }
 
-const sendSkillSuggest = (word: string, context: any, groups: any[]) => {
+
+const getSkillsContext = (context: any, groups: any[], accordionList:  any[]) => {
+
+    const skillsContext : any[] = [];
+
+    const discardedSkills = context.discardedSkills || {};
+
+    for(let type in discardedSkills){
+        const array = discardedSkills[type] || [];
+        const category = 'discardedSkills';
+        for(let index in array) {
+            const sk = array[index];
+            const skill = {...sk, type, category};
+            skillsContext.push(skill);
+        }
+    }
+
+    for(let groupIndex in groups){
+        const group = groups[groupIndex] || {};
+        const array = group.list || [];
+        const type = group.name;
+        const category = type;
+        for(let index in array) {
+            const sk = array[index];
+            const skill = {...sk, type, category};
+            skillsContext.push(skill);
+        }
+    }
+
+
+    for(let index in accordionList){
+        const skill = accordionList[index];
+        if(!skill){
+            continue;
+        }
+        skill.category = 'parent';
+        skill.type = 'parent';
+        skillsContext.push(skill);
+    }
+
+
+    return skillsContext;
+}
+
+
+const sendSkillSuggest = (word: string, context: any, groups: any[], accordionList:  any[]) => {
+    const skillsContext = getSkillsContext(context, groups, accordionList);
+
+    const numbers = {};
+
+    const types = skillsContext.map(x => x.category);
+
+    const set = new Set(types);
+    const array = [...set];
+    for(let index in array){
+        const type = array[index];
+        const number = skillsContext.filter(x => x.category == type).length;
+
+        numbers[type] = number;
+    }
+    console.log(numbers);
     const mainGroup = groups.filter(group => group.main)[0];
 
     {
@@ -254,7 +313,7 @@ const errorHasFound = (context: any, error: any, word: string) => {
 const SkillList: React.FC<SkillListProps> = ({ title, width, list, filter, setFilter, setList, transferToAnotherList, main }) => {
     const [skill, setSkill] = useState('');
     const filtro = (item: any) => !filter || item.label.toUpperCase().startsWith(filter.trim().toUpperCase());
-    const { context, groups } = TabSkillStore((state: ITabSkillStore) => ({
+    const { context, groups, accordionList } = TabSkillStore((state: ITabSkillStore) => ({
         ...state,
     }));
     return (
@@ -272,7 +331,7 @@ const SkillList: React.FC<SkillListProps> = ({ title, width, list, filter, setFi
                 )}
                 {main ? (
                     <LinkModal
-                        onSave={() => sendSkillSuggest(skill, context, groups)}
+                        onSave={() => sendSkillSuggest(skill, context, groups, accordionList)}
                         headerModal="Descreva a habilidade técnica que CONSTA no texto do seu currículo e que deixamos de listar aqui"
                         labelText={``}
                         linkText="Deixamos de listar alguma habilidade?"
@@ -334,7 +393,6 @@ const AccordionList: React.FC<AccordionListProps> = ({ width }) => {
     }));
     const [visible, setVisible] = useState(false);
     const [errorImplictKnowledge, setErrorImplictKnowledge] = useState('');
-
     return (
         <ScrollPanel style={{ width, padding: '10px' }}>
             {accordionList && !!accordionList.length && (
