@@ -10,7 +10,6 @@ import { LabelComponent } from '@/presentation/components/source/LabelComponent'
 import { NotAllowedCompany } from './NotAllowedCompany';
 
 import { Dropdown } from 'primereact/dropdown';
-import {TabSkills2, TabSkillStore, ITabSkillStore} from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabSkills/TabSkills'
 
 export interface TabResumeProps {}
 
@@ -21,31 +20,37 @@ export interface ITabResumeStore {
     resumeText: string;
     fieldErrors: any;
     lastJob: string;
-    resumeType: number;
+    resumeType: any;
 
     onMoveOnFowardTabs: () => string[];
     setLastJob: (lastJob: string) => void;
+    setResumeType: (resumeType: any) => void;
     setFieldErrors: (fieldErrors: any) => void;
-    setResumeType: (resumeText: number) => void;
     setResumeText: (resumeText: string) => void;
     setDesiredJob: (desiredJob: string) => void;
     setLinkedinAddress: (linkedinAddress: string) => void;
     setNotAllowedCompany: (notAllowedCompany: string[]) => void;
 }
+const resumeTypes = [
+    { id: 1, label: 'Tecnologia da Informação (Com curso técnico ou profissionalizante ou faculdade ou simples experiência comprovada)' },
+    { id: 2, label: 'Recrutamento e seleção (Com curso técnico ou profissionalizante ou faculdade ou simples experiência comprovada)' },
+    { id: 3, label: 'Outras profissões de nível Superior (Graduação ou Pós Graduação em faculdade e/ou universidade)' },
+    { id: 4, label: 'Profissões de nível operacional (Com diploma de ensino médio ou fundamental ou sem escolaridade ou escolaridade incompleta)' },
+];
 
 export const TabResumeStore = create<ITabResumeStore>((set, get) => ({
+    resumeType:resumeTypes[0],
     notAllowedCompany: [],
     linkedinAddress: '',
     fieldErrors: {},
     desiredJob: '',
     resumeText: '',
-    resumeType: {id: 0},
     lastJob: '',
     setLastJob: (lastJob: string) => set({ lastJob }),
     setFieldErrors: (fieldErrors: any) => set({ fieldErrors }),
     setDesiredJob: (desiredJob: string) => set({ desiredJob }),
     setResumeText: (resumeText: string) => set({ resumeText }),
-    setResumeType: (resumeType: number) => set({ resumeType }),
+    setResumeType: (resumeType: any) => set({ resumeType }),
     setLinkedinAddress: (linkedinAddress: string) => set({ linkedinAddress }),
     setNotAllowedCompany: (notAllowedCompany: string[]) => set({ notAllowedCompany }),
 
@@ -81,12 +86,6 @@ export const TabResume: React.FC<TabResumeProps> = ({}) => {
         setResumeType,
     } = TabResumeStore((state: ITabResumeStore) => ({ ...state }));
 
-    const resumeTypes = [
-        { id: 1, label: 'Tecnologia da Informação (Com curso técnico ou profissionalizante ou faculdade ou simples experiência comprovada)' },
-        { id: 2, label: 'Recrutamento e seleção (Com curso técnico ou profissionalizante ou faculdade ou simples experiência comprovada)' },
-        { id: 3, label: 'Outras profissões de nível Superior (Graduação ou Pós Graduação em faculdade e/ou universidade)' },
-        { id: 4, label: 'Profissões de nível operacional (Com diploma de ensino médio ou fundamental ou sem escolaridade ou escolaridade incompleta)' },
-    ];
 
     return (
         <div>

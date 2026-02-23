@@ -25,9 +25,11 @@ export interface ITabSkillStore {
     setGroups: (groups: SkillListModel[], getAccordionList: (group: any) => any[]) => void;
     getWordsFromGroup: (name: string) => string[];
     setContext: (context: any) => void;
+    loadSkillsContext: () => any;
     groups: SkillListModel[];
     accordionList: any[];
     context: any;
+
 }
 const getSorter = (fieldName: string) => {
     const sorter = (a: any, b: any) => {
@@ -37,6 +39,13 @@ const getSorter = (fieldName: string) => {
 };
 
 export const TabSkillStore = create<ITabSkillStore>((set, get) => ({
+
+   loadSkillsContext: () =>{
+        const { context, groups, accordionList } = get();
+        const skillsContext = getSkillsContext(context, groups, accordionList);
+        return skillsContext;
+    },
+
     setGroups: (groups: SkillListModel[], getAccordionList: (group: any) => any[]) => {
         groups.forEach((group) => {
             group.list && group.list.sort(getSorter('label'));
@@ -62,6 +71,7 @@ export const TabSkillStore = create<ITabSkillStore>((set, get) => ({
     groups: [],
     accordionList: [],
     context: {},
+    skillsContext: {}
 }));
 export interface TabSkillsProps {
     getAccordionList: (group: any) => any[];
@@ -196,7 +206,7 @@ const sendSkillSuggest = (word: string, context: any, groups: any[], accordionLi
 
         numbers[type] = number;
     }
-    console.log(numbers);
+
     const mainGroup = groups.filter(group => group.main)[0];
 
     {

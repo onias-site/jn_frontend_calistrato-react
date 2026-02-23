@@ -6,11 +6,12 @@ import 'primeicons/primeicons.css';
 import './SubMenuMyResume.css';
 import 'primereact/resources/primereact.min.css';
 import { RegioesStore, IRegioesStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabFilter/RegioesComponent';
-import { TabOptions } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabFilter/FormFilter';
+import { TabOptions, TabOptionsStore, ITabOptionsStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabFilter/FormFilter';
 import { TabLanguages, TabLanguagesStore, ITabLanguagesStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabLanguages/ChooserLanguages';
 import { TabResume, TabResumeStore, ITabResumeStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabResume/FormResume';
 import { TabSalary, TabSalaryStore, ITabSalaryStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabSalary/FormSalary';
 import { TabSkills2, TabSkillStore, ITabSkillStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabSkills/TabSkills';
+
 import { Tabs } from '@/presentation/components/source/Tabs';
 import JnAjax from '@/app/JnAjax';
 import { create } from 'zustand';
@@ -25,6 +26,58 @@ export const SubMenuMyResumeStore = create<ISubMenuMyResumeStore>((set) => ({
     hasTabSkills: false,
 }));
 
+const saveResume = (stateSkills: any, stateResume: any, stateLanguage: any, stateSalary: any, stateRegioes: any, stateOptions: any) => {
+    const formErrors = stateSalary.onMoveOnFowardTabs();
+
+    if (formErrors && formErrors.length) {
+        return formErrors;
+    }
+    const language = stateLanguage.getSelectedLanguages();
+    const skill = stateSkills.loadSkillsContext();
+    const allData = {...stateResume, ...stateLanguage, ...stateSalary, ...stateRegioes, ...stateOptions };
+    const ddd = allData.regioesSelecionadas;
+    const resumeType = allData.resumeType.id;
+    const {
+        btc,
+        clt,
+        desiredJob,
+        disponibility,
+        email,
+        experience,
+        lastJob,
+        linkedinAddress,
+        negotiableClaim,
+        notAllowedCompany,
+        pcd,
+        pj,
+        temporallyJobTime,
+        travel,
+    } = allData;
+
+    const resume = {
+        btc,
+        clt,
+        ddd,
+        desiredJob,
+        disponibility,
+        email,
+        resumeType,
+        skill,
+        experience,
+        language,
+        lastJob,
+        linkedinAddress,
+        negotiableClaim,
+        notAllowedCompany,
+        pcd,
+        pj,
+        temporallyJobTime,
+        travel,
+    };
+    console.log('resume', resume);
+    console.log('language', language);
+};
+
 const SubMenuMyResume = () => {
     const stateSkills = TabSkillStore((state: ITabSkillStore) => ({
         ...state,
@@ -35,13 +88,15 @@ const SubMenuMyResume = () => {
     const hasTabSkills = stateSubMenuMyResume.hasTabSkills && stateResume.resumeType.id == 1;
 
     const stateLanguage = TabLanguagesStore((state: ITabLanguagesStore) => ({ ...state }));
+    const stateOptions = TabOptionsStore((state: ITabOptionsStore) => ({ ...state }));
     const stateSalary = TabSalaryStore((state: ITabSalaryStore) => ({ ...state }));
     const stateRegioes = RegioesStore((state: IRegioesStore) => ({ ...state }));
+
     const tabs = [
         { label: 'Currículo', icon: 'pi pi-file-pdf', onMoveOnFowardTabs: () => loadSkillsFromBackEnd(stateResume, stateSkills, stateSubMenuMyResume) },
         { label: 'Idiomas', icon: 'pi pi-language', onMoveOnFowardTabs: stateLanguage.onMoveOnFowardTabs },
         { label: 'Opções', icon: 'pi pi-cog', onMoveOnFowardTabs: stateRegioes.onMoveOnFowardTabs },
-        { label: 'Salários', icon: 'pi pi-dollar', onMoveOnFowardTabs: stateSalary.onMoveOnFowardTabs },
+        { label: 'Salários', icon: 'pi pi-dollar', onMoveOnFowardTabs: () => saveResume(stateSkills, stateResume, stateLanguage, stateSalary, stateRegioes, stateOptions) },
     ];
     const tabSkills = {
         label: 'Habilidades',
@@ -74,10 +129,9 @@ const SubMenuMyResume = () => {
 };
 
 const loadSkillsFromBackEnd = (stateResume: any, stateSkills: any, stateSubMenuMyResume: any) => {
-
     const formErrors = stateResume.onMoveOnFowardTabs();
 
-    if(formErrors && formErrors.length){
+    if (formErrors && formErrors.length) {
         return formErrors;
     }
 

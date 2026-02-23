@@ -9,9 +9,10 @@ import { Dropdown } from 'primereact/dropdown';
 import { Checkbox } from 'primereact/checkbox';
 
 export interface ITabLanguagesStore {
-    selectedLanguages: any[];
     language: any;
+    selectedLanguages: any[];
     speakOtherLanguages: boolean;
+    getSelectedLanguages: () => any[];
     onMoveOnFowardTabs: () => string[];
     setLanguage: (language: any[]) => void;
     setSelectedLanguages: (selectedLanguages: any[]) => void;
@@ -23,6 +24,12 @@ export const TabLanguagesStore = create<ITabLanguagesStore>((set, get) => ({
     selectedLanguages: [],
     speakOtherLanguages: false,
     setLanguage: (language: any) => set({ language }),
+    getSelectedLanguages: () => {
+        const { selectedLanguages } = get();
+        const selected = languages.filter(x => selectedLanguages && selectedLanguages.includes(x.id));
+        return selected;
+    },
+
     setSelectedLanguages: (selectedLanguages: any[]) => set({ selectedLanguages }),
     setSpeakOtherLanguages: (speakOtherLanguages: boolean) => {
         const { selectedLanguages } = get();
@@ -301,7 +308,6 @@ export const TabLanguages: React.FC<TabResumeProps> = ({}) => {
     const {selectedLanguages, setSelectedLanguages, setLanguage, setSpeakOtherLanguages, speakOtherLanguages } = TabLanguagesStore((state: ITabLanguagesStore) => ({
         ...state,
     }));
-
     const selectLanguages = (e: any) => {
         const language = languages.filter((x) => x.id == e.selectedOption.id)[0];
         if (language) {
