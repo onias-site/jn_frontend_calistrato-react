@@ -10,9 +10,15 @@ export default class JnAjax {
     static deafultEnviroment = JnAjax.PRODUCAO;
     //    static deafultEnviroment = JnAjax.DESENVOLVIMENTO;
 
+    static setLoading = () => () => JnAjax.ajaxLoading(true);
+
+    static setNotLoading = () => () => JnAjax.ajaxLoading(false);
+
     static doAnAjaxRequest(uri, callbacks = {}, verb = 'HEAD', requestBody = {}, headers = {}, enviroment = JnAjax.deafultEnviroment, contentType = 'application/json', dataType = 'json') {
         const url = JnAjax.getUrlBackEnd(enviroment);
-        JnAjax.ajaxLoading(true);
+        callbacks['setLoading'] = callbacks['setLoading'] || JnAjax.setLoading();
+        callbacks['setLoading']();
+
         const token = this.getToken();
         if (!headers) {
             headers = {};
@@ -33,7 +39,8 @@ export default class JnAjax {
 
             complete: (a) => {
                 try {
-                    JnAjax.ajaxLoading(false);
+                    callbacks['setNotLoading'] = callbacks['setNotLoading'] || JnAjax.setNotLoading();
+                    callbacks['setNotLoading']();
 
                     callbacks[401] = callbacks[401] || JnAjax.getHandler401();
 
@@ -57,6 +64,8 @@ export default class JnAjax {
 
                     afterHttpRequest(responseBody, a.status);
                 } catch (error) {
+                    callbacks['setNotLoading'] = JnAjax['setNotLoading'] || JnAjax.setNotLoading();
+                    callbacks['setNotLoading']();
                     console.error(error);
                 }
             },
@@ -64,19 +73,12 @@ export default class JnAjax {
     }
 
     static getHandler422 = (response) => {
-        PubSub.publish('httpStatus422', response);
+        return () => PubSub.publish('httpStatus422', response);
     }
 
-    static getHandler401 = () => {
-        let resultado = () => {
-            const token = JnAjax.getToken();
+    static getHandler401 = response => {
+        return () => PubSub.publish('httpStatus401', response);
 
-            sessionStorage.removeItem('sessao');
-            const queryParameters = token.email ? `?email=${token.email}&mensagem=sessaoExpirada` : '?mensagem=acessoNegado';
-            window.location.href = '#/login' + queryParameters;
-        };
-
-        return resultado;
     };
 
     static getHandler420 = () => {

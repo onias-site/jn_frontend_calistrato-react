@@ -15,6 +15,8 @@ import { TabSkills2, TabSkillStore, ITabSkillStore } from '@/presentation/menus/
 import { Tabs } from '@/presentation/components/source/Tabs';
 import JnAjax from '@/app/JnAjax';
 import { create } from 'zustand';
+import PubSub from 'pubsub-js';
+
 
 export interface ISubMenuMyResumeStore {
     hasTabSkills: boolean;
@@ -76,6 +78,25 @@ const saveResume = (stateSkills: any, stateResume: any, stateLanguage: any, stat
     };
     console.log('resume', resume);
     console.log('language', language);
+
+    const callbacks: any = {};
+
+
+
+    callbacks[200] = (responseFromBackEnd: any) => {
+
+        PubSub.publish('showMessage', {
+            detail: `Currículo salvo com sucesso`,
+            summary: `Currículo salvo com sucesso`,
+        });
+
+        console.log('responseFromBackEnd', responseFromBackEnd);
+
+    };
+
+
+    JnAjax.doAnAjaxRequest('resume/onias85@gmail.com/language/portuguese', callbacks, 'POST', resume, {}, 'http://localhost:8081');
+
 };
 
 const SubMenuMyResume = () => {
