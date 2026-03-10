@@ -6,17 +6,11 @@ import Select from 'react-select';
 
 export interface RequestAnswersProps {}
 export const RequestAnswersClick = (setError: any, showModal: any, callbacks: any, email: string, context: any) => {
-    alert(JSON.stringify(context));
-
-    // const openModal = (selectedScreen: string) => showModal(selectedScreen, '');
-
-    // return () => {
-    //     setError('');
-    //     callbacks['201'] = () => openModal('RequestAnswers');
-    //     callbacks['404'] = () => openModal('ConfirmEmail');
-
-    //     JnAjax.doAnAjaxRequest(`login/${email}/token`, callbacks, 'HEAD', {}, {}, 'http://localhost:8080');
-    // };
+    const openModal = (selectedScreen: string) => showModal(selectedScreen, '');
+    setError('');
+    callbacks['202'] = () => openModal('SavePassword');
+    callbacks['404'] = () => openModal('ConfirmEmail');
+    JnAjax.doAnAjaxRequest(`login/${email}/pre-registration`, callbacks, 'POST', context, {}, 'http://localhost:8080');
 };
 
 export const RequestAnswers: React.FC<RequestAnswersProps> = ({}) => {

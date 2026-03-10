@@ -30,9 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
     useEffect(() => {
         !serverResponse.errors &&
-            PubSub.subscribe('httpStatus422', (msg: any, sr: any) => {
-                !serverResponse.errors && setServerResponse(sr);
-            });
+            PubSub.subscribe('httpStatus422', (msg: any, sr: any) => setServerResponse(sr));
         PubSub.subscribe('showInfoMessage', (msg: any, sr: any) => {
             sr.summary && setInfoMessage(sr);
         });

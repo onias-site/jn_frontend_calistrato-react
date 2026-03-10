@@ -3,9 +3,11 @@ import { create } from 'zustand';
 import React from 'react';
 import { RequestEmail, RequestEmailFooter, RequestEmailClick } from '@/presentation/auth/RequestEmail';
 import { ConfirmEmail, ConfirmEmailFooter, ConfirmEmailClick } from '@/presentation/auth/ConfirmEmail';
+import {SavePassword, SavePasswordClick, SavePasswordFooter} from '@/presentation/auth/SavePassword';
 import { RequestAnswers, RequestAnswersClick } from '@/presentation/auth/RequestAnswers';
 import { LoadingButton } from '@/presentation/components/source/LoadingButton';
 import { Modal } from '@/presentation/components/source/Modal';
+
 
 export interface ModalLoginProps {}
 
@@ -43,7 +45,6 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
         context[key] = value;
         set({context});
     },
-
     hideModal: () => set({ selectedScreen: 'RequestEmail', title: '', visible: false, error: '', loading: false }),
     setLoading: (loading: boolean) => set({ loading }),
     setEmail: (email: string) => set({ email }),
@@ -70,6 +71,15 @@ export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
             component: <RequestEmail />,
             buttonLabel: 'Avançar',
         },
+
+        SavePassword:{
+            footerComponent: <SavePasswordFooter/>,
+            headerLabel: 'Criar senha',
+            buttonClick: SavePasswordClick,
+            component: <SavePassword />,
+            buttonLabel: 'Salvar senha',
+        },
+
         RequestAnswers: {
             headerLabel: 'Informe suas preferências e objetivos' ,
             buttonClick: RequestAnswersClick,

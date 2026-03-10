@@ -1,6 +1,6 @@
 'use client'
-import IconLockDots from "../../icons/icon-lock-dots";
-import IconLoader from "../../icons/icon-loader";
+import IconLockDots from "@/presentation/icons/icon-lock-dots";
+import IconLoader from "@/presentation/icons/icon-loader";
 import IconEye from "@/presentation/icons/icon-eye";
 import { useTogglePassword } from "@/presentation/Login/hooks/useTogglePassword";
 import Modal from "@/presentation/modules/MeusDados/SobreMim/application/components/modal-composition";

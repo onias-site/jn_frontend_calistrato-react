@@ -17,14 +17,27 @@ export const LabelComponent: React.FC<LabelComponentProps> = ({ children, labelV
     const [visible, setVisible] = useState(false);
     return (
         <div className="mb-5 text-center">
-             <Dialog header={labelValue} visible={visible} style={{ width: '50vw' }} onHide={() => {if (!visible) return; setVisible(false); }}>
-                <p className="m-0">
-                    {explanation}
-                </p>
+            <Dialog
+                header={labelValue}
+                visible={visible}
+                style={{ width: '50vw' }}
+                onHide={() => {
+                    if (!visible) return;
+                    setVisible(false);
+                }}
+            >
+                <p className="m-0">{explanation}</p>
             </Dialog>
             <div className="flex-column flex">
                 <Tooltip target="#btnHelp" content="Clique aqui para saber mais detalhes sobre este campo" position="bottom" />
-                <Button icon="pi pi-question-circle" id="btnHelp"  onClick={() => setVisible(true)}/>
+                <Button
+                    icon="pi pi-question-circle"
+                    id="btnHelp"
+                    onClick={(e) => {
+                        e && e.preventDefault && e.preventDefault()
+                        setVisible(true);
+                    }}
+                />
                 <label htmlFor={property} style={{ width: '25%', color }} className="letraPequena">
                     {labelValue}
                 </label>
