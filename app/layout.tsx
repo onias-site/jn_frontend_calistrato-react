@@ -8,7 +8,7 @@ import { QueryProvider } from '@/presentation/contexts/QueryProvider';
 import './loading.css';
 import PubSub from 'pubsub-js';
 import { Toast } from 'primereact/toast';
-import {ModalLogin, ModalLoginStore, IModalLoginStore} from '@/presentation/auth/ModalLogin';
+import { ModalLogin, ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogin';
 
 const nunito = Nunito({
     weight: ['400', '500', '600', '700', '800'],
@@ -20,7 +20,6 @@ const nunito = Nunito({
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     const [serverResponse, setServerResponse] = useState({});
     const [infoMessage, setInfoMessage] = useState({});
-    const [showLogin, setShowLogin] = useState(false);
     const [message, setMessage] = useState({});
     const toast = useRef(null);
     const translate = (error: any) => {
@@ -29,19 +28,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     };
 
     useEffect(() => {
-        !serverResponse.errors &&
-            PubSub.subscribe('httpStatus422', (msg: any, sr: any) => setServerResponse(sr));
+        PubSub.subscribe('httpStatus422', (msg: any, sr: any) => setServerResponse(sr));
+
         PubSub.subscribe('showInfoMessage', (msg: any, sr: any) => {
             sr.summary && setInfoMessage(sr);
         });
         PubSub.subscribe('showMessage', (msg: any, sr: any) => {
             sr.summary && setMessage(sr);
         });
-
-
     }, []);
 
     const showErrorMessages = (errors: any) => {
+        console.log('errors', errors)
         for (let fieldName in errors) {
             const errorsInTheField = errors[fieldName];
             errorsInTheField.forEach((error: any) => {
@@ -51,15 +49,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             });
         }
     };
-    const { showModal} = ModalLoginStore((state: IModalLoginStore) => ({
+    const { showModal } = ModalLoginStore((state: IModalLoginStore) => ({
         ...state,
     }));
 
     const showInfoMessage = () => infoMessage && infoMessage.summary && toast.current.show({ severity: 'warn', life: 10000, ...infoMessage });
     const showMessage = () => message && message.summary && toast.current.show({ severity: message.severity || 'success', life: message.life || 10000, ...message });
 
-
-    PubSub.subscribe('httpStatus401', () => showModal('RequestEmail', 'Diga quem é você, antes de continuar...'));
+    PubSub.subscribe('httpStatus401', (msg: any, retryAfter401: any) => showModal('RequestEmail', 'Diga quem é você, antes de continuar...', retryAfter401));
     showMessage();
     showInfoMessage();
     showErrorMessages(serverResponse.errors);
@@ -72,7 +69,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     <Toast ref={toast} />
                     <div id="cover" style={{ display: 'none' }}></div>
                     <ProviderComponent>{children}</ProviderComponent>
-                    <ModalLogin/>
+                    <ModalLogin />
                 </body>
             </html>
         </QueryProvider>

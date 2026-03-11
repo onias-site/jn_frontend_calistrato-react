@@ -12,6 +12,7 @@ import { Modal } from '@/presentation/components/source/Modal';
 export interface ModalLoginProps {}
 
 export interface IModalLoginStore {
+    retryAfterAuthentication: any;
     selectedScreen: string;
     visible: boolean;
     loading: boolean;
@@ -20,24 +21,33 @@ export interface IModalLoginStore {
     error: string;
     email: string;
     context: any;
-
-    showModal: (selectedScreen: string, title: string) => void;
-    setContextField: (key: string, value: any) => void;
-    setLoading: (loading: boolean) => void;
+    hideModal: () => void;
     setEmail: (email: string) => void;
     setError: (error: string) => void;
-    hideModal: () => void;
+    setLoading: (loading: boolean) => void;
+    executeRetryAfterAuthentication: () => void;
+    setContextField: (key: string, value: any) => void;
+    showModal: (selectedScreen: string, title: string, retryAfterAuthenticationCallBack: any) => void;
 }
 
 export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
-    showModal: (selectedScreen: string, title: string) => {
-        const { setError, setLoading, email } = get();
+
+    retryAfterAuthentication: null,
+    executeRetryAfterAuthentication: () => {
+        const {retryAfterAuthentication } = get();
+        retryAfterAuthentication && retryAfterAuthentication();
+        set({retryAfterAuthentication});
+    },
+    showModal: (selectedScreen: string, title: string, retryAfterAuthenticationCallBack: any) => {
+        const { setError, setLoading, email, retryAfterAuthentication, executeRetryAfterAuthentication } = get();
+        const retryAfter401 =  retryAfterAuthenticationCallBack || retryAfterAuthentication;
         const callbacks = {};
         callbacks['setLoading'] = () => setLoading(true);
         callbacks['setNotLoading'] = () => setLoading(false);
+        callbacks['200'] = () => executeRetryAfterAuthentication();
         callbacks['400'] = () => setError(`O e-mail '${email}' é inválido`);
 
-        set({ selectedScreen, title, visible: true, error: '', loading: false, callbacks });
+        set({ selectedScreen, title, visible: true, error: '', loading: false, callbacks, retryAfterAuthentication: retryAfter401});
     },
     context: {},
     setContextField: (key: string, value: any) => {
@@ -52,10 +62,10 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
     selectedScreen: 'RequestEmail',
     loading: false,
     visible: false,
+    callbacks: {},
     title: '',
     email: '',
     error: '',
-    callbacks: {},
 }));
 
 export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {

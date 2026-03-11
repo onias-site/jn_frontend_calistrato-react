@@ -17,36 +17,36 @@ export const RequestAnswers: React.FC<RequestAnswersProps> = ({}) => {
     const { context, setContextField } = ModalLoginStore((state: IModalLoginStore) => ({
         ...state,
     }));
-    const comoNosConheceu = [
+    const channels = [
         { value: 'linkedin', label: 'Por alguém ou por anúncio no linkedin' },
         { value: 'telegram', label: 'Grupos de vagas no telegram' },
         { value: 'friends', label: 'Indicação de amigos' },
         { value: 'others', label: 'outros' },
     ];
 
-    const qualObjetivo = [
+    const goals = [
         { value: 'jobs', label: 'Salários e Empregos' },
         { value: 'recruiting', label: 'Ver currículos' },
     ];
 
     useEffect(() => {
-        setContextField('goal', qualObjetivo[0].value);
-        setContextField('channel', comoNosConheceu[0].value);
+        setContextField('goal', goals[0].value);
+        setContextField('channel', channels[0].value);
     }, []);
 
-    const handleComoNosConheceuChange = (newValue: { value: string; label: string } | null) => newValue && setContextField('channel', newValue.value);
+    const hadleChannel = (newValue: { value: string; label: string } | null) => newValue && setContextField('channel', newValue.value);
 
-    const handleQualObjetivoChange = (newValue: { value: string; label: string } | null) => newValue && setContextField('goal', newValue.value);
+    const handleGoal = (newValue: { value: string; label: string } | null) => newValue && setContextField('goal', newValue.value);
 
     return (
         <div className="relative">
             <h5>Como você nos conheceu?</h5>
             <div className="mb-5 pb-2">
-                <Select defaultValue={context.channel || comoNosConheceu[0]} options={comoNosConheceu} isSearchable={false} onChange={handleComoNosConheceuChange} />
+                <Select defaultValue={context.channel || channels[0]} options={channels} isSearchable={false} onChange={hadleChannel} />
             </div>
             <h5>Qual seu objetivo?</h5>
             <div className="mb-12">
-                <Select defaultValue={context.goal || qualObjetivo[0]} options={qualObjetivo} isSearchable={false} onChange={handleQualObjetivoChange} />
+                <Select defaultValue={context.goal || goals[0]} options={goals} isSearchable={false} onChange={handleGoal} />
             </div>
         </div>
     );

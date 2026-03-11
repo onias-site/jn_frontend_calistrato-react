@@ -30,7 +30,6 @@ export const SubMenuMyResumeStore = create<ISubMenuMyResumeStore>((set) => ({
 
 const saveResume = (stateSkills: any, stateResume: any, stateLanguage: any, stateSalary: any, stateRegioes: any, stateOptions: any) => {
     const formErrors = stateSalary.onMoveOnFowardTabs();
-
     if (formErrors && formErrors.length) {
         return formErrors;
     }
@@ -76,13 +75,11 @@ const saveResume = (stateSkills: any, stateResume: any, stateLanguage: any, stat
         temporallyJobTime,
         travel,
     };
-    console.log('resume', resume);
-    console.log('language', language);
 
     const callbacks: any = {};
 
 
-
+    callbacks['retryAfterAuthentication'] = () => saveResume(stateSkills, stateResume, stateLanguage, stateSalary, stateRegioes, stateOptions );
     callbacks[200] = (responseFromBackEnd: any) => {
 
         PubSub.publish('showMessage', {

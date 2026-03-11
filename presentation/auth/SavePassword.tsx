@@ -14,7 +14,6 @@ export const SavePasswordClick = (setError: any, showModal: any, callbacks: any,
     callbacks['201'] = () => openModal('RequestAnswers');
     callbacks['421'] = () => setError('O token informado está incorreto');
     callbacks['403'] = () => setError('Seu token está bloqueado, por favor, tente novamente em 24 horas');
-
     JnAjax.doAnAjaxRequest(`login/${email}/password`, callbacks, 'POST', context, {}, 'http://localhost:8080');
 };
 
@@ -42,9 +41,9 @@ export const SavePassword: React.FC<SavePasswordProps> = ({}) => {
     useEffect(() => {
         setError('');
         callbacks['404'] = () => showModal('RequestEmail', '');
-        callbacks['201'] = () => showModal('RequestAnswers', '');
         callbacks['403'] = () => setError('Seu token está bloqueado, por favor, tente novamente em 24 horas');
         callbacks['429'] = () => setError(`Seu token já foi previamente enviado ao e-mail '${email}'. Por favor, verifique sua caixa de entrada e sua caixa de spam / lixo eletrônico`);
+        callbacks['afterHttpRequest'] = () => delete callbacks['422'];
         JnAjax.doAnAjaxRequest(`login/${email}/token/language/portuguese`, callbacks, 'POST', {}, {}, 'http://localhost:8080');
 
     }, []);

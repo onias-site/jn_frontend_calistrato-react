@@ -14,8 +14,8 @@ export default class JnAjax {
 
     static setNotLoading = () => () => JnAjax.ajaxLoading(false);
 
-    static doAnAjaxRequest(uri, callbacks = {}, verb = 'HEAD', requestBody = {}, headers = {}, enviroment = JnAjax.deafultEnviroment, contentType = 'application/json', dataType = 'json') {
-        const url = JnAjax.getUrlBackEnd(enviroment);
+    static doAnAjaxRequest(uri, callbacks = {}, type = 'HEAD', requestBody = {}, headers = {}, enviroment = JnAjax.deafultEnviroment, contentType = 'application/json', dataType = 'json') {
+        const path = JnAjax.getUrlBackEnd(enviroment);
         callbacks['setLoading'] = callbacks['setLoading'] || JnAjax.setLoading();
         callbacks['setLoading']();
 
@@ -28,56 +28,62 @@ export default class JnAjax {
             headers['token'] = token.token;
             headers['email'] = token.email;
         }
+        const url = `${path}/${uri}`;
+        const data = JSON.stringify(requestBody);
+
+        const complete = (a) => {
+            try {
+
+                callbacks['setNotLoading'] = callbacks['setNotLoading'] || JnAjax.setNotLoading();
+
+                callbacks['setNotLoading']();
+
+                const retryAfterAuthentication = callbacks['retryAfterAuthentication'] || (() => {});
+
+                callbacks[401] = callbacks[401] || JnAjax.getHandler401(retryAfterAuthentication);
+
+                callbacks[420] = callbacks[420] || JnAjax.getHandler420();
+
+                callbacks[403] = callbacks[403] || JnAjax.getHandler403(uri);
+
+                callbacks[410] = callbacks[410] || JnAjax.getHandler410(uri);
+
+                const afterHttpRequest = callbacks['afterHttpRequest'] || (() => {});
+
+                const responseBody = JnAjax.parseToObject(a.responseText);
+
+                callbacks[422] = callbacks[422] || JnAjax.getHandler422(responseBody);
+
+                const callback = callbacks[a.status] || callbacks['onUnexpectedHttpStatus'] || ((responseBody, httpStatus) => console.log('resposta' + responseBody, 'status imprevisto: ' + httpStatus));
+
+                callback(responseBody, a.status);
+
+                afterHttpRequest(responseBody, a.status);
+            } catch (error) {
+                callbacks['setNotLoading'] = JnAjax['setNotLoading'] || JnAjax.setNotLoading();
+                callbacks['setNotLoading']();
+                console.error(error);
+            }
+        };
 
         $.ajax({
-            data: JSON.stringify(requestBody),
+            data,
             headers,
-            url: `${url}/${uri}`,
+            url,
             contentType,
-            type: verb,
+            type,
             dataType,
-
-            complete: (a) => {
-                try {
-                    callbacks['setNotLoading'] = callbacks['setNotLoading'] || JnAjax.setNotLoading();
-                    callbacks['setNotLoading']();
-
-                    callbacks[401] = callbacks[401] || JnAjax.getHandler401();
-
-                    callbacks[420] = callbacks[420] || JnAjax.getHandler420();
-
-
-                    callbacks[403] = callbacks[403] || JnAjax.getHandler403(uri);
-
-                    callbacks[410] = callbacks[410] || JnAjax.getHandler410(uri);
-
-
-                    const afterHttpRequest = callbacks['afterHttpRequest'] || (() => {});
-
-                    const responseBody = JnAjax.parseToObject(a.responseText);
-
-                    callbacks[422] = callbacks[422] || JnAjax.getHandler422(responseBody);
-
-                    const callback = callbacks[a.status] || callbacks['onUnexpectedHttpStatus'] || ((responseBody, httpStatus) => console.log('resposta' + responseBody, 'status imprevisto: ' + httpStatus));
-
-                    callback(responseBody, a.status);
-
-                    afterHttpRequest(responseBody, a.status);
-                } catch (error) {
-                    callbacks['setNotLoading'] = JnAjax['setNotLoading'] || JnAjax.setNotLoading();
-                    callbacks['setNotLoading']();
-                    console.error(error);
-                }
-            },
+            complete
         });
     }
 
-    static getHandler422 = (response) => {
+    static getHandler422 = (response, status) => {
         return () => PubSub.publish('httpStatus422', response);
     }
 
-    static getHandler401 = response => {
-        return () => PubSub.publish('httpStatus401', response);
+    static getHandler401 = (retryAfterAuthentication) => {
+        console.log('retryAfterAuthentication', retryAfterAuthentication);
+        return () => PubSub.publish('httpStatus401', retryAfterAuthentication);
 
     };
 
