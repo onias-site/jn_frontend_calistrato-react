@@ -1,12 +1,13 @@
 'use client';
 import { create } from 'zustand';
-import React from 'react';
+import React, { useState, useEffect }  from 'react';
 import { RequestEmail, RequestEmailFooter, RequestEmailClick } from '@/presentation/auth/RequestEmail';
 import { ConfirmEmail, ConfirmEmailFooter, ConfirmEmailClick } from '@/presentation/auth/ConfirmEmail';
 import {SavePassword, SavePasswordClick, SavePasswordFooter} from '@/presentation/auth/SavePassword';
 import { RequestAnswers, RequestAnswersClick } from '@/presentation/auth/RequestAnswers';
 import { LoadingButton } from '@/presentation/components/source/LoadingButton';
 import { Modal } from '@/presentation/components/source/Modal';
+import { Alert } from '@mantine/core';
 
 
 export interface ModalLoginProps {}
@@ -16,6 +17,7 @@ export interface IModalLoginStore {
     selectedScreen: string;
     visible: boolean;
     loading: boolean;
+    invalid: boolean;
     callbacks: any;
     title: string;
     error: string;
@@ -25,6 +27,7 @@ export interface IModalLoginStore {
     setEmail: (email: string) => void;
     setError: (error: string) => void;
     setLoading: (loading: boolean) => void;
+    setInvalid: (invalid: boolean) => void;
     executeRetryAfterAuthentication: () => void;
     setContextField: (key: string, value: any) => void;
     showModal: (selectedScreen: string, title: string, retryAfterAuthenticationCallBack: any) => void;
@@ -38,16 +41,15 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
         retryAfterAuthentication && retryAfterAuthentication();
         set({retryAfterAuthentication});
     },
-    showModal: (selectedScreen: string, title: string, retryAfterAuthenticationCallBack: any) => {
+    showModal: (selectedScreen: string, title: string, retryAfterAuthenticationCallBack: any, error: string) => {
         const { setError, setLoading, email, retryAfterAuthentication, executeRetryAfterAuthentication } = get();
         const retryAfter401 =  retryAfterAuthenticationCallBack || retryAfterAuthentication;
         const callbacks = {};
         callbacks['setLoading'] = () => setLoading(true);
         callbacks['setNotLoading'] = () => setLoading(false);
-        callbacks['200'] = () => executeRetryAfterAuthentication();
         callbacks['400'] = () => setError(`O e-mail '${email}' é inválido`);
 
-        set({ selectedScreen, title, visible: true, error: '', loading: false, callbacks, retryAfterAuthentication: retryAfter401});
+        set({ selectedScreen, title, visible: true, error, loading: false, callbacks, retryAfterAuthentication: retryAfter401});
     },
     context: {},
     setContextField: (key: string, value: any) => {
@@ -57,10 +59,13 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
     },
     hideModal: () => set({ selectedScreen: 'RequestEmail', title: '', visible: false, error: '', loading: false }),
     setLoading: (loading: boolean) => set({ loading }),
+    setInvalid: (invalid: boolean) => set({invalid}),
     setEmail: (email: string) => set({ email }),
     setError: (error: string) => set({ error }),
+
     selectedScreen: 'RequestEmail',
     loading: false,
+    invalid: false,
     visible: false,
     callbacks: {},
     title: '',
@@ -69,9 +74,16 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
 }));
 
 export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
-    const { title, selectedScreen, visible, hideModal, showModal, email, loading, callbacks, setError, error, context } = ModalLoginStore((state: IModalLoginStore) => ({
+    const {invalid, executeRetryAfterAuthentication, title, selectedScreen, visible, hideModal, showModal, email, loading, callbacks, setError, error, context } = ModalLoginStore((state: IModalLoginStore) => ({
         ...state,
     }));
+
+
+
+    useEffect(() => {
+       alert(error);
+
+    }, []);
 
     const allScreens = {
         RequestEmail: {
@@ -114,7 +126,7 @@ export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
                     {screen.component}
                     {error && <p className="text-red-600">{error}</p>}
                 </div>
-                <LoadingButton label={screen.buttonLabel} loading={loading} onClick={() => screen.buttonClick(setError, showModal, callbacks, email, context)} />
+                <LoadingButton invalid={invalid} label={screen.buttonLabel} loading={loading} onClick={() => screen.buttonClick(setError, showModal, callbacks, email, context, executeRetryAfterAuthentication)} />
             </form>
             {screen.footerComponent}
         </Modal>

@@ -5,10 +5,11 @@ import IconLoader from '@/presentation/icons/icon-loader';
 export interface LoadingButtonProps {
     onClick: () => void;
     loading: boolean;
+    invalid: boolean;
     label: string;
 }
 
-export const LoadingButton: React.FC<LoadingButtonProps> = ({ onClick, label, loading }) => {
+export const LoadingButton: React.FC<LoadingButtonProps> = ({ onClick, label, loading, invalid }) => {
     const getInconLoader = () => {
         if (!loading) {
             return null;
@@ -18,7 +19,7 @@ export const LoadingButton: React.FC<LoadingButtonProps> = ({ onClick, label, lo
     };
 
     return (
-        <button disabled={loading} type="button" className="btn btn-primary w-full" onClick={onClick}>
+        <button disabled={loading || invalid} type="button" className="btn btn-primary w-full" onClick={onClick}>
             {getInconLoader()}
             {label}
         </button>

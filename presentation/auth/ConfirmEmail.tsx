@@ -11,6 +11,7 @@ export const ConfirmEmailClick = (setError: any, showModal: any, callbacks: any,
     callbacks['201'] = () => openModal('RequestAnswers');
     callbacks['404'] = () => openModal('ConfirmEmail');
     callbacks['202'] = () => openModal('SavePassword');
+    callbacks['421'] = () => showModal('SavePassword', 'Desbloqueie sua senha');
 
     JnAjax.doAnAjaxRequest(`login/${email}/token`, callbacks, 'POST', {}, {}, 'http://localhost:8080');
 };

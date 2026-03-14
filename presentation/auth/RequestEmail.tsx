@@ -21,7 +21,9 @@ export const RequestEmailClick = (setError: any, showModal: any, callbacks: any,
     setError('');
     callbacks['201'] = () => openModal('RequestAnswers');
     callbacks['404'] = () => openModal('ConfirmEmail');
-    callbacks['202'] = () => openModal('SavePassword');
+    callbacks['202'] = () => showModal('SavePassword', 'Criar uma nova senha');
+    callbacks['409'] = () => showModal('SavePassword', 'Desbloqueie seu login', null, 'Já há um login corrente em sua conta, pode ser que não tenha havido o logout ou pode se tratar de algum acesso em outra estação de trabalho, preencha os campos abaixos para desfazer o outro login corrente');
+    callbacks['423'] = () => showModal('SavePassword', 'Desbloqueie sua senha');
 
     JnAjax.doAnAjaxRequest(`login/${email}/token`, callbacks, 'HEAD', {}, {}, 'http://localhost:8080');
 };
