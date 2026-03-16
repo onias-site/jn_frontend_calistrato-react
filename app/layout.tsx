@@ -3,7 +3,7 @@ import ProviderComponent from '@/presentation/layouts/provider-component';
 import 'react-perfect-scrollbar/dist/css/styles.css';
 import '../styles/tailwind.css';
 import { Nunito } from 'next/font/google';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { QueryProvider } from '@/presentation/contexts/QueryProvider';
 import './loading.css';
 import PubSub from 'pubsub-js';
@@ -18,29 +18,17 @@ const nunito = Nunito({
 });
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-    const [serverResponse, setServerResponse] = useState({});
-    const [infoMessage, setInfoMessage] = useState({});
-    const [message, setMessage] = useState({});
+
     const toast = useRef(null);
+
     const translate = (error: any) => {
         const translations = {};
         return translations[error.errorName] || (typeof error.errorDescription === 'string' ? error.errorDescription : showErrorMessages(error.errorDescription.errors));
     };
 
-    useEffect(() => {
-        PubSub.subscribe('httpStatus422', (msg: any, sr: any) => setServerResponse(sr));
-
-        PubSub.subscribe('showInfoMessage', (msg: any, sr: any) => {
-            sr.summary && setInfoMessage(sr);
-        });
-        PubSub.subscribe('showMessage', (msg: any, sr: any) => {
-            sr.summary && setMessage(sr);
-        });
-    }, []);
-
-    const showErrorMessages = (errors: any) => {
-        for (let fieldName in errors) {
-            const errorsInTheField = errors[fieldName];
+    const showErrorMessages = (sr: any) => {
+        for (let fieldName in sr.errors) {
+            const errorsInTheField = sr.errors[fieldName];
             errorsInTheField.forEach((error: any) => {
                 const detail = translate(error);
                 const summary = fieldName;
@@ -48,19 +36,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             });
         }
     };
+    const showMessage = (message: any) => message && message.summary && toast.current.show({ severity: message.severity || 'success', life: message.life || 10000, ...message });
+
     const { showModal } = ModalLoginStore((state: IModalLoginStore) => ({
         ...state,
     }));
 
-    const showInfoMessage = () => infoMessage && infoMessage.summary && toast.current.show({ severity: 'warn', life: 10000, ...infoMessage });
-    const showMessage = () => message && message.summary && toast.current.show({ severity: message.severity || 'success', life: message.life || 10000, ...message });
+    useEffect(() => {
+        PubSub.subscribe('httpStatus422', (msg: any, sr: any) => showErrorMessages(sr));
+        PubSub.subscribe('showMessage', (msg: any, sr: any) => sr.summary && showMessage(sr));
+        PubSub.subscribe('httpStatus401', (msg: any, retryAfter401: any) => showModal('RequestEmail', 'Diga quem é você, antes de continuar...', retryAfter401));
+    }, []);
 
-    PubSub.subscribe('httpStatus401', (msg: any, retryAfter401: any) => showModal('RequestEmail', 'Diga quem é você, antes de continuar...', retryAfter401));
-    showMessage();
-    showInfoMessage();
-    showErrorMessages(serverResponse.errors);
-    delete serverResponse.errors;
-    delete infoMessage.summary;
+
     return (
         <QueryProvider>
             <html lang="en">

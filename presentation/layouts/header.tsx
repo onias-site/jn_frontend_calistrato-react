@@ -21,6 +21,8 @@ import { getTranslation } from '@/i18n';
 import { useStore } from '@/presentation/Login/store/useStore';
 import JnAjax from '@/app/JnAjax';
 import PubSub from 'pubsub-js';
+import { ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogin';
+
 
 const Header = () => {
     const pathname = usePathname();
@@ -30,16 +32,50 @@ const Header = () => {
 
     const user = useStore((state) => state.userState);
 
-    const executeLogout = () => {
+
+    const getLogin = () => {
         const login = JnAjax.getLogin();
-        const  callbacks = {};
-        callbacks['200'] = () =>
-        {
-            PubSub.publish('showMessage', { summary: 'Sucesso!!!', detail: `O usuário '${login.email}' encerrou o login com sucesso!` });
-            sessionStorage.removeItem('login');
-        };
-        JnAjax.doAnAjaxRequest(`login/${login.email}/${login.sessionToken}`, callbacks, 'DELETE', {}, {}, 'http://localhost:8080');
+
+        if(!login || !login.email || !login.sessionToken){
+            PubSub.publish('showMessage', {
+                detail: `Usuário não logado!!!`,
+                summary: `Erro!!!`,
+                severity: 'error'
+            });
+            return;
+        }
+        return login;
     };
+
+    const executeLogout = () => {
+        const login = getLogin();
+
+        if(!login){
+            return;
+        }
+
+        const  callbacks = {};
+        sessionStorage.removeItem('login');
+        callbacks['200'] = () => PubSub.publish('showMessage', { summary: 'Sucesso!!!', detail: `O usuário '${login.email}' encerrou o login com sucesso!` });
+        callbacks['404'] = () => PubSub.publish('showMessage', { summary: 'Aviso!!!', detail: `O usuário '${login.email}' não está logado neste sistema!`, severity: 'warn' });
+        JnAjax.doAnAjaxRequest(`login/${login.email}/${login.sessionToken}`, callbacks, 'DELETE', null, {}, 'http://localhost:8080');
+    };
+
+    const { showModal} = ModalLoginStore((state: IModalLoginStore) => ({
+        ...state,
+    }));
+
+    const showModalChangePassword = () => {
+        const login = getLogin();
+
+        if(!login){
+            return;
+        }
+
+
+        showModal('SavePassword', 'Troque sua senha', null, 'Preencha os campos para atualizar sua senha');
+    };
+
 
     useEffect(() => {
         const selector = document.querySelector('ul.horizontal-menu a[href="' + window.location.pathname + '"]');
@@ -231,7 +267,7 @@ const Header = () => {
                                         </div>
                                     </li>
                                     <li>
-                                        <Link href="/users/profile" className="dark:hover:text-white">
+                                        <Link href="#" className="dark:hover:text-white" onClick = {showModalChangePassword}>
                                             <IconUser className="h-4.5 w-4.5 shrink-0 ltr:mr-2 rtl:ml-2" />
                                             Trocar Senha
                                         </Link>
@@ -250,7 +286,7 @@ const Header = () => {
                                     </li>
                                     <li className="border-t border-white-light dark:border-white-light/10">
                                         {/* <Link href="/auth/boxed-signin" className="!py-3 text-danger"> */}
-                                        <button className="!py-3 text-danger" onClick={() => executeLogout()}>
+                                        <button className="!py-3 text-danger" onClick={executeLogout}>
                                             <IconLogout className="h-4.5 w-4.5 shrink-0 rotate-90 ltr:mr-2 rtl:ml-2" />
                                             Sair do Sistema
                                         </button>

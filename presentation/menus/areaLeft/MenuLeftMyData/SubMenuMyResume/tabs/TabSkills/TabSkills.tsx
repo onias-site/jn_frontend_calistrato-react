@@ -212,16 +212,21 @@ const sendSkillSuggest = (word: string, context: any, groups: any[], accordionLi
     {
         const showMessage = mainGroup.list.filter((sk: any) => sk.word.toUpperCase() == word.toUpperCase())[0];
         if (showMessage) {
-            PubSub.publish('showInfoMessage', { detail: `A palavra '${word}' já está relacionada em sua lista de ferramentas`, summary: `Palavra já relacionada` });
+            PubSub.publish('showMessage', {
+                detail: `A palavra '${word}' já está relacionada em sua lista de ferramentas`,
+                summary: `Palavra já relacionada`,
+                severity: 'warn'
+            });
             return;
         }
     }
     {
         const showMessage = mainGroup.list.filter((sk: any) => sk.skill.toUpperCase() == word.toUpperCase())[0];
         if (showMessage) {
-            PubSub.publish('showInfoMessage', {
+            PubSub.publish('showMessage', {
                 detail: `A palavra '${word}' já está relacionada em sua lista de ferramentas porém com o nome '${showMessage.word}'`,
                 summary: `Palavra já relacionada`,
+                severity: 'warn'
             });
             return;
         }
@@ -237,16 +242,21 @@ const sendSkillSuggest = (word: string, context: any, groups: any[], accordionLi
         {
             const showMessage = group.list.filter((sk: any) => sk.skill.toUpperCase() == word.toUpperCase())[0];
             if (showMessage) {
-                PubSub.publish('showInfoMessage', { detail: `A palavra '${word}' já está relacionada em sua lista de ferramentas na lista '${group.title}'`, summary: `Palavra já relacionada` });
+                PubSub.publish('showMessage', {
+                    detail: `A palavra '${word}' já está relacionada em sua lista de ferramentas na lista '${group.title}'`,
+                    summary: `Palavra já relacionada`,
+                    severity: 'warn'
+                });
                 return;
             }
         }
         {
             const showMessage = group.list.filter((sk: any) => sk.word.toUpperCase() == word.toUpperCase())[0];
             if (showMessage) {
-                PubSub.publish('showInfoMessage', {
+                PubSub.publish('showMessage', {
                     detail: `A palavra '${word}' já está relacionada em sua lista de ferramentas porém com o nome '${showMessage.word}' e na lista '${group.title}'`,
                     summary: `Palavra já relacionada`,
+                    severity: 'warn'
                 });
                 return;
             }
@@ -279,9 +289,10 @@ const sendSkillSuggest = (word: string, context: any, groups: any[], accordionLi
             const showMessage = mainGroup.list.filter((sk: any) => sk.parent.includes(word.toUpperCase()));
             if (showMessage.length) {
                 const words = showMessage.map((x: any) => x.word);
-                PubSub.publish('showInfoMessage', {
+                PubSub.publish('showMessage', {
                     detail: `A palavra '${word}' já está relacionada em sua lista de ferramentas porém como pré requisito das palavras ${JSON.stringify(words)}`,
                     summary: `Palavra já relacionada como pré requisito de outras palavras`,
+                    severity: 'warn'
                 });
                 return;
             }
@@ -312,9 +323,10 @@ const errorHasFound = (context: any, error: any, word: string) => {
     if (!filtered) {
         return false;
     }
-    PubSub.publish('showInfoMessage', {
+    PubSub.publish('showMessage', {
         detail: summary.replace('{associated}', filtered.associated),
         summary : summary.replace('{associated}', filtered.associated),
+        severity: 'warn'
     });
 
     return true;

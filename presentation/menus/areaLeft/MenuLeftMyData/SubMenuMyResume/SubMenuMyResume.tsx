@@ -78,7 +78,6 @@ const saveResume = (stateSkills: any, stateResume: any, stateLanguage: any, stat
 
     const callbacks: any = {};
 
-
     callbacks['retryAfterAuthentication'] = () => saveResume(stateSkills, stateResume, stateLanguage, stateSalary, stateRegioes, stateOptions );
     callbacks[200] = (responseFromBackEnd: any) => {
 
@@ -86,14 +85,9 @@ const saveResume = (stateSkills: any, stateResume: any, stateLanguage: any, stat
             detail: `Currículo salvo com sucesso`,
             summary: `Currículo salvo com sucesso`,
         });
-
         console.log('responseFromBackEnd', responseFromBackEnd);
-
     };
-
-
     JnAjax.doAnAjaxRequest('resume/{email}/language/portuguese', callbacks, 'POST', resume, {}, 'http://localhost:8081');
-
 };
 
 const SubMenuMyResume = () => {

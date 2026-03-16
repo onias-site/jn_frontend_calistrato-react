@@ -31,16 +31,19 @@ export interface IModalLoginStore {
     setInvalid: (invalid: boolean) => void;
     setContextField: (key: string, value: any) => void;
     executeRetryAfterAuthentication: (response: any) => void;
+    clearRetryAfterAuthentication: () => void;
     showModal: (selectedScreen: string, title: string, retryAfterAuthenticationCallBack: any) => void;
 }
 
 export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
 
     retryAfterAuthentication: null,
+
+    clearRetryAfterAuthentication: () => set({retryAfterAuthentication: null}),
+
     executeRetryAfterAuthentication: (response: any) => {
 
         sessionStorage.setItem('login', JSON.stringify(response));
-
         const {retryAfterAuthentication , hideModal, email} = get();
         retryAfterAuthentication && retryAfterAuthentication();
         set({retryAfterAuthentication});

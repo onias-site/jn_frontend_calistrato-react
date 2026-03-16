@@ -29,7 +29,6 @@ export default class JnAjax {
             headers = {...headers, ...login};
         }
 
-
         const retryAfterAuthentication = callbacks['retryAfterAuthentication'] || (() => {});
 
         callbacks[401] = callbacks[401] || JnAjax.getHandler401(retryAfterAuthentication);
@@ -43,7 +42,7 @@ export default class JnAjax {
 
         const url = url2.replace('{email}', login.email);
 
-        const data = JSON.stringify(requestBody);
+        const data = requestBody ? JSON.stringify(requestBody) : null;
 
         const complete = (a) => {
             try {
