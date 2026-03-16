@@ -39,7 +39,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     }, []);
 
     const showErrorMessages = (errors: any) => {
-        console.log('errors', errors)
         for (let fieldName in errors) {
             const errorsInTheField = errors[fieldName];
             errorsInTheField.forEach((error: any) => {

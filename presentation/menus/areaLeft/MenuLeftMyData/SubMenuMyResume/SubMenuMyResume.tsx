@@ -92,7 +92,7 @@ const saveResume = (stateSkills: any, stateResume: any, stateLanguage: any, stat
     };
 
 
-    JnAjax.doAnAjaxRequest('resume/onias85@gmail.com/language/portuguese', callbacks, 'POST', resume, {}, 'http://localhost:8081');
+    JnAjax.doAnAjaxRequest('resume/{email}/language/portuguese', callbacks, 'POST', resume, {}, 'http://localhost:8081');
 
 };
 

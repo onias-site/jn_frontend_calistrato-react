@@ -18,17 +18,31 @@ export default class JnAjax {
         const path = JnAjax.getUrlBackEnd(enviroment);
         callbacks['setLoading'] = callbacks['setLoading'] || JnAjax.setLoading();
         callbacks['setLoading']();
+        callbacks['getLogin'] = callbacks['getLogin'] || this.getLogin;
+        const login =  callbacks['getLogin']();
 
-        const token = this.getToken();
         if (!headers) {
             headers = {};
         }
 
-        if (token && token.token) {
-            headers['token'] = token.token;
-            headers['email'] = token.email;
+        if (login && login.sessionToken && login.email) {
+            headers = {...headers, ...login};
         }
-        const url = `${path}/${uri}`;
+
+
+        const retryAfterAuthentication = callbacks['retryAfterAuthentication'] || (() => {});
+
+        callbacks[401] = callbacks[401] || JnAjax.getHandler401(retryAfterAuthentication);
+
+        const url2 = `${path}/${uri}`;
+
+        if(!login.email && url2.includes('{email}')){
+            callbacks[401]();
+            return;
+        }
+
+        const url = url2.replace('{email}', login.email);
+
         const data = JSON.stringify(requestBody);
 
         const complete = (a) => {
@@ -37,10 +51,6 @@ export default class JnAjax {
                 callbacks['setNotLoading'] = callbacks['setNotLoading'] || JnAjax.setNotLoading();
 
                 callbacks['setNotLoading']();
-
-                const retryAfterAuthentication = callbacks['retryAfterAuthentication'] || (() => {});
-
-                callbacks[401] = callbacks[401] || JnAjax.getHandler401(retryAfterAuthentication);
 
                 callbacks[420] = callbacks[420] || JnAjax.getHandler420();
 
@@ -82,7 +92,6 @@ export default class JnAjax {
     }
 
     static getHandler401 = (retryAfterAuthentication) => {
-        console.log('retryAfterAuthentication', retryAfterAuthentication);
         return () => PubSub.publish('httpStatus401', retryAfterAuthentication);
 
     };
@@ -162,12 +171,14 @@ export default class JnAjax {
         return urls[enviroment] || enviroment;
     }
 
-    static getToken() {
-        const sessao = sessionStorage.getItem('sessao');
+    static getLogin() {
+        const sessao = sessionStorage.getItem('login');
 
         try {
             const sessaoObj = JSON.parse(sessao);
-            return { ...sessaoObj };
+            const {sessionToken, email} = sessaoObj;
+            const login = {sessionToken, email};
+            return login;
         } catch (error) {
             return {};
         }

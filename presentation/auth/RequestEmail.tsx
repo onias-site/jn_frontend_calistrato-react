@@ -2,8 +2,8 @@
 
 import IconUser from '@/presentation/icons/icon-user';
 
-import JnAjax from '@/app/JnAjax';
 import React from 'react';
+import JnAjax from '@/app/JnAjax';
 import { ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogin';
 
 export interface RequestEmailProps {}
@@ -19,11 +19,12 @@ export const RequestEmailClick = (setError: any, showModal: any, callbacks: any,
     const openModal = (selectedScreen: string) => showModal(selectedScreen, '');
 
     setError('');
-    callbacks['201'] = () => openModal('RequestAnswers');
     callbacks['404'] = () => openModal('ConfirmEmail');
+    callbacks['201'] = () => openModal('RequestAnswers');
+    callbacks['200'] = () => openModal('RequestPassword');
     callbacks['202'] = () => showModal('SavePassword', 'Criar uma nova senha');
-    callbacks['409'] = () => showModal('SavePassword', 'Desbloqueie seu login', null, 'Já há um login corrente em sua conta, pode ser que não tenha havido o logout ou pode se tratar de algum acesso em outra estação de trabalho, preencha os campos abaixos para desfazer o outro login corrente');
     callbacks['423'] = () => showModal('SavePassword', 'Desbloqueie sua senha');
+    callbacks['409'] = () => showModal('SavePassword', 'Desbloqueie seu login', null, 'Já há um login corrente em sua conta, pode ser que você não tenha feito a saída em seu último login, ou se trata de algum acesso concorrente em sua conta em outra estação de trabalho. De qualquer forma, preencha os campos deste formulário para desfazer o outro login corrente');
 
     JnAjax.doAnAjaxRequest(`login/${email}/token`, callbacks, 'HEAD', {}, {}, 'http://localhost:8080');
 };

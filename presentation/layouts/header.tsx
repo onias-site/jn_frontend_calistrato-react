@@ -19,7 +19,8 @@ import IconMenuPages from '@/presentation/icons/menu/icon-menu-pages';
 import { usePathname, useRouter } from 'next/navigation';
 import { getTranslation } from '@/i18n';
 import { useStore } from '@/presentation/Login/store/useStore';
-import { useLogout } from '@/presentation/Login/hooks/useLogout';
+import JnAjax from '@/app/JnAjax';
+import PubSub from 'pubsub-js';
 
 const Header = () => {
     const pathname = usePathname();
@@ -27,8 +28,18 @@ const Header = () => {
     const router = useRouter();
     const { t, i18n } = getTranslation();
 
-    const user = useStore(state => state.userState)
-    const { handleLogoutSubmission } = useLogout()
+    const user = useStore((state) => state.userState);
+
+    const executeLogout = () => {
+        const login = JnAjax.getLogin();
+        const  callbacks = {};
+        callbacks['200'] = () =>
+        {
+            PubSub.publish('showMessage', { summary: 'Sucesso!!!', detail: `O usuário '${login.email}' encerrou o login com sucesso!` });
+            sessionStorage.removeItem('login');
+        };
+        JnAjax.doAnAjaxRequest(`login/${login.email}/${login.sessionToken}`, callbacks, 'DELETE', {}, {}, 'http://localhost:8080');
+    };
 
     useEffect(() => {
         const selector = document.querySelector('ul.horizontal-menu a[href="' + window.location.pathname + '"]');
@@ -74,14 +85,14 @@ const Header = () => {
         <header className={`z-40 ${themeConfig.semidark && themeConfig.menu === 'horizontal' ? 'dark' : ''}`}>
             <div className="shadow-sm">
                 <div className="relative flex w-full items-center bg-white px-5 py-2.5 dark:bg-black">
-                    <div className="horizontal-logo flex items-center justify-between lg:hidden ltr:mr-2 rtl:ml-2">
+                    <div className="horizontal-logo flex items-center justify-between ltr:mr-2 rtl:ml-2 lg:hidden">
                         <Link href="/" className="main-logo flex shrink-0 items-center">
                             {/* <img className="inline w-8 ltr:-ml-1 rtl:-mr-1" src="/assets/images/JN.png" alt="logo" /> */}
-                            <span className="hidden align-middle text-2xl  font-semibold  transition-all duration-300 dark:text-white-light md:inline ltr:ml-1.5 rtl:mr-1.5">JOBSNOW</span>
+                            <span className="hidden align-middle text-2xl  font-semibold  transition-all duration-300 ltr:ml-1.5 rtl:mr-1.5 dark:text-white-light md:inline">JOBSNOW</span>
                         </Link>
                         <button
                             type="button"
-                            className="collapse-icon flex flex-none rounded-full bg-white-light/40 p-2 hover:bg-white-light/90 hover:text-primary dark:bg-dark/40 dark:text-[#d0d2d6] dark:hover:bg-dark/60 dark:hover:text-primary lg:hidden ltr:ml-2 rtl:mr-2"
+                            className="collapse-icon flex flex-none rounded-full bg-white-light/40 p-2 hover:bg-white-light/90 hover:text-primary ltr:ml-2 rtl:mr-2 dark:bg-dark/40 dark:text-[#d0d2d6] dark:hover:bg-dark/60 dark:hover:text-primary lg:hidden"
                             onClick={() => dispatch(toggleSidebar())}
                         >
                             <IconMenu className="h-5 w-5" />
@@ -89,7 +100,7 @@ const Header = () => {
                     </div>
 
                     {/* //TODO Componentizar Saldo */}
-                    <div className="flex items-center space-x-1.5 dark:text-[#d0d2d6] sm:flex-1 lg:space-x-2 ltr:ml-auto ltr:sm:ml-0 rtl:mr-auto rtl:space-x-reverse sm:rtl:mr-0">
+                    <div className="flex items-center space-x-1.5 ltr:ml-auto rtl:mr-auto rtl:space-x-reverse dark:text-[#d0d2d6] sm:flex-1 ltr:sm:ml-0 sm:rtl:mr-0 lg:space-x-2">
                         <div className="sm:ltr:mr-auto sm:rtl:ml-auto">
                             <div className="flex flex-row gap-2 rounded-full bg-white-light/40 p-2 hover:bg-white-light/90 hover:text-primary dark:bg-dark/40 dark:hover:bg-dark/60">
                                 <div className="dropdown flex shrink-0">
@@ -239,7 +250,7 @@ const Header = () => {
                                     </li>
                                     <li className="border-t border-white-light dark:border-white-light/10">
                                         {/* <Link href="/auth/boxed-signin" className="!py-3 text-danger"> */}
-                                        <button className="!py-3 text-danger" onClick={() => handleLogoutSubmission(user as string)}>
+                                        <button className="!py-3 text-danger" onClick={() => executeLogout()}>
                                             <IconLogout className="h-4.5 w-4.5 shrink-0 rotate-90 ltr:mr-2 rtl:ml-2" />
                                             Sair do Sistema
                                         </button>
@@ -251,7 +262,7 @@ const Header = () => {
                 </div>
 
                 {/* horizontal menu */}
-                <ul className="horizontal-menu hidden border-t border-[#ebedf2] bg-white px-6 py-1.5 font-semibold text-black dark:border-[#191e3a] dark:bg-black dark:text-white-dark lg:space-x-1.5 xl:space-x-8 rtl:space-x-reverse">
+                <ul className="horizontal-menu hidden border-t border-[#ebedf2] bg-white px-6 py-1.5 font-semibold text-black rtl:space-x-reverse dark:border-[#191e3a] dark:bg-black dark:text-white-dark lg:space-x-1.5 xl:space-x-8">
                     <li className="menu nav-item relative">
                         <button type="button" className="nav-link">
                             <div className="flex items-center">
@@ -270,7 +281,7 @@ const Header = () => {
                                         <IconCaretDown />
                                     </div>
                                 </button>
-                                <ul className="absolute top-0 z-[10] hidden min-w-[180px] rounded bg-white p-0 py-2 text-dark shadow dark:bg-[#1b2e4b] dark:text-white-dark ltr:left-[95%] rtl:right-[95%]">
+                                <ul className="absolute top-0 z-[10] hidden min-w-[180px] rounded bg-white p-0 py-2 text-dark shadow ltr:left-[95%] rtl:right-[95%] dark:bg-[#1b2e4b] dark:text-white-dark">
                                     <li>
                                         <Link href="/users/profile">{t('profile')}</Link>
                                     </li>
@@ -291,7 +302,7 @@ const Header = () => {
                                         <IconCaretDown />
                                     </div>
                                 </button>
-                                <ul className="absolute top-0 z-[10] hidden min-w-[180px] rounded bg-white p-0 py-2 text-dark shadow dark:bg-[#1b2e4b] dark:text-white-dark ltr:left-[95%] rtl:right-[95%]">
+                                <ul className="absolute top-0 z-[10] hidden min-w-[180px] rounded bg-white p-0 py-2 text-dark shadow ltr:left-[95%] rtl:right-[95%] dark:bg-[#1b2e4b] dark:text-white-dark">
                                     <li>
                                         <Link href="/pages/error404" target="_blank">
                                             {t('404')}
@@ -316,6 +327,5 @@ const Header = () => {
         </header>
     );
 };
-
 
 export default Header;

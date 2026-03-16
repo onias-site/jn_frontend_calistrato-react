@@ -1,13 +1,14 @@
 'use client';
 import { create } from 'zustand';
-import React, { useState, useEffect }  from 'react';
+import React from 'react';
+import { RequestPassword, RequestPasswordClick, RequestPasswordFooter } from '@/presentation/auth/RequestPassword';
 import { RequestEmail, RequestEmailFooter, RequestEmailClick } from '@/presentation/auth/RequestEmail';
 import { ConfirmEmail, ConfirmEmailFooter, ConfirmEmailClick } from '@/presentation/auth/ConfirmEmail';
 import {SavePassword, SavePasswordClick, SavePasswordFooter} from '@/presentation/auth/SavePassword';
 import { RequestAnswers, RequestAnswersClick } from '@/presentation/auth/RequestAnswers';
 import { LoadingButton } from '@/presentation/components/source/LoadingButton';
 import { Modal } from '@/presentation/components/source/Modal';
-import { Alert } from '@mantine/core';
+import PubSub from 'pubsub-js';
 
 
 export interface ModalLoginProps {}
@@ -28,25 +29,33 @@ export interface IModalLoginStore {
     setError: (error: string) => void;
     setLoading: (loading: boolean) => void;
     setInvalid: (invalid: boolean) => void;
-    executeRetryAfterAuthentication: () => void;
     setContextField: (key: string, value: any) => void;
+    executeRetryAfterAuthentication: (response: any) => void;
     showModal: (selectedScreen: string, title: string, retryAfterAuthenticationCallBack: any) => void;
 }
 
 export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
 
     retryAfterAuthentication: null,
-    executeRetryAfterAuthentication: () => {
-        const {retryAfterAuthentication } = get();
+    executeRetryAfterAuthentication: (response: any) => {
+
+        sessionStorage.setItem('login', JSON.stringify(response));
+
+        const {retryAfterAuthentication , hideModal, email} = get();
         retryAfterAuthentication && retryAfterAuthentication();
         set({retryAfterAuthentication});
+        PubSub.publish('showMessage', {summary: 'Sucesso!!!', detail: `O usuário '${email}' foi autenticado com sucesso!`});
+        hideModal();
     },
     showModal: (selectedScreen: string, title: string, retryAfterAuthenticationCallBack: any, error: string) => {
-        const { setError, setLoading, email, retryAfterAuthentication, executeRetryAfterAuthentication } = get();
+        const { setError, setLoading, email, retryAfterAuthentication } = get();
         const retryAfter401 =  retryAfterAuthenticationCallBack || retryAfterAuthentication;
         const callbacks = {};
         callbacks['setLoading'] = () => setLoading(true);
         callbacks['setNotLoading'] = () => setLoading(false);
+        callbacks['getLogin'] = () => {
+            return {};
+        };
         callbacks['400'] = () => setError(`O e-mail '${email}' é inválido`);
 
         set({ selectedScreen, title, visible: true, error, loading: false, callbacks, retryAfterAuthentication: retryAfter401});
@@ -57,7 +66,7 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
         context[key] = value;
         set({context});
     },
-    hideModal: () => set({ selectedScreen: 'RequestEmail', title: '', visible: false, error: '', loading: false }),
+    hideModal: () => set({invalid: false, selectedScreen: 'RequestEmail', title: '', visible: false, error: '', loading: false }),
     setLoading: (loading: boolean) => set({ loading }),
     setInvalid: (invalid: boolean) => set({invalid}),
     setEmail: (email: string) => set({ email }),
@@ -78,13 +87,6 @@ export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
         ...state,
     }));
 
-
-
-    useEffect(() => {
-       alert(error);
-
-    }, []);
-
     const allScreens = {
         RequestEmail: {
             footerComponent: <RequestEmailFooter />,
@@ -93,7 +95,6 @@ export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
             component: <RequestEmail />,
             buttonLabel: 'Avançar',
         },
-
         SavePassword:{
             footerComponent: <SavePasswordFooter/>,
             headerLabel: 'Criar senha',
@@ -101,7 +102,6 @@ export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
             component: <SavePassword />,
             buttonLabel: 'Salvar senha',
         },
-
         RequestAnswers: {
             headerLabel: 'Informe suas preferências e objetivos' ,
             buttonClick: RequestAnswersClick,
@@ -114,6 +114,13 @@ export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
             buttonClick: ConfirmEmailClick,
             component: <ConfirmEmail />,
             buttonLabel: 'Confirmar',
+        },
+        RequestPassword: {
+            headerLabel: `Informe a senha para o login '${email}'`,
+            footerComponent: <RequestPasswordFooter />,
+            buttonClick: RequestPasswordClick,
+            component: <RequestPassword />,
+            buttonLabel: 'Login',
         },
     };
 
