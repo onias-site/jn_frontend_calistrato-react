@@ -13,7 +13,9 @@ export const RequestPasswordClick = (setError: any, showModal: any, callbacks: a
     callbacks['201'] = () => openModal('RequestAnswers');
     callbacks['200'] = (response: any) => executeRetryAfterAuthentication(response);
     callbacks['403'] = () => setError('Seu token está bloqueado, por favor, tente novamente em 24 horas');
-
+    callbacks['421'] = () => setError('Sua senha está incorreta!!!');
+    callbacks['423'] = () => showModal('SavePassword', 'Desbloqueie a sua senha', null, 'Preencha os campos para desbloquear sua senha');
+    callbacks['429'] = () => showModal('SavePassword', 'Desbloqueie a sua senha', null, 'Preencha os campos para desbloquear sua senha');
     JnAjax.doAnAjaxRequest(`login/${email}`, callbacks, 'POST', context, {}, 'http://localhost:8080');
 };
 

@@ -9,6 +9,7 @@ import { RequestAnswers, RequestAnswersClick } from '@/presentation/auth/Request
 import { LoadingButton } from '@/presentation/components/source/LoadingButton';
 import { Modal } from '@/presentation/components/source/Modal';
 import PubSub from 'pubsub-js';
+import JnAjax from '@/app/JnAjax';
 
 
 export interface ModalLoginProps {}
@@ -60,8 +61,9 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
             return {};
         };
         callbacks['400'] = () => setError(`O e-mail '${email}' é inválido`);
-
-        set({ selectedScreen, title, visible: true, error, loading: false, callbacks, retryAfterAuthentication: retryAfter401});
+        const login = JnAjax.getLogin();
+        const email2 = email || login.email;
+        set({invalid: false, context:{}, email: email2,  selectedScreen, title, visible: true, error, loading: false, callbacks, retryAfterAuthentication: retryAfter401});
     },
     context: {},
     setContextField: (key: string, value: any) => {
@@ -69,7 +71,7 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
         context[key] = value;
         set({context});
     },
-    hideModal: () => set({invalid: false, selectedScreen: 'RequestEmail', title: '', visible: false, error: '', loading: false }),
+    hideModal: () => set({context: {}, callbacks: {}, email: '', retryAfterAuthentication: null, invalid: false, selectedScreen: 'RequestEmail', title: '', visible: false, error: '', loading: false }),
     setLoading: (loading: boolean) => set({ loading }),
     setInvalid: (invalid: boolean) => set({invalid}),
     setEmail: (email: string) => set({ email }),
