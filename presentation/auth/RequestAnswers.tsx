@@ -9,7 +9,7 @@ export const RequestAnswersClick = (setError: any, showModal: any, callbacks: an
     const openModal = (selectedScreen: string) => showModal(selectedScreen, '');
     setError('');
     callbacks['202'] = () => openModal('SavePassword');
-    callbacks['404'] = () => openModal('ConfirmEmail');
+    callbacks['404'] = () => showModal('RequestEmail', '', null, 'O seu login não foi encontrado, por favor, informe um e-mail');
     JnAjax.doAnAjaxRequest(`login/${email}/pre-registration`, callbacks, 'POST', context, {}, 'http://localhost:8080');
 };
 

@@ -9,11 +9,11 @@ export const RequestPasswordClick = (setError: any, showModal: any, callbacks: a
     const openModal = (selectedScreen: string) => showModal(selectedScreen, '');
 
     setError('');
-    callbacks['404'] = () => openModal('RequestEmail');
     callbacks['201'] = () => openModal('RequestAnswers');
     callbacks['200'] = (response: any) => executeRetryAfterAuthentication(response);
+    callbacks['404'] = () => showModal('RequestEmail', '', null, 'O seu login não foi encontrado, por favor, informe um e-mail');
     callbacks['403'] = () => setError('Seu token está bloqueado, por favor, tente novamente em 24 horas');
-    callbacks['421'] = () => setError('Sua senha está incorreta!!!');
+    callbacks['427'] = (response: any) => setError(`Sua senha está incorreta!!! Você ainda tem direito a ${3 - response.attempts} tentativa(s)`);
     callbacks['423'] = () => showModal('SavePassword', 'Desbloqueie a sua senha', null, 'Preencha os campos para desbloquear sua senha');
     callbacks['429'] = () => showModal('SavePassword', 'Desbloqueie a sua senha', null, 'Preencha os campos para desbloquear sua senha');
     JnAjax.doAnAjaxRequest(`login/${email}`, callbacks, 'POST', context, {}, 'http://localhost:8080');

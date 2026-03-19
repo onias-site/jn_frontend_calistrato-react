@@ -170,6 +170,11 @@ export default class JnAjax {
         return urls[enviroment] || enviroment;
     }
 
+    static hasLogin(){
+        const login = this.getLogin();
+        return login && login.sessionToken && login.email && true;
+    }
+
     static getLogin() {
         const sessao = sessionStorage.getItem('login');
 

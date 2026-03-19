@@ -2,9 +2,10 @@
 
 import IconUser from '@/presentation/icons/icon-user';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import JnAjax from '@/app/JnAjax';
 import { ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogin';
+import { Noto_Serif_Old_Uyghur } from 'next/font/google';
 
 export interface RequestEmailProps {}
 
@@ -24,21 +25,47 @@ export const RequestEmailClick = (setError: any, showModal: any, callbacks: any,
     callbacks['200'] = () => openModal('RequestPassword');
     callbacks['202'] = () => showModal('SavePassword', 'Criar uma nova senha');
     callbacks['421'] = () => showModal('SavePassword', 'Desbloqueie a sua senha', null, 'Preencha os campos para desbloquear sua senha');
-    callbacks['409'] = () => showModal('SavePassword', 'Desbloqueie seu login', null, 'Já há um login corrente em sua conta, pode ser que você não tenha feito a saída em seu último login, ou se trata de algum acesso concorrente em sua conta em outra estação de trabalho. De qualquer forma, preencha os campos deste formulário para desfazer o outro login corrente');
+    callbacks['409'] = () =>
+        showModal(
+            'SavePassword',
+            'Desbloqueie seu login',
+            null,
+            'Já há um login corrente em sua conta, pode ser que você não tenha feito a saída em seu último login, ou se trata de algum acesso concorrente em sua conta em outra estação de trabalho. De qualquer forma, preencha os campos deste formulário para desfazer o outro login corrente'
+        );
 
     JnAjax.doAnAjaxRequest(`login/${email}/token`, callbacks, 'HEAD', {}, {}, 'http://localhost:8080');
 };
 export const RequestEmail: React.FC<RequestEmailProps> = ({}) => {
-    const { email, setEmail} = ModalLoginStore((state: IModalLoginStore) => ({
+    const { email, setInvalid, setError, setEmail, error } = ModalLoginStore((state: IModalLoginStore) => ({
         ...state,
     }));
+
+    const validateEmail = (value: string, oldError: string) => {
+        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const invalid = !regex.test(value);
+        const error = invalid ? `O e-mail '${value}' está em formato inválido` : oldError;
+        setInvalid(invalid);
+        setEmail(value);
+        setError(error);
+    };
+
+    useEffect(() => {
+
+        setError(error);
+        if (!email) {
+            setError(`Favor informar um e-mail ao qual você tenha pleno acesso`);
+            setInvalid(true);
+            return;
+        }
+        validateEmail(email, error);
+    }, []);
 
     return (
         <div className="relative">
             <span className="absolute top-1/2 -translate-y-1/2 ltr:left-3 rtl:right-3 dark:text-white-dark">
                 <IconUser className="h-5 w-5" />
             </span>
-            <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="Email" className="form-input ltr:pl-10 rtl:pr-10" />
+            <input value={email} onChange={(e) => validateEmail(e.target.value, '')} type="email" placeholder="Email" className="form-input ltr:pl-10 rtl:pr-10" />
         </div>
     );
 };

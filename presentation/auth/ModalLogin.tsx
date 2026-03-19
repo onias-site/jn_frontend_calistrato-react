@@ -71,7 +71,12 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
         context[key] = value;
         set({context});
     },
-    hideModal: () => set({context: {}, callbacks: {}, email: '', retryAfterAuthentication: null, invalid: false, selectedScreen: 'RequestEmail', title: '', visible: false, error: '', loading: false }),
+    hideModal: () =>
+    {
+        set({context: {}, callbacks: {}, email: '', retryAfterAuthentication: null, invalid: false, selectedScreen: 'RequestEmail', title: '', visible: false, error: '', loading: false });
+        document.getElementById('cover').style.display = 'none';
+
+    },
     setLoading: (loading: boolean) => set({ loading }),
     setInvalid: (invalid: boolean) => set({invalid}),
     setEmail: (email: string) => set({ email }),

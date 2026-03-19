@@ -286,7 +286,8 @@ const Header = () => {
                                     </li>
                                     <li className="border-t border-white-light dark:border-white-light/10">
                                         {/* <Link href="/auth/boxed-signin" className="!py-3 text-danger"> */}
-                                        <button className="!py-3 text-danger" onClick={executeLogout}>
+                                        <button
+                                         className="!py-3 text-danger" onClick={executeLogout}>
                                             <IconLogout className="h-4.5 w-4.5 shrink-0 rotate-90 ltr:mr-2 rtl:ml-2" />
                                             Sair do Sistema
                                         </button>
