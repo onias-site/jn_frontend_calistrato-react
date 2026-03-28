@@ -5,15 +5,15 @@ import { ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogi
 import { Password } from 'primereact/password';
 import { LabelComponent } from '@/presentation/components/source/LabelComponent';
 
-export const SavePasswordClick = (setError: any, showModal: any, callbacks: any, email: string, context: any, executeRetryAfterAuthentication: any) => {
+export const SavePasswordClick = (setError: any, showModal: any, callbacks: any, email: string, context: any, executeRetryAfterAuthentication: any, setLockedToken: any) => {
     const openModal = (selectedScreen: string) => showModal(selectedScreen, '');
 
     setError('');
-    callbacks['201'] = () => openModal('RequestAnswers');
-    callbacks['421'] = () => setError('O token informado está incorreto');
-    callbacks['200'] = (response: any) => executeRetryAfterAuthentication(response);
-    callbacks['403'] = () => setError('Seu token está bloqueado, por favor, tente novamente em 24 horas');
+    callbacks['427'] = (response: any) => setError(`O token informado está incorreto, você ainda pode tentar mais ${3 - response.attempts} vez(es)`);
     callbacks['404'] = () => showModal('RequestEmail', '', null, 'O seu login não foi encontrado, por favor, informe um e-mail');
+    callbacks['200'] = (response: any) => executeRetryAfterAuthentication(response);
+    callbacks['201'] = () => openModal('RequestAnswers');
+    callbacks['429'] = () => setLockedToken(true);
 
     JnAjax.doAnAjaxRequest(`login/${email}/password`, callbacks, 'POST', context, {}, 'http://localhost:8080');
 };

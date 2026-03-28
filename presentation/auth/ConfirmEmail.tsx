@@ -7,7 +7,6 @@ import IconUser from '@/presentation/icons/icon-user';
 export const ConfirmEmailClick = (setError: any, showModal: any, callbacks: any, email: string) => {
     const openModal = (selectedScreen: string) => showModal(selectedScreen, '');
 
-    setError('');
     callbacks['201'] = () => openModal('RequestAnswers');
     callbacks['202'] = () => openModal('SavePassword');
     callbacks['421'] = () => showModal('SavePassword', 'Desbloqueie sua senha');

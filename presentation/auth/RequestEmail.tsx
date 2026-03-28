@@ -19,12 +19,11 @@ export const RequestEmailFooter: React.FC<RequestEmailProps> = ({}) => {
 export const RequestEmailClick = (setError: any, showModal: any, callbacks: any, email: string) => {
     const openModal = (selectedScreen: string) => showModal(selectedScreen, '');
 
-    setError('');
     callbacks['404'] = () => openModal('ConfirmEmail');
     callbacks['201'] = () => openModal('RequestAnswers');
     callbacks['200'] = () => openModal('RequestPassword');
     callbacks['202'] = () => showModal('SavePassword', 'Criar uma nova senha');
-    callbacks['421'] = () => showModal('SavePassword', 'Desbloqueie a sua senha', null, 'Preencha os campos para desbloquear sua senha');
+    callbacks['427'] = () => showModal('SavePassword', 'Desbloqueie a sua senha', null, 'Devido a tentativas de acessos suspeitos, sua senha foi preventivamente bloqueada. Preencha os campos acima, para desbloqueá-la.');
     callbacks['409'] = () =>
         showModal(
             'SavePassword',
