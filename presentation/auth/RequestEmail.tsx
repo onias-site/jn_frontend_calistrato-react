@@ -5,7 +5,6 @@ import IconUser from '@/presentation/icons/icon-user';
 import React, { useEffect } from 'react';
 import JnAjax from '@/app/JnAjax';
 import { ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogin';
-import { Noto_Serif_Old_Uyghur } from 'next/font/google';
 
 export interface RequestEmailProps {}
 
@@ -17,7 +16,21 @@ export const RequestEmailFooter: React.FC<RequestEmailProps> = ({}) => {
     );
 };
 export const RequestEmailClick = (setError: any, showModal: any, callbacks: any, email: string) => {
+
+    const login = JnAjax.getLogin();
+    let timestamp = login.timestamp;
+
+
+    if(login.email != email){
+        sessionStorage.removeItem('login');
+        timestamp = undefined;
+    }
     const openModal = (selectedScreen: string) => showModal(selectedScreen, '');
+
+    if(timestamp){
+        openModal('RequestPassword');
+        return;
+    }
 
     callbacks['404'] = () => openModal('ConfirmEmail');
     callbacks['201'] = () => openModal('RequestAnswers');

@@ -1,6 +1,6 @@
 'use client';
 import JnAjax from '@/app/JnAjax';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogin';
 import { Password } from 'primereact/password';
 import { LabelComponent } from '@/presentation/components/source/LabelComponent';
@@ -24,9 +24,9 @@ export const SavePasswordFooter: React.FC<any> = ({}) => {
     return (
         <div className="border-t border-[#ebe9f1] p-5 dark:border-white/10">
             <p className="text-center text-sm text-white-dark dark:text-white-dark/70">
-                Não recebeu o Token?
+                Não recebeu ou perdeu o token?
                 <button type="button" className="text-[#515365] hover:underline ltr:ml-1 rtl:mr-1 dark:text-white-dark">
-                    reenvie aqui
+                    Clique aqui para reenviar
                 </button>
             </p>
         </div>
@@ -38,12 +38,30 @@ export const SavePassword: React.FC<SavePasswordProps> = ({}) => {
         ...state,
     }));
 
+    const [messageSent, setMessageSent] = useState('');
+
     useEffect(() => {
         setError(error);
+
+        const login = JnAjax.getLogin();
+        let timestamp = login.timestamp;
+
+        setMessageSent(timestamp ? `Seu token já foi previamente enviado ao e-mail '${email}'
+        no dia ${login.dateItWasSaved} e expirará no dia ${login.expirationDate}
+        . Por favor, verifique sua caixa de entrada e sua caixa de spam / lixo eletrônico. Caso tenha perdido o seu token, clique abaixo para reenviarmos.`
+        : `Seu token está sendo enviado ao e-mail '${email}' nos próximos minutos. Por favor, verifique sua caixa de entrada e sua caixa de spam / lixo eletrônico.`);
+
+
+        if (timestamp) {
+            !error && setError(messageSent);
+            return;
+        }
+
         callbacks['404'] = () => showModal('RequestEmail', '', null, 'O seu login não foi encontrado, por favor, informe um e-mail');
         callbacks['403'] = () => setError('Seu token está bloqueado, por favor, tente novamente em 24 horas');
 
-        callbacks['429'] = () => !error && setError(`Seu token já foi previamente enviado ao e-mail '${email}'. Por favor, verifique sua caixa de entrada e sua caixa de spam / lixo eletrônico`);
+        callbacks['429'] = () => !error && setError(messageSent);
+
         callbacks['afterHttpRequest'] = () => {
             delete callbacks['422'];
             setField(() => {}, error);
@@ -142,7 +160,7 @@ export const SavePassword: React.FC<SavePasswordProps> = ({}) => {
                 />
             </LabelComponent>
             <LabelComponent
-                explanation={`Informe o token que você recebeu pelo e-mail '${email}'. Este token deve ter exatamente 8 caracteres maiúsculos, podendo ser alfanuméricos.`}
+                explanation={messageSent}
                 labelValue={`Token recebido no e-mail '${email}':`}
                 property="token"
                 errors={fieldErrors}

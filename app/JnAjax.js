@@ -180,8 +180,8 @@ export default class JnAjax {
 
         try {
             const sessaoObj = JSON.parse(sessao);
-            const {sessionToken, email} = sessaoObj;
-            const login = {sessionToken, email};
+            const {sessionToken, email, timestamp, expirationDate, dateItWasSaved} = sessaoObj;
+            const login = {sessionToken, email, timestamp, expirationDate, dateItWasSaved};
             return login;
         } catch (error) {
             return {};

@@ -47,7 +47,13 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
 
     executeRetryAfterAuthentication: (response: any) => {
 
-        const login = {email: response.email, sessionToken: response.sessionToken};
+        const login = {
+            email: response.email,
+            timestamp: response.timestamp,
+            sessionToken: response.sessionToken,
+            expirationDate: response.expirationDate,
+            dateItWasSaved: response.dateItWasSaved,
+        };
         sessionStorage.setItem('login', JSON.stringify(login));
         const { retryAfterAuthentication, hideModal, email } = get();
         retryAfterAuthentication && retryAfterAuthentication();
