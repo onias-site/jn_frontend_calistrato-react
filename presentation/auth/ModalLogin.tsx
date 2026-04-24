@@ -131,6 +131,15 @@ export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
             ...state,
         }));
 
+    const requestUnlockToken = () =>{
+        callbacks['200'] = () => setError(`A solicitação de desbloqueio do token para o e-mail '${email}' foi efetuada com sucesso, por favor, verifique a caixa de entrada, spam / lixo eletrônico deste e-mail para localizar o token que enviamos. Caso não o encontre, por favor, clique no link de reenvio de token, que reenviaremos o token a este e-mail. `);
+        callbacks['409'] = (response: any) => setError(`A solicitação de desbloqueio do token para o e-mail '${email}' já foi feita na data ${response.dateItWasSaved}, se necessário, poderá ser refeita na data ${response.expirationDate}. Assim que possível, será enviado em e-mail neste mesmo endereço de e-mail`);
+        callbacks['404'] = () => setError(`Seu token não está bloqueado, por favor, verifique a caixa de entrada, spam / lixo eletrônico do e-mail '${email}' para localizar o token que enviamos. Caso não o encontre, por favor, clique no link de reenvio de token, que reenviaremos o token a este e-mail.`)
+        callbacks['429'] = (response: any) => setError(`A solicitação de desbloqueio do token para o e-mail '${email}' já foi atendida na data ${response.dateItWasSaved}, se necessário, poderá ser refeita na data ${response.expirationDate}`);
+
+        JnAjax.doAnAjaxRequest(`login/${email}/token/request/unlocking`, callbacks, 'POST', {}, {}, 'http://localhost:8080');
+    }
+
     const allScreens = {
         RequestEmail: {
             footerComponent: <RequestEmailFooter />,
@@ -194,8 +203,8 @@ export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
                 <div className="border-t border-[#ebe9f1] p-5 dark:border-white/10">
                     <p className="text-center text-sm text-red-600 dark:text-white-dark/70">
                         Seu token está bloqueado!
-                        <button type="button" className="text-[#515365] hover:underline ltr:ml-1 rtl:mr-1 dark:text-white-dark">
-                            Clique aqui para desbloquear
+                        <button onClick={requestUnlockToken} type="button" className="text-[#515365] hover:underline ltr:ml-1 rtl:mr-1 dark:text-white-dark">
+                            Clique aqui para solicitar desbloqueio
                         </button>
                     </p>
                 </div>
