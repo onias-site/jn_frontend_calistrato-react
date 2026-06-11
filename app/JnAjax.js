@@ -20,14 +20,9 @@ export default class JnAjax {
         callbacks['setLoading']();
         callbacks['getLogin'] = callbacks['getLogin'] || this.getLogin;
         const login =  callbacks['getLogin']();
-
-        if (!headers) {
-            headers = {};
-        }
-
-        if (login && login.sessionToken && login.email) {
-            headers = {...headers, ...login};
-        }
+        const {sessionToken, email} = login;
+        headers = (headers || {});
+        headers = {...headers, sessionToken, email};
 
         const retryAfterAuthentication = callbacks['retryAfterAuthentication'] || (() => {});
 
