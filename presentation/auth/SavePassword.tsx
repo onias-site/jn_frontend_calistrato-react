@@ -21,11 +21,11 @@ export const SavePasswordClick = (setError: any, showModal: any, callbacks: any,
 export interface SavePasswordProps {}
 
 export const SavePasswordFooter: React.FC<any> = ({}) => {
+    const { email, setError, callbacks, loading} = ModalLoginStore((state: IModalLoginStore) => ({
+        ...state,
+    }));
 
     const requestResentToken = () => {
-        const { email, setError, callbacks} = ModalLoginStore((state: IModalLoginStore) => ({
-            ...state,
-        }));
 
         callbacks['409'] = (response: any) => setError(`A solicitação de reenvio do token para o e-mail '${email}' já foi feita na data ${response.dateItWasSaved}, se necessário, poderá ser refeita na data ${response.expirationDate}. Assim que possível, será enviado em e-mail neste mesmo endereço de e-mail.`);
         callbacks['200'] = () => setError(`A solicitação de reenvio do token para o e-mail '${email}' foi efetuada com sucesso, por favor, verifique a caixa de entrada, spam / lixo eletrônico deste e-mail para localizar o token que enviamos.`);
@@ -37,12 +37,12 @@ export const SavePasswordFooter: React.FC<any> = ({}) => {
 
     return (
         <div className="border-t border-[#ebe9f1] p-5 dark:border-white/10">
-            <p className="text-center text-sm text-white-dark dark:text-white-dark/70">
+            {!loading && <p className="text-center text-sm text-white-dark dark:text-white-dark/70">
                 Não recebeu ou perdeu o token?
                 <button onClick={requestResentToken} type="button" className="text-[#515365] hover:underline ltr:ml-1 rtl:mr-1 dark:text-white-dark">
                     Clique aqui para reenviar
                 </button>
-            </p>
+            </p>}
         </div>
     );
 };
