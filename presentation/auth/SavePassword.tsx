@@ -131,7 +131,6 @@ export const SavePassword: React.FC<SavePasswordProps> = ({}) => {
             return;
         }
         !erro && setError('');
-
         if (!context.password) {
             !erro && setError('Informe a senha, ela deve conter ao menos 8 caractéres, ao menos uma letra maiúscula, ao menos um número e ao menos um caractere especial');
             setInvalid(true);
