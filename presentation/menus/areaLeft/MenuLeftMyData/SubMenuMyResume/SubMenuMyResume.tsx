@@ -16,7 +16,7 @@ import { Tabs } from '@/presentation/components/source/Tabs';
 import JnAjax from '@/app/JnAjax';
 import { create } from 'zustand';
 import PubSub from 'pubsub-js';
-
+import { sha1 } from 'js-sha1';
 
 export interface ISubMenuMyResumeStore {
     hasTabSkills: boolean;
@@ -145,10 +145,14 @@ const loadSkillsFromBackEnd = (stateResume: any, stateSkills: any, stateSubMenuM
     if (formErrors && formErrors.length) {
         return formErrors;
     }
+    const cacheHash = sha1(stateResume.resumeText);
+
+    if(stateSkills.context && stateSkills.context.cacheHash == cacheHash){
+        return [];
+    }
 
     const callbacks: any = {};
     callbacks[200] = (responseFromBackEnd: any) => putSkillsInStore(responseFromBackEnd, stateSkills, requestSkillsToBackEnd, stateSubMenuMyResume);
-
     const requestSkillsToBackEnd = createRequestSkillsToBackEnd(stateResume, stateSkills);
 
     JnAjax.doAnAjaxRequest('skills/fromText', callbacks, 'POST', requestSkillsToBackEnd, {}, 'http://localhost:8081');
