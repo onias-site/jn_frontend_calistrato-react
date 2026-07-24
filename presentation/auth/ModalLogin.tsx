@@ -28,6 +28,7 @@ export interface IModalLoginStore {
     hideModal: () => void;
     setEmail: (email: string) => void;
     setError: (error: string) => void;
+    notifyAboutLoginNotFound: () => void;
     setLoading: (loading: boolean) => void;
     setInvalid: (invalid: boolean) => void;
     clearRetryAfterAuthentication: () => void;
@@ -40,21 +41,48 @@ export interface IModalLoginStore {
 export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
     retryAfterAuthentication: null,
     lockedToken: false,
-
+    notifyAboutLoginNotFound: () => {
+        const {email, showModal} = get();
+        JnAjax.removeStageOvercomeFromLogin(email, 'email');
+        showModal('RequestEmail', '', null, 'O seu login não foi encontrado, por favor, informe um e-mail');
+    },
     setLockedToken: (lockedToken: boolean) => set({ lockedToken, invalid: true }),
 
     clearRetryAfterAuthentication: () => set({ retryAfterAuthentication: null }),
 
     executeRetryAfterAuthentication: (response: any) => {
 
-        const login = {
+        const loginToSessionStorage = {
             email: response.email,
-            timestamp: response.timestamp,
             sessionToken: response.sessionToken,
+            timestamp: response.timestamp,
             expirationDate: response.expirationDate,
             dateItWasSaved: response.dateItWasSaved,
         };
-        sessionStorage.setItem('login', JSON.stringify(login));
+
+
+        const loginToLocalStorage = (response.timestamp && response.expirationDate && response.dateItWasSaved)
+        && {
+            timestamp: response.timestamp,
+            expirationDate: response.expirationDate,
+            dateItWasSaved: response.dateItWasSaved,
+            stagesOvercome: ['email', 'token', 'password']
+        };
+
+        const array = localStorage.getItem('logins');
+        let logins = {};
+        try {
+            logins = JSON.parse(array) ||{};
+            const loginLoadedFromLocalStorage = loginToLocalStorage || logins[response.email];
+            logins[response.email] = loginLoadedFromLocalStorage;
+            localStorage.setItem('logins', JSON.stringify(logins));
+
+        } catch (error) {
+            console.error(error);
+        }
+
+        sessionStorage.setItem('login', JSON.stringify(loginToSessionStorage));
+
         const { retryAfterAuthentication, hideModal, email } = get();
         retryAfterAuthentication && retryAfterAuthentication();
         set({ retryAfterAuthentication });
@@ -126,11 +154,11 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
 }));
 
 export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
-    const { setLockedToken, lockedToken, invalid, executeRetryAfterAuthentication, title, selectedScreen, visible, hideModal, showModal, email, loading, callbacks, setError, error, context } =
+    const { setLockedToken, lockedToken, invalid, executeRetryAfterAuthentication, title, selectedScreen, visible, hideModal, showModal, email, loading, callbacks, setError, error, context, notifyAboutLoginNotFound } =
         ModalLoginStore((state: IModalLoginStore) => ({
             ...state,
         }));
-
+        const state = { setLockedToken, lockedToken, invalid, executeRetryAfterAuthentication, title, selectedScreen, visible, hideModal, showModal, email, loading, callbacks, setError, error, context, notifyAboutLoginNotFound};
     const requestUnlockToken = () =>{
         callbacks['200'] = () => setError(`A solicitação de desbloqueio do token para o e-mail '${email}' foi efetuada com sucesso, por favor, verifique a caixa de entrada, spam / lixo eletrônico deste e-mail para localizar o token que enviamos. Caso não o encontre, por favor, clique no link de reenvio de token, que reenviaremos o token a este e-mail. `);
         callbacks['409'] = (response: any) => setError(`A solicitação de desbloqueio do token para o e-mail '${email}' já foi feita na data ${response.dateItWasSaved}, se necessário, poderá ser refeita na data ${response.expirationDate}. Assim que possível, será enviado em e-mail neste mesmo endereço de e-mail`);
@@ -193,7 +221,7 @@ export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
                     onClick={() => {
                         setError('');
                         setLockedToken(false);
-                        screen.buttonClick(setError, showModal, callbacks, email, context, executeRetryAfterAuthentication, setLockedToken);
+                        screen.buttonClick(state);
                     }}
                 />
             </form>

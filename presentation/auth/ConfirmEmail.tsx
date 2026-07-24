@@ -4,13 +4,16 @@ import React, {useEffect} from 'react';
 import { ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogin';
 import IconUser from '@/presentation/icons/icon-user';
 
-export const ConfirmEmailClick = (setError: any, showModal: any, callbacks: any, email: string) => {
+export const ConfirmEmailClick = (store: any) => {
+    const  {showModal, callbacks, email, notifyAboutLoginNotFound} = store;
     const openModal = (selectedScreen: string) => showModal(selectedScreen, '');
 
-    callbacks['201'] = () => openModal('RequestAnswers');
     callbacks['202'] = () => openModal('SavePassword');
+    callbacks['201'] = () => openModal('RequestAnswers');
+    callbacks['200'] = () => openModal('RequestPassword');
     callbacks['421'] = () => showModal('SavePassword', 'Desbloqueie sua senha');
-    callbacks['404'] = () => showModal('RequestEmail', '', null, 'O seu login não foi encontrado, por favor, informe um e-mail');
+    callbacks['afterHttpRequest'] = () => JnAjax.addStageOvercomeToLogin(email, 'email');
+    callbacks['404'] = () => notifyAboutLoginNotFound();
 
     JnAjax.doAnAjaxRequest(`login/${email}/token`, callbacks, 'POST', {}, {}, 'http://localhost:8080');
 };

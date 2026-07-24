@@ -170,16 +170,70 @@ export default class JnAjax {
         return login && login.sessionToken && login.email && true;
     }
 
+    static removeStageOvercomeFromLogin(email, stage){
+        try {
+            const array = localStorage.getItem('logins');
+            const logins = JSON.parse(array);
+            const login = logins[email] || {};
+            login.stagesOvercome = login.stagesOvercome || [];
+            login.stagesOvercome = login.stagesOvercome.filter(x => x != stage);
+            logins[email] = login;
+            localStorage.setItem('logins', JSON.stringify(logins));
+        } catch (error) {
+
+        }
+    }
+
+    static addStageOvercomeToLogin(email, stage){
+        try {
+            const array = localStorage.getItem('logins');
+            const logins = JSON.parse(array);
+            const login = logins[email] || {};
+            login.stagesOvercome = login.stagesOvercome || [];
+            login.stagesOvercome.push(stage);
+            logins[email] = login;
+            localStorage.setItem('logins', JSON.stringify(logins));
+        } catch (error) {
+
+        }
+    }
+
+    static hasThisStageBeenOvercome(email, stage){
+        try {
+            const array = localStorage.getItem('logins');
+            const logins = JSON.parse(array);
+            const login = logins[email];
+            return login && login.stagesOvercome && login.stagesOvercome.includes(stage);
+        } catch (error) {
+           return false;
+        }
+    }
     static getLogin() {
         const sessao = sessionStorage.getItem('login');
-
+        let login = {};
         try {
             const sessaoObj = JSON.parse(sessao);
-            const {sessionToken, email, timestamp, expirationDate, dateItWasSaved} = sessaoObj;
-            const login = {sessionToken, email, timestamp, expirationDate, dateItWasSaved};
-            return login;
+            const {sessionToken, email} = sessaoObj;
+            login = {sessionToken, email};
         } catch (error) {
             return {};
+        }
+
+        try {
+            const array = localStorage.getItem('logins');
+            const logins = JSON.parse(array);
+            const data = logins[login.email];
+
+            if(!data){
+                return login;
+            }
+
+            const {timestamp, expirationDate, dateItWasSaved} = data;
+            const localFields = {timestamp, expirationDate, dateItWasSaved};
+            login = {...login, ...localFields};
+            return login;
+        } catch (error) {
+            return login;
         }
     }
 }

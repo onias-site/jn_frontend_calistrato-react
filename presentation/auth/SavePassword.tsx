@@ -5,14 +5,16 @@ import { ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogi
 import { Password } from 'primereact/password';
 import { LabelComponent } from '@/presentation/components/source/LabelComponent';
 
-export const SavePasswordClick = (setError: any, showModal: any, callbacks: any, email: string, context: any, executeRetryAfterAuthentication: any, setLockedToken: any) => {
+export const SavePasswordClick = (store: any)  => {
+    const  {notifyAboutLoginNotFound, showModal, callbacks, email, executeRetryAfterAuthentication, setLockedToken, context, setError} = store;
+
     const openModal = (selectedScreen: string) => showModal(selectedScreen, '');
 
     setError('');
     callbacks['427'] = (response: any) => setError(`O token informado está incorreto, você ainda pode tentar mais ${3 - response.attempts} vez(es)`);
-    callbacks['404'] = () => showModal('RequestEmail', '', null, 'O seu login não foi encontrado, por favor, informe um e-mail');
     callbacks['200'] = (response: any) => executeRetryAfterAuthentication(response);
     callbacks['201'] = () => openModal('RequestAnswers');
+    callbacks['404'] = () => notifyAboutLoginNotFound();
     callbacks['429'] = () => setLockedToken(true);
 
     JnAjax.doAnAjaxRequest(`login/${email}/password`, callbacks, 'POST', context, {}, 'http://localhost:8080');
@@ -48,7 +50,7 @@ export const SavePasswordFooter: React.FC<any> = ({}) => {
 };
 
 export const SavePassword: React.FC<SavePasswordProps> = ({}) => {
-    const { setInvalid, email, context, setContextField, setError, callbacks, showModal, error } = ModalLoginStore((state: IModalLoginStore) => ({
+    const { setInvalid, email, context, setContextField, notifyAboutLoginNotFound, setError, callbacks, showModal, error } = ModalLoginStore((state: IModalLoginStore) => ({
         ...state,
     }));
 
@@ -65,19 +67,19 @@ export const SavePassword: React.FC<SavePasswordProps> = ({}) => {
         . Por favor, verifique sua caixa de entrada e sua caixa de spam / lixo eletrônico. Caso tenha perdido o seu token, clique abaixo para reenviarmos.`
         : `Seu token está sendo enviado ao e-mail '${email}' nos próximos minutos. Por favor, verifique sua caixa de entrada e sua caixa de spam / lixo eletrônico.`);
 
-
-        if (timestamp) {
+        if (JnAjax.hasThisStageBeenOvercome(email, 'token')) {
             !error && setError(messageSent);
             return;
         }
 
-        callbacks['404'] = () => showModal('RequestEmail', '', null, 'O seu login não foi encontrado, por favor, informe um e-mail');
+        callbacks['404'] = () => notifyAboutLoginNotFound();
         callbacks['403'] = () => setError('Seu token está bloqueado, por favor, tente novamente em 24 horas');
         callbacks['429'] = () => !error && setError(messageSent);
 
         callbacks['afterHttpRequest'] = () => {
             delete callbacks['422'];
             setField(() => {}, error);
+            JnAjax.addStageOvercomeToLogin(email, 'token')
         };
         JnAjax.doAnAjaxRequest(`login/${email}/token/language/portuguese`, callbacks, 'POST', {}, {}, 'http://localhost:8080');
     }, []);

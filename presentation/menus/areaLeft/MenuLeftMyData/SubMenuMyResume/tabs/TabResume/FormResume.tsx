@@ -39,7 +39,7 @@ const resumeTypes = [
 ];
 
 export const TabResumeStore = create<ITabResumeStore>((set, get) => ({
-    resumeType:resumeTypes[0],
+    resumeType: resumeTypes[0],
     notAllowedCompany: [],
     linkedinAddress: '',
     fieldErrors: {},
@@ -55,7 +55,7 @@ export const TabResumeStore = create<ITabResumeStore>((set, get) => ({
     setNotAllowedCompany: (notAllowedCompany: string[]) => set({ notAllowedCompany }),
 
     onMoveOnFowardTabs: () => {
-        const {resumeType, desiredJob, linkedinAddress, resumeText, setFieldErrors } = get();
+        const { resumeType, desiredJob, linkedinAddress, resumeText, setFieldErrors } = get();
         let errors: any = [];
         const fieldErrors = {};
         !desiredJob && (fieldErrors['desiredJob'] = true) && errors.push('Deve-se informar a função desejada');
@@ -66,7 +66,6 @@ export const TabResumeStore = create<ITabResumeStore>((set, get) => ({
 
         return errors;
     },
-
 }));
 
 export const TabResume: React.FC<TabResumeProps> = ({}) => {
@@ -85,7 +84,6 @@ export const TabResume: React.FC<TabResumeProps> = ({}) => {
         setLinkedinAddress,
         setResumeType,
     } = TabResumeStore((state: ITabResumeStore) => ({ ...state }));
-
 
     return (
         <div>
@@ -132,32 +130,34 @@ export const TabResume: React.FC<TabResumeProps> = ({}) => {
                     style={{ width: '75%' }}
                     value={resumeType}
                     invalid={fieldErrors.resumeType}
-                    onChange={(e) => setResumeType(e.value)}
+                    onChange={(e) => {
+                        resumeType.id != 1 && setResumeText('');
+                        setResumeType(e.value);
+                    }}
                     options={resumeTypes}
                     optionLabel="label"
                     placeholder="Escolha o tipo do seu currículo"
                     className="md:w-14rem w-full"
                 />
             </LabelComponent>
-            {
-            resumeType.id == 1 && <LabelComponent
-                explanation="Para evitar problemas com a LGPD (Lei Geral de Proteção de Dados), não guardamos o texto do seu currículo. A cada nova atualização no seu currículo, você precisará copiar o texto de dentro dele e colar aqui novamente. O texto aqui colado é usado para alimentar as listas de habilidade da aba 'Habilidades' mais à frente."
-                labelValue="Todo o texto que copiei do meu currículo:"
-                property="resumeText"
-                errors={fieldErrors}
-            >
-                <InputTextarea
-                    placeholder="Copie o texto do seu currículo e cole aqui."
-                    invalid={fieldErrors.resumeText}
-                    style={{ width: '75%' }}
-                    value={resumeText}
-                    onChange={(e) => setResumeText(e.target.value)}
-                    rows={15}
-                    cols={100}
-                />
-            </LabelComponent>
-
-            }
+            {resumeType.id == 1 && (
+                <LabelComponent
+                    explanation="Para evitar problemas com a LGPD (Lei Geral de Proteção de Dados), não guardamos o texto do seu currículo. A cada nova atualização no seu currículo, você precisará copiar o texto de dentro dele e colar aqui novamente. O texto aqui colado é usado para alimentar as listas de habilidade da aba 'Habilidades' mais à frente."
+                    labelValue="Todo o texto que copiei do meu currículo:"
+                    property="resumeText"
+                    errors={fieldErrors}
+                >
+                    <InputTextarea
+                        placeholder="Copie o texto do seu currículo e cole aqui."
+                        invalid={fieldErrors.resumeText}
+                        style={{ width: '75%' }}
+                        value={resumeText}
+                        onChange={(e) => setResumeText(e.target.value)}
+                        rows={15}
+                        cols={100}
+                    />
+                </LabelComponent>
+            )}
         </div>
     );
 };

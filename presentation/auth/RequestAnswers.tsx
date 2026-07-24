@@ -5,10 +5,13 @@ import { ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogi
 import Select from 'react-select';
 
 export interface RequestAnswersProps {}
-export const RequestAnswersClick = (setError: any, showModal: any, callbacks: any, email: string, context: any) => {
+export const RequestAnswersClick = (store: any)  => {
+    const  {showModal, callbacks, email, context, notifyAboutLoginNotFound} = store;
+
     const openModal = (selectedScreen: string) => showModal(selectedScreen, '');
     callbacks['202'] = () => openModal('SavePassword');
-    callbacks['404'] = () => showModal('RequestEmail', '', null, 'O seu login não foi encontrado, por favor, informe um e-mail');
+    callbacks['404'] = () => notifyAboutLoginNotFound();
+    callbacks['200'] = () => openModal('RequestPassword');
     JnAjax.doAnAjaxRequest(`login/${email}/pre-registration`, callbacks, 'POST', context, {}, 'http://localhost:8080');
 };
 
