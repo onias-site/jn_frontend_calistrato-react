@@ -187,10 +187,12 @@ export default class JnAjax {
     static addStageOvercomeToLogin(email, stage){
         try {
             const array = localStorage.getItem('logins');
-            const logins = JSON.parse(array);
+            const logins = JSON.parse(array) || {};
             const login = logins[email] || {};
             login.stagesOvercome = login.stagesOvercome || [];
-            login.stagesOvercome.push(stage);
+            const set = new Set(login.stagesOvercome);
+            set.add(stage);
+            login.stagesOvercome = [...set];
             logins[email] = login;
             localStorage.setItem('logins', JSON.stringify(logins));
         } catch (error) {
@@ -199,11 +201,17 @@ export default class JnAjax {
     }
 
     static hasThisStageBeenOvercome(email, stage){
+       const defaultValidator = login => {
+            return login && login.stagesOvercome && login.stagesOvercome.includes(stage);
+       };
+       const stageValidators = {token: login => login.timestamp > new Date().getTime()};
+       const stageValidator = stageValidators[stage] || defaultValidator;
+
         try {
             const array = localStorage.getItem('logins');
             const logins = JSON.parse(array);
             const login = logins[email];
-            return login && login.stagesOvercome && login.stagesOvercome.includes(stage);
+            return stageValidator(login);
         } catch (error) {
            return false;
         }

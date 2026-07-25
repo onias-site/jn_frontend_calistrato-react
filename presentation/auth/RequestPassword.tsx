@@ -11,6 +11,7 @@ export const RequestPasswordClick = (store: any)  => {
     const openModal = (selectedScreen: string) => showModal(selectedScreen, '');
 
     callbacks['201'] = () => openModal('RequestAnswers');
+    callbacks['202'] = () => showModal('SavePassword', 'Criar uma nova senha');
     callbacks['200'] = (response: any) => executeRetryAfterAuthentication(response);
     callbacks['404'] = () => notifyAboutLoginNotFound();
     callbacks['409'] = () =>

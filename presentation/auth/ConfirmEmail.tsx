@@ -8,9 +8,9 @@ export const ConfirmEmailClick = (store: any) => {
     const  {showModal, callbacks, email, notifyAboutLoginNotFound} = store;
     const openModal = (selectedScreen: string) => showModal(selectedScreen, '');
 
-    callbacks['202'] = () => openModal('SavePassword');
     callbacks['201'] = () => openModal('RequestAnswers');
     callbacks['200'] = () => openModal('RequestPassword');
+    callbacks['202'] = () => showModal('SavePassword', 'Criar uma nova senha');
     callbacks['421'] = () => showModal('SavePassword', 'Desbloqueie sua senha');
     callbacks['afterHttpRequest'] = () => JnAjax.addStageOvercomeToLogin(email, 'email');
     callbacks['404'] = () => notifyAboutLoginNotFound();
