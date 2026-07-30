@@ -358,8 +358,8 @@ export const TabLanguages: React.FC<TabResumeProps> = ({}) => {
         <div>
             <div className="mb-5 text-center">
                 <div className="align-items-center flex">
-                    <Checkbox onChange={(e) => setSpeakOtherLanguages(e.checked)} checked={speakOtherLanguages} name="doNotSpeakAnyLanguage" />
-                    <label htmlFor="ingredient3" className="letraPequena ml-2" style={{width:'500px'}}>
+                    <Checkbox id = "doNotSpeakAnyLanguage" onChange={(e) => setSpeakOtherLanguages(e.checked)} checked={speakOtherLanguages} name="doNotSpeakAnyLanguage" />
+                    <label onClick={() => setSpeakOtherLanguages(!speakOtherLanguages)} className="letraPequena ml-2" style={{width:'500px'}}>
                         Tenho conhecimento em outro(s) idioma(s) além do meu idioma nativo
                     </label>
                 </div>

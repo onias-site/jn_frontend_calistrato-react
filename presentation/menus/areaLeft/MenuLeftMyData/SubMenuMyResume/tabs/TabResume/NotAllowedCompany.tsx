@@ -31,9 +31,10 @@ export const NotAllowedCompany: React.FC<NotAllowedCompanyProps> = ({ invalid, n
 
     return (
         <AutoComplete
-            minLength={3}
-            multiple={true}
-            invalid={invalid}
+        id = "notAllowedCompany"
+        minLength={3}
+        multiple={true}
+        invalid={invalid}
             className="form-input"
             style={{ width: '75%' }}
             value={notAllowedCompany}

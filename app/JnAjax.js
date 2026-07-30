@@ -170,14 +170,11 @@ export default class JnAjax {
         return login && login.sessionToken && login.email && true;
     }
 
-    static removeStageOvercomeFromLogin(email, stage){
+    static removeLogin(email){
         try {
             const array = localStorage.getItem('logins');
             const logins = JSON.parse(array);
-            const login = logins[email] || {};
-            login.stagesOvercome = login.stagesOvercome || [];
-            login.stagesOvercome = login.stagesOvercome.filter(x => x != stage);
-            logins[email] = login;
+            delete logins[email];
             localStorage.setItem('logins', JSON.stringify(logins));
         } catch (error) {
 
@@ -200,6 +197,76 @@ export default class JnAjax {
         }
     }
 
+    static setTokenStatus(email, informationType, status, response){
+        try {
+            const array = localStorage.getItem('logins');
+            const logins = JSON.parse(array) || {};
+            const login = logins[email] || {};
+            const data = login[informationType] || {};
+            data[status] = response;
+            login[informationType] = data;
+            logins[email] = login;
+            localStorage.setItem('logins', JSON.stringify(logins));
+        } catch (error) {
+
+        }
+    }
+
+
+    static getTokenStatus(email, callbacks){
+        try {
+            const array = localStorage.getItem('logins');
+
+            if(!array){
+                return;
+            }
+
+            const logins = JSON.parse(array);
+
+            if(!logins){
+                return;
+            }
+
+            const login = logins[email];
+
+            if(!login){
+                return;
+            }
+
+            for(let property in callbacks){
+                const responses = login[property];
+
+                if(!responses){
+                    continue;
+                }
+
+                const statuses = callbacks[property];
+
+                for(let status in statuses){
+
+                    const response = responses[status];
+
+                    if(!response){
+                        continue;
+                    }
+
+                    const expiredTimeStamp = response.timestamp < new Date().getTime();
+
+                    if(expiredTimeStamp){
+                        return;
+                    }
+
+                    const callback = statuses[status];
+                    callback(response);
+                    return response;
+                }
+            }
+
+    }catch(e){
+	}
+}
+
+
     static hasThisStageBeenOvercome(email, stage){
        const defaultValidator = login => {
             return login && login.stagesOvercome && login.stagesOvercome.includes(stage);
@@ -216,6 +283,20 @@ export default class JnAjax {
            return false;
         }
     }
+
+    static getLoginToken(email){
+
+         try {
+             const array = localStorage.getItem('logins');
+             const logins = JSON.parse(array);
+             const login = logins[email];
+            return login;
+            } catch (error) {
+            return {};
+         }
+     }
+
+
     static getLogin() {
         const sessao = sessionStorage.getItem('login');
         let login = {};

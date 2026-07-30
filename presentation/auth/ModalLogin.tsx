@@ -41,11 +41,13 @@ export interface IModalLoginStore {
 export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
     retryAfterAuthentication: null,
     lockedToken: false,
+
     notifyAboutLoginNotFound: () => {
         const {email, showModal} = get();
-        JnAjax.removeStageOvercomeFromLogin(email, 'email');
+        JnAjax.removeLogin(email);
         showModal('RequestEmail', '', null, 'O seu login não foi encontrado, por favor, informe um e-mail');
     },
+
     setLockedToken: (lockedToken: boolean) => set({ lockedToken, invalid: true }),
 
     clearRetryAfterAuthentication: () => set({ retryAfterAuthentication: null }),

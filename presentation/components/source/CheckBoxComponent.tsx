@@ -30,8 +30,8 @@ export const CheckBoxComponent: React.FC<CheckBoxComponentProps> = ({ explanatio
             <div className="align-items-center flex">
                 <Tooltip target="#btnHelp" content="Clique aqui para saber mais detalhes sobre este campo" position="bottom" />
                 <Button icon="pi pi-question-circle" id="btnHelp" onClick={() => setVisible(true)} />
-                <Checkbox checked={value} onChange={(e) => setValue(e.checked)} />
-                <label htmlFor="ingredient3" className="letraPequena">
+                <Checkbox id = {checkBoxLabel} checked={value} onChange={(e) => setValue(e.checked)} />
+                <label htmlFor= {checkBoxLabel} className="letraPequena" onClick = {() => setValue(!value)}>
                     {checkBoxLabel}
                 </label>
             </div>

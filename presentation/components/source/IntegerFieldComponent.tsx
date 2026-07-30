@@ -48,7 +48,7 @@ export const IntegerFieldComponent: React.FC<IntegerFieldProps> = ({ explanation
                     <Tooltip target="#btnHelp" content="Clique aqui para saber mais detalhes sobre este campo" position="bottom" />
                     <Button icon="pi pi-question-circle" id="btnHelp" onClick={() => setVisible(true)} />
                     <Checkbox onChange={(e) => (e.checked ? setValue(0) : setValue(defaultValue))} checked={value == 0} />
-                    <label className="letraPequena ml-2">{checkBoxLabel}</label>
+                    <label onClick = { () => value != 0 ? setValue(0) : setValue(defaultValue)} className="letraPequena ml-2">{checkBoxLabel}</label>
                 </div>
             </div>
 
@@ -58,10 +58,10 @@ export const IntegerFieldComponent: React.FC<IntegerFieldProps> = ({ explanation
             {value != 0 && (
                 <div className="mb-5 text-center">
                     <div className="align-items-center flex">
-                        <label htmlFor="ingredient3" className="letraPequena ml-2" style={{ width: '300px', color: isInvalid() ? '#e24c4c' : 'black' }}>
+                        <label htmlFor = {textFieldLabel} className="letraPequena ml-2" style={{ width: '300px', color: isInvalid() ? '#e24c4c' : 'black' }}>
                             {textFieldLabel}
                         </label>
-                        <InputText keyfilter="pint" invalid={isInvalid()} value={value} onChange={(e) => setValue(e.target.value)} style={{ width: '100px' }} />
+                        <InputText id = {textFieldLabel} keyfilter="pint" invalid={isInvalid()} value={value} onChange={(e) => setValue(e.target.value)} style={{ width: '100px' }} />
                     </div>
                 </div>
             )}

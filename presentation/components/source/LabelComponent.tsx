@@ -10,6 +10,7 @@ export interface LabelComponentProps {
     explanation: string;
     labelValue: string;
     property: string;
+
     errors: any;
 }
 export const LabelComponent: React.FC<LabelComponentProps> = ({ children, labelValue, property, errors, explanation }) => {

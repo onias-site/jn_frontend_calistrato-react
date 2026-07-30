@@ -109,7 +109,7 @@ export const TabResume: React.FC<TabResumeProps> = ({}) => {
                 property="linkedinAddress"
                 errors={fieldErrors}
             >
-                <InputText invalid={fieldErrors.linkedinAddress} style={{ width: '75%' }} value={linkedinAddress} onChange={(e) => setLinkedinAddress(e.target.value)} />
+                <InputText id= "linkedinAddress" invalid={fieldErrors.linkedinAddress} style={{ width: '75%' }} value={linkedinAddress} onChange={(e) => setLinkedinAddress(e.target.value)} />
             </LabelComponent>
             <LabelComponent
                 explanation="Recrutadores cujo os domínios de e-mail das empresas / consultorias mencionados aqui neste campo não poderão ver o seu endereço de linkedin / contato. Cabe ressaltar que se o recrutador estiver logado por outro e-mail com um domínio que não estiver mencionado aqui neste campo ou se ele estiver usando e-mails pessoais (gmail, outlook e afins), este recrutador poderá ter acesso ao seu link de linkedin / contato."
@@ -127,6 +127,7 @@ export const TabResume: React.FC<TabResumeProps> = ({}) => {
                 errors={fieldErrors}
             >
                 <Dropdown
+                    id = "resumeType"
                     style={{ width: '75%' }}
                     value={resumeType}
                     invalid={fieldErrors.resumeType}
@@ -148,6 +149,7 @@ export const TabResume: React.FC<TabResumeProps> = ({}) => {
                     errors={fieldErrors}
                 >
                     <InputTextarea
+                        id = "resumeText"
                         placeholder="Copie o texto do seu currículo e cole aqui."
                         invalid={fieldErrors.resumeText}
                         style={{ width: '75%' }}

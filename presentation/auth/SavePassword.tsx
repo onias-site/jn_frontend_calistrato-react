@@ -27,12 +27,27 @@ export const SavePasswordFooter: React.FC<any> = ({}) => {
         ...state,
     }));
 
+
+    const tokenCallbacks = {
+        resendToken: {
+            '409': (response: any) => setError(`A solicitação de reenvio do token para o e-mail '${email}' já foi feita na data ${response.dateItWasSaved}, se necessário, poderá ser refeita na data ${response.expirationDate}. Assim que possível, será enviado em e-mail neste mesmo endereço de e-mail.`),
+            '429': (response: any) => setError(`A solicitação de reenvio do token para o e-mail '${email}' já foi atendida na data ${response.dateItWasSaved}, se necessário, poderá ser refeita na data ${response.expirationDate}`)
+        }
+
+    };
+
     const requestResentToken = () => {
 
-        callbacks['409'] = (response: any) => setError(`A solicitação de reenvio do token para o e-mail '${email}' já foi feita na data ${response.dateItWasSaved}, se necessário, poderá ser refeita na data ${response.expirationDate}. Assim que possível, será enviado em e-mail neste mesmo endereço de e-mail.`);
-        callbacks['200'] = () => setError(`A solicitação de reenvio do token para o e-mail '${email}' foi efetuada com sucesso, por favor, verifique a caixa de entrada, spam / lixo eletrônico deste e-mail para localizar o token que enviamos.`);
-        callbacks['429'] = (response: any) => setError(`A solicitação de reenvio do token para o e-mail '${email}' já foi atendida na data ${response.dateItWasSaved}, se necessário, poderá ser refeita na data ${response.expirationDate}`);
 
+        const tokenStatus = JnAjax.getTokenStatus(email, tokenCallbacks);
+
+        if(tokenStatus){
+            return;
+        }
+
+
+        callbacks['200'] = () => setError(`A solicitação de reenvio do token para o e-mail '${email}' foi efetuada com sucesso, por favor, verifique a caixa de entrada, spam / lixo eletrônico deste e-mail para localizar o token que enviamos.`);
+        callbacks['onUnexpectedHttpStatus'] = (response: any, status: any) => tokenCallbacks.resendToken[status](response) || JnAjax.setTokenStatus(email, 'resendToken', status, response);
         JnAjax.doAnAjaxRequest(`login/${email}/token/request/resending`, callbacks, 'POST', {}, {}, 'http://localhost:8080');
     }
 
@@ -59,7 +74,7 @@ export const SavePassword: React.FC<SavePasswordProps> = ({}) => {
     useEffect(() => {
         setError(error);
 
-        const login = JnAjax.getLogin();
+        const login = JnAjax.getLoginToken(email);
         let timestamp = login.timestamp;
 
         setMessageSent(timestamp ? `Seu token já foi previamente enviado ao e-mail '${email}'
