@@ -197,7 +197,7 @@ export default class JnAjax {
         }
     }
 
-    static setTokenStatus(email, informationType, status, response){
+    static setLoginStatus(email, informationType, status, response){
         try {
             const array = localStorage.getItem('logins');
             const logins = JSON.parse(array) || {};
@@ -213,7 +213,7 @@ export default class JnAjax {
     }
 
 
-    static getTokenStatus(email, callbacks){
+    static getLoginStatus(email, property, callbacks){
         try {
             const array = localStorage.getItem('logins');
 
@@ -233,33 +233,28 @@ export default class JnAjax {
                 return;
             }
 
-            for(let property in callbacks){
-                const responses = login[property];
+            const responses = login[property];
 
-                if(!responses){
+            if(!responses){
+                continue;
+            }
+            for(let status in callbacks){
+
+                const response = responses[property][status];
+
+                if(!response){
                     continue;
                 }
 
-                const statuses = callbacks[property];
+                const expiredTimeStamp = response && response.timestamp && response.timestamp < new Date().getTime();
 
-                for(let status in statuses){
-
-                    const response = responses[status];
-
-                    if(!response){
-                        continue;
-                    }
-
-                    const expiredTimeStamp = response.timestamp < new Date().getTime();
-
-                    if(expiredTimeStamp){
-                        return;
-                    }
-
-                    const callback = statuses[status];
-                    callback(response);
-                    return response;
+                if(expiredTimeStamp){
+                    return;
                 }
+
+                const callback = callbacks[status];
+                callback(response);
+                return response;
             }
 
     }catch(e){

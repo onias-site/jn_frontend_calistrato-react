@@ -3,7 +3,6 @@
 import IconUser from '@/presentation/icons/icon-user';
 
 import React, { useEffect } from 'react';
-import JnAjax from '@/app/JnAjax';
 import { ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogin';
 
 export interface RequestEmailProps {}
@@ -15,42 +14,7 @@ export const RequestEmailFooter: React.FC<RequestEmailProps> = ({}) => {
         </div>
     );
 };
-export const RequestEmailClick = (store: any)  => {
-    const  {showModal, callbacks, email} = store;
-
-    const login = JnAjax.getLogin();
-
-
-    if(login.email != email){
-        sessionStorage.removeItem('login');
-    }
-    const openModal = (selectedScreen: string) => showModal(selectedScreen, '');
-    const hasPassword = JnAjax.hasThisStageBeenOvercome(email, 'password');
-    const hasToken = JnAjax.hasThisStageBeenOvercome(email, 'token');
-    const hasEmail = JnAjax.hasThisStageBeenOvercome(email, 'email');
-    if(hasEmail && (!hasPassword || !hasToken)){
-        openModal('SavePassword');
-        return;
-    }
-     if(hasEmail){
-        openModal('RequestPassword');
-         return;
-     }
-    callbacks['404'] = () => openModal('ConfirmEmail');
-    callbacks['201'] = () => openModal('RequestAnswers');
-    callbacks['200'] = () => openModal('RequestPassword');
-    callbacks['202'] = () => showModal('SavePassword', 'Criar uma nova senha');
-    callbacks['427'] = () => showModal('SavePassword', 'Desbloqueie a sua senha', null, 'Devido a tentativas de acessos suspeitos, sua senha foi preventivamente bloqueada. Preencha os campos acima, para desbloqueá-la.');
-    callbacks['409'] = () =>
-        showModal(
-            'SavePassword',
-            'Desbloqueie seu login',
-            null,
-            'Já há um login corrente em sua conta, pode ser que você não tenha feito a saída em seu último login, ou se trata de algum acesso concorrente em sua conta em outra estação de trabalho. De qualquer forma, preencha os campos deste formulário para desfazer o outro login corrente'
-        );
-
-    JnAjax.doAnAjaxRequest(`login/${email}/token`, callbacks, 'HEAD', {}, {}, 'http://localhost:8080');
-};
+export const RequestEmailClick = 'checkEmail';
 export const RequestEmail: React.FC<RequestEmailProps> = ({}) => {
     const { email, setInvalid, setError, setEmail, error } = ModalLoginStore((state: IModalLoginStore) => ({
         ...state,

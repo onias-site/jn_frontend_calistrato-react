@@ -1,102 +1,41 @@
 'use client';
-import JnAjax from '@/app/JnAjax';
 import React, { useEffect, useState } from 'react';
 import { ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogin';
 import { Password } from 'primereact/password';
 import { LabelComponent } from '@/presentation/components/source/LabelComponent';
+import { serverRequests } from '@/presentation/auth/ServerRequests';
 
-export const SavePasswordClick = (store: any)  => {
-    const  {notifyAboutLoginNotFound, showModal, callbacks, email, executeRetryAfterAuthentication, setLockedToken, context, setError} = store;
-
-    const openModal = (selectedScreen: string) => showModal(selectedScreen, '');
-
-    setError('');
-    callbacks['427'] = (response: any) => setError(`O token informado está incorreto, você ainda pode tentar mais ${3 - response.attempts} vez(es)`);
-    callbacks['200'] = (response: any) => executeRetryAfterAuthentication(response);
-    callbacks['201'] = () => openModal('RequestAnswers');
-    callbacks['404'] = () => notifyAboutLoginNotFound();
-    callbacks['429'] = () => setLockedToken(true);
-
-    JnAjax.doAnAjaxRequest(`login/${email}/password`, callbacks, 'POST', context, {}, 'http://localhost:8080');
-};
+export const SavePasswordClick = 'savePassword';
 
 export interface SavePasswordProps {}
 
 export const SavePasswordFooter: React.FC<any> = ({}) => {
-    const { email, setError, callbacks, loading} = ModalLoginStore((state: IModalLoginStore) => ({
+    const {loading, doAnAjaxRequest} = ModalLoginStore((state: IModalLoginStore) => ({
         ...state,
     }));
 
-
-    const tokenCallbacks = {
-        resendToken: {
-            '409': (response: any) => setError(`A solicitação de reenvio do token para o e-mail '${email}' já foi feita na data ${response.dateItWasSaved}, se necessário, poderá ser refeita na data ${response.expirationDate}. Assim que possível, será enviado em e-mail neste mesmo endereço de e-mail.`),
-            '429': (response: any) => setError(`A solicitação de reenvio do token para o e-mail '${email}' já foi atendida na data ${response.dateItWasSaved}, se necessário, poderá ser refeita na data ${response.expirationDate}`)
-        }
-
-    };
-
-    const requestResentToken = () => {
-
-
-        const tokenStatus = JnAjax.getTokenStatus(email, tokenCallbacks);
-
-        if(tokenStatus){
-            return;
-        }
-
-
-        callbacks['200'] = () => setError(`A solicitação de reenvio do token para o e-mail '${email}' foi efetuada com sucesso, por favor, verifique a caixa de entrada, spam / lixo eletrônico deste e-mail para localizar o token que enviamos.`);
-        callbacks['onUnexpectedHttpStatus'] = (response: any, status: any) => tokenCallbacks.resendToken[status](response) || JnAjax.setTokenStatus(email, 'resendToken', status, response);
-        JnAjax.doAnAjaxRequest(`login/${email}/token/request/resending`, callbacks, 'POST', {}, {}, 'http://localhost:8080');
-    }
-
-
     return (
         <div className="border-t border-[#ebe9f1] p-5 dark:border-white/10">
-            {!loading && <p className="text-center text-sm text-white-dark dark:text-white-dark/70">
-                Não recebeu ou perdeu o token?
-                <button onClick={requestResentToken} type="button" className="text-[#515365] hover:underline ltr:ml-1 rtl:mr-1 dark:text-white-dark">
-                    Clique aqui para reenviar
-                </button>
-            </p>}
+            {!loading && (
+                <p className="text-center text-sm text-white-dark dark:text-white-dark/70">
+                    Não recebeu ou perdeu o token?
+                    <button onClick={() => doAnAjaxRequest('requestResendToken')} type="button" className="text-[#515365] hover:underline ltr:ml-1 rtl:mr-1 dark:text-white-dark">
+                        Clique aqui para reenviar
+                    </button>
+                </p>
+            )}
         </div>
     );
 };
 
 export const SavePassword: React.FC<SavePasswordProps> = ({}) => {
-    const { setInvalid, email, context, setContextField, notifyAboutLoginNotFound, setError, callbacks, showModal, error } = ModalLoginStore((state: IModalLoginStore) => ({
+    const { setInvalid, email, context, setContextField, doAnAjaxRequest, setError, error } = ModalLoginStore((state: IModalLoginStore) => ({
         ...state,
     }));
 
-    const [messageSent, setMessageSent] = useState('');
-
     useEffect(() => {
-        setError(error);
-
-        const login = JnAjax.getLoginToken(email);
-        let timestamp = login.timestamp;
-
-        setMessageSent(timestamp ? `Seu token já foi previamente enviado ao e-mail '${email}'
-        no dia ${login.dateItWasSaved} e expirará no dia ${login.expirationDate}
-        . Por favor, verifique sua caixa de entrada e sua caixa de spam / lixo eletrônico. Caso tenha perdido o seu token, clique abaixo para reenviarmos.`
-        : `Seu token está sendo enviado ao e-mail '${email}' nos próximos minutos. Por favor, verifique sua caixa de entrada e sua caixa de spam / lixo eletrônico.`);
-
-        if (JnAjax.hasThisStageBeenOvercome(email, 'token')) {
-            !error && setError(messageSent);
-            return;
-        }
-
-        callbacks['404'] = () => notifyAboutLoginNotFound();
-        callbacks['403'] = () => setError('Seu token está bloqueado, por favor, tente novamente em 24 horas');
-        callbacks['429'] = () => !error && setError(messageSent);
-
-        callbacks['afterHttpRequest'] = () => {
-            delete callbacks['422'];
-            setField(() => {}, error);
-            JnAjax.addStageOvercomeToLogin(email, 'token')
-        };
-        JnAjax.doAnAjaxRequest(`login/${email}/token/language/portuguese`, callbacks, 'POST', {}, {}, 'http://localhost:8080');
+        serverRequests.sendToken.afterHttpRequest = () => setField(() => {}, error);
+        doAnAjaxRequest('sendToken');
     }, []);
 
     const fieldErrors = {};
@@ -188,12 +127,7 @@ export const SavePassword: React.FC<SavePasswordProps> = ({}) => {
                     toggleMask
                 />
             </LabelComponent>
-            <LabelComponent
-                explanation={messageSent}
-                labelValue={`Token recebido no e-mail '${email}':`}
-                property="token"
-                errors={fieldErrors}
-            >
+            <LabelComponent explanation={error} labelValue={`Token recebido no e-mail '${email}':`} property="token" errors={fieldErrors}>
                 <Password {...emptyPasswordOptions} value={context.token} onChange={(e) => setField(() => setContextField('token', e.target.value), '')} toggleMask />
             </LabelComponent>
         </div>

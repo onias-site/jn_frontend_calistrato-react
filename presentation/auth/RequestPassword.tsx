@@ -1,31 +1,10 @@
 'use client';
-import JnAjax from '@/app/JnAjax';
 import React from 'react';
 import { ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogin';
 import { Password } from 'primereact/password';
 import { LabelComponent } from '@/presentation/components/source/LabelComponent';
 
-export const RequestPasswordClick = (store: any)  => {
-    const  {showModal, callbacks, email, executeRetryAfterAuthentication, setError, context, notifyAboutLoginNotFound}  = store;
-
-    const openModal = (selectedScreen: string) => showModal(selectedScreen, '');
-
-    callbacks['201'] = () => openModal('RequestAnswers');
-    callbacks['202'] = () => showModal('SavePassword', 'Criar uma nova senha');
-    callbacks['200'] = (response: any) => executeRetryAfterAuthentication(response);
-    callbacks['404'] = () => notifyAboutLoginNotFound();
-    callbacks['409'] = () =>
-        showModal(
-            'SavePassword',
-            'Desbloqueie seu login',
-            null,
-            'Já há um login corrente em sua conta, pode ser que você não tenha feito a saída em seu último login, ou se trata de algum acesso concorrente em sua conta em outra estação de trabalho. De qualquer forma, preencha os campos deste formulário para desfazer o outro login corrente'
-        );
-    callbacks['427'] = (response: any) => setError(`Sua senha está incorreta!!! Você ainda tem direito a ${3 - response.attempts} tentativa(s)`);
-    callbacks['423'] = () => showModal('SavePassword', 'Desbloqueie a sua senha', null, 'Devido a tentativas de acessos suspeitos, sua senha foi preventivamente bloqueada. Preencha os campos acima, para desbloqueá-la.');
-    callbacks['429'] = () => showModal('SavePassword', 'Desbloqueie a sua senha', null, 'Devido a tentativas de acessos suspeitos, sua senha foi preventivamente bloqueada. Preencha os campos acima, para desbloqueá-la.');
-    JnAjax.doAnAjaxRequest(`login/${email}`, callbacks, 'POST', context, {}, 'http://localhost:8080');
-};
+export const RequestPasswordClick = 'requestPassword';
 
 export interface RequestPasswordProps {}
 

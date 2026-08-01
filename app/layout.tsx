@@ -3,6 +3,7 @@ import ProviderComponent from '@/presentation/layouts/provider-component';
 import 'react-perfect-scrollbar/dist/css/styles.css';
 import '../styles/tailwind.css';
 import { Nunito } from 'next/font/google';
+
 import React, { useRef, useEffect } from 'react';
 import { QueryProvider } from '@/presentation/contexts/QueryProvider';
 import './loading.css';

@@ -1,19 +1,10 @@
 'use client';
-import JnAjax from '@/app/JnAjax';
 import React, { useEffect } from 'react';
 import { ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogin';
 import Select from 'react-select';
 
 export interface RequestAnswersProps {}
-export const RequestAnswersClick = (store: any)  => {
-    const  {showModal, callbacks, email, context, notifyAboutLoginNotFound} = store;
-
-    const openModal = (selectedScreen: string) => showModal(selectedScreen, '');
-    callbacks['202'] = () => openModal('SavePassword');
-    callbacks['404'] = () => notifyAboutLoginNotFound();
-    callbacks['200'] = () => openModal('RequestPassword');
-    JnAjax.doAnAjaxRequest(`login/${email}/pre-registration`, callbacks, 'POST', context, {}, 'http://localhost:8080');
-};
+export const RequestAnswersClick = 'requestAnswers';
 
 export const RequestAnswers: React.FC<RequestAnswersProps> = ({}) => {
     const { context, setContextField } = ModalLoginStore((state: IModalLoginStore) => ({

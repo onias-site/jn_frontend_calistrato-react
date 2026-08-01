@@ -7,9 +7,10 @@ import { ConfirmEmail, ConfirmEmailFooter, ConfirmEmailClick } from '@/presentat
 import { SavePassword, SavePasswordClick, SavePasswordFooter } from '@/presentation/auth/SavePassword';
 import { RequestAnswers, RequestAnswersClick } from '@/presentation/auth/RequestAnswers';
 import { LoadingButton } from '@/presentation/components/source/LoadingButton';
+import { serverRequests } from '@/presentation/auth/ServerRequests';
 import { Modal } from '@/presentation/components/source/Modal';
-import PubSub from 'pubsub-js';
 import JnAjax from '@/app/JnAjax';
+import PubSub from 'pubsub-js';
 
 export interface ModalLoginProps {}
 
@@ -31,6 +32,7 @@ export interface IModalLoginStore {
     notifyAboutLoginNotFound: () => void;
     setLoading: (loading: boolean) => void;
     setInvalid: (invalid: boolean) => void;
+    doAnAjaxRequest: (requestName: string) => void;
     clearRetryAfterAuthentication: () => void;
     setLockedToken: (lockedToken: boolean) => void;
     setContextField: (key: string, value: any) => void;
@@ -41,13 +43,30 @@ export interface IModalLoginStore {
 export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
     retryAfterAuthentication: null,
     lockedToken: false,
+    doAnAjaxRequest: (requestName: string) =>{
+        const {email} = get();
+        const requestDetails = serverRequests[requestName];
 
+        if(requestDetails.mustInterruptRequest() === true){
+            return;
+        }
+
+        const tokenStatus = JnAjax.getLoginStatus(email, requestName, requestDetails.cached);
+
+        if(tokenStatus){
+            return;
+        }
+
+        requestDetails.callbacks.onUnexpectedHttpStatus = (response: any, status: any) => requestDetails.cached[status](response) || JnAjax.setLoginStatus(email, requestName, status, response);
+
+        JnAjax.doAnAjaxRequest(requestDetails.url, requestDetails.callbacks, requestDetails.method, requestDetails.getBody(), {}, 'http://localhost:8080');
+
+    },
     notifyAboutLoginNotFound: () => {
         const {email, showModal} = get();
         JnAjax.removeLogin(email);
         showModal('RequestEmail', '', null, 'O seu login não foi encontrado, por favor, informe um e-mail');
     },
-
     setLockedToken: (lockedToken: boolean) => set({ lockedToken, invalid: true }),
 
     clearRetryAfterAuthentication: () => set({ retryAfterAuthentication: null }),
@@ -156,21 +175,15 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
 }));
 
 export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
-    const { setLockedToken, lockedToken, invalid, executeRetryAfterAuthentication, title, selectedScreen, visible, hideModal, showModal, email, loading, callbacks, setError, error, context, notifyAboutLoginNotFound } =
+    const { setLockedToken, lockedToken, invalid, title, selectedScreen, visible, hideModal, showModal, email, loading, setError, error } =
         ModalLoginStore((state: IModalLoginStore) => ({
             ...state,
         }));
-        const state = { setLockedToken, lockedToken, invalid, executeRetryAfterAuthentication, title, selectedScreen, visible, hideModal, showModal, email, loading, callbacks, setError, error, context, notifyAboutLoginNotFound};
-    const requestUnlockToken = () =>{
-        callbacks['200'] = () => setError(`A solicitação de desbloqueio do token para o e-mail '${email}' foi efetuada com sucesso, por favor, verifique a caixa de entrada, spam / lixo eletrônico deste e-mail para localizar o token que enviamos. Caso não o encontre, por favor, clique no link de reenvio de token, que reenviaremos o token a este e-mail. `);
-        callbacks['409'] = (response: any) => setError(`A solicitação de desbloqueio do token para o e-mail '${email}' já foi feita na data ${response.dateItWasSaved}, se necessário, poderá ser refeita na data ${response.expirationDate}. Assim que possível, será enviado em e-mail neste mesmo endereço de e-mail`);
-        callbacks['404'] = () => setError(`Seu token não está bloqueado, por favor, verifique a caixa de entrada, spam / lixo eletrônico do e-mail '${email}' para localizar o token que enviamos. Caso não o encontre, por favor, clique no link de reenvio de token, que reenviaremos o token a este e-mail.`)
-        callbacks['429'] = (response: any) => setError(`A solicitação de desbloqueio do token para o e-mail '${email}' já foi atendida na data ${response.dateItWasSaved}, se necessário, poderá ser refeita na data ${response.expirationDate}`);
+        const estado =  ModalLoginStore((state: IModalLoginStore) => ({
+            ...state,
+        }));
 
-        JnAjax.doAnAjaxRequest(`login/${email}/token/request/unlocking`, callbacks, 'POST', {}, {}, 'http://localhost:8080');
-    }
-
-    const allScreens = {
+        const allScreens = {
         RequestEmail: {
             footerComponent: <RequestEmailFooter />,
             headerLabel: 'Verificação de e-mail',
@@ -223,7 +236,7 @@ export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
                     onClick={() => {
                         setError('');
                         setLockedToken(false);
-                        screen.buttonClick(state);
+                       estado.doAnAjaxRequest(screen.buttonClick);
                     }}
                 />
             </form>
@@ -233,7 +246,7 @@ export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
                 <div className="border-t border-[#ebe9f1] p-5 dark:border-white/10">
                     <p className="text-center text-sm text-red-600 dark:text-white-dark/70">
                         Seu token está bloqueado!
-                        <button onClick={requestUnlockToken} type="button" className="text-[#515365] hover:underline ltr:ml-1 rtl:mr-1 dark:text-white-dark">
+                        <button onClick={() => estado.doAnAjaxRequest('requestUnlockToken')} type="button" className="text-[#515365] hover:underline ltr:ml-1 rtl:mr-1 dark:text-white-dark">
                             Clique aqui para solicitar desbloqueio
                         </button>
                     </p>
