@@ -4,15 +4,13 @@ import IconUser from '@/presentation/icons/icon-user';
 
 import React, { useEffect } from 'react';
 import { ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogin';
+import JnAjax from '@/app/JnAjax';
+import { WelcomeMessage } from '@/presentation/auth/WelcomeMessage';
 
 export interface RequestEmailProps {}
 
 export const RequestEmailFooter: React.FC<RequestEmailProps> = ({}) => {
-    return (
-        <div className="border-t border-[#ebe9f1] p-5 dark:border-white/10">
-            <p className="cursor-pointer text-center text-sm text-white-dark dark:text-white-dark/70">Informe o seu e-mail, ainda que seja seu primeiro acesso</p>
-        </div>
-    );
+    return <WelcomeMessage />;
 };
 export const RequestEmailClick = 'checkEmail';
 export const RequestEmail: React.FC<RequestEmailProps> = ({}) => {
@@ -21,9 +19,10 @@ export const RequestEmail: React.FC<RequestEmailProps> = ({}) => {
     }));
 
     const validateEmail = (value: string, oldError: string) => {
+
         const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const invalid = !regex.test(value);
-        const error = invalid ? `O e-mail '${value}' está em formato inválido` : oldError;
+        const error = !value? `Favor informar um e-mail ao qual você tenha pleno acesso` :  invalid ? `O e-mail '${value}' está em formato inválido` : oldError;
         setInvalid(invalid);
         setEmail(value);
         setError(error);

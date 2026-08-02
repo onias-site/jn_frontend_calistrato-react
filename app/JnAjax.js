@@ -19,10 +19,10 @@ export default class JnAjax {
         callbacks['setLoading'] = callbacks['setLoading'] || JnAjax.setLoading();
         callbacks['setLoading']();
         callbacks['getLogin'] = callbacks['getLogin'] || this.getLogin;
-        const login =  callbacks['getLogin']();
-        const {sessionToken, email} = login;
-        headers = (headers || {});
-        headers = {...headers, sessionToken, email};
+        const login = callbacks['getLogin']();
+        const { sessionToken, email } = login;
+        headers = headers || {};
+        headers = { ...headers, sessionToken, email };
 
         const retryAfterAuthentication = callbacks['retryAfterAuthentication'] || (() => {});
 
@@ -30,7 +30,7 @@ export default class JnAjax {
 
         const url2 = `${path}/${uri}`;
 
-        if(!login.email && url2.includes('{email}')){
+        if (!login.email && url2.includes('{email}')) {
             callbacks[401]();
             return;
         }
@@ -41,7 +41,6 @@ export default class JnAjax {
 
         const complete = (a) => {
             try {
-
                 callbacks['setNotLoading'] = callbacks['setNotLoading'] || JnAjax.setNotLoading();
 
                 callbacks['setNotLoading']();
@@ -58,7 +57,8 @@ export default class JnAjax {
 
                 callbacks[422] = callbacks[422] || JnAjax.getHandler422(responseBody);
 
-                const callback = callbacks[a.status] || callbacks['onUnexpectedHttpStatus'] || ((responseBody, httpStatus) => console.log('resposta' + responseBody, 'status imprevisto: ' + httpStatus));
+                const callback =
+                    callbacks[a.status] || callbacks['onUnexpectedHttpStatus'] || ((responseBody, httpStatus) => console.log('resposta' + responseBody, 'status imprevisto: ' + httpStatus));
 
                 callback(responseBody, a.status);
 
@@ -77,17 +77,16 @@ export default class JnAjax {
             contentType,
             type,
             dataType,
-            complete
+            complete,
         });
     }
 
     static getHandler422 = (response, status) => {
         return () => PubSub.publish('httpStatus422', response);
-    }
+    };
 
     static getHandler401 = (retryAfterAuthentication) => {
         return () => PubSub.publish('httpStatus401', retryAfterAuthentication);
-
     };
 
     static getHandler420 = () => {
@@ -165,90 +164,89 @@ export default class JnAjax {
         return urls[enviroment] || enviroment;
     }
 
-    static hasLogin(){
+    static hasLogin() {
         const login = this.getLogin();
         return login && login.sessionToken && login.email && true;
     }
 
-    static removeLogin(email){
+    static hasPastLogin(email){
+        try {
+            const array = localStorage.getItem('logins');
+            const logins = JSON.parse(array);
+            return logins[email];
+        } catch (error) {
+
+        }
+    }
+
+    static removeLogin(email) {
         try {
             const array = localStorage.getItem('logins');
             const logins = JSON.parse(array);
             delete logins[email];
             localStorage.setItem('logins', JSON.stringify(logins));
-        } catch (error) {
-
-        }
+        } catch (error) {}
     }
 
-    static addStageOvercomeToLogin(email, stage){
+    static removeLoginPropery(email, property) {
         try {
             const array = localStorage.getItem('logins');
-            const logins = JSON.parse(array) || {};
-            const login = logins[email] || {};
-            login.stagesOvercome = login.stagesOvercome || [];
-            const set = new Set(login.stagesOvercome);
-            set.add(stage);
-            login.stagesOvercome = [...set];
+            const logins = JSON.parse(array);
+            const login = logins[email];
+            delete login[property];
             logins[email] = login;
             localStorage.setItem('logins', JSON.stringify(logins));
-        } catch (error) {
-
-        }
+        } catch (error) {}
     }
 
-    static setLoginStatus(email, informationType, status, response){
+    static setLoginStatus(email, informationType, status, response) {
         try {
             const array = localStorage.getItem('logins');
             const logins = JSON.parse(array) || {};
             const login = logins[email] || {};
             const data = login[informationType] || {};
-            data[status] = response;
+            data[status] = response || {};
             login[informationType] = data;
             logins[email] = login;
             localStorage.setItem('logins', JSON.stringify(logins));
-        } catch (error) {
-
-        }
+        } catch (error) {}
     }
 
-
-    static getLoginStatus(email, property, callbacks){
+    static getLoginStatus(email, property, callbacks) {
         try {
             const array = localStorage.getItem('logins');
 
-            if(!array){
+            if (!array) {
                 return;
             }
 
             const logins = JSON.parse(array);
 
-            if(!logins){
+            if (!logins) {
                 return;
             }
 
             const login = logins[email];
 
-            if(!login){
+            if (!login) {
                 return;
             }
 
             const responses = login[property];
 
-            if(!responses){
-                continue;
+            if (!responses) {
+                return;
             }
-            for(let status in callbacks){
+            for (let status in callbacks) {
+                const response = responses[status];
 
-                const response = responses[property][status];
-
-                if(!response){
+                if (!response) {
                     continue;
                 }
 
-                const expiredTimeStamp = response && response.timestamp && response.timestamp < new Date().getTime();
+                const expiredTimeStamp = response.timestamp && response.timestamp < new Date().getTime();
 
-                if(expiredTimeStamp){
+                if (expiredTimeStamp) {
                     return;
                 }
 
@@ -256,49 +254,27 @@ export default class JnAjax {
                 callback(response);
                 return response;
             }
+        } catch (e) {}
+    }
 
-    }catch(e){
-	}
-}
-
-
-    static hasThisStageBeenOvercome(email, stage){
-       const defaultValidator = login => {
-            return login && login.stagesOvercome && login.stagesOvercome.includes(stage);
-       };
-       const stageValidators = {token: login => login.timestamp > new Date().getTime()};
-       const stageValidator = stageValidators[stage] || defaultValidator;
-
+    static getLoginToken(email) {
         try {
             const array = localStorage.getItem('logins');
             const logins = JSON.parse(array);
             const login = logins[email];
-            return stageValidator(login);
+            return login;
         } catch (error) {
-           return false;
+            return {};
         }
     }
-
-    static getLoginToken(email){
-
-         try {
-             const array = localStorage.getItem('logins');
-             const logins = JSON.parse(array);
-             const login = logins[email];
-            return login;
-            } catch (error) {
-            return {};
-         }
-     }
-
 
     static getLogin() {
         const sessao = sessionStorage.getItem('login');
         let login = {};
         try {
             const sessaoObj = JSON.parse(sessao);
-            const {sessionToken, email} = sessaoObj;
-            login = {sessionToken, email};
+            const { sessionToken, email } = sessaoObj;
+            login = { sessionToken, email };
         } catch (error) {
             return {};
         }
@@ -308,13 +284,13 @@ export default class JnAjax {
             const logins = JSON.parse(array);
             const data = logins[login.email];
 
-            if(!data){
+            if (!data) {
                 return login;
             }
 
-            const {timestamp, expirationDate, dateItWasSaved} = data;
-            const localFields = {timestamp, expirationDate, dateItWasSaved};
-            login = {...login, ...localFields};
+            const { timestamp, expirationDate, dateItWasSaved } = data;
+            const localFields = { timestamp, expirationDate, dateItWasSaved };
+            login = { ...login, ...localFields };
             return login;
         } catch (error) {
             return login;

@@ -3,27 +3,16 @@ import React, { useEffect, useState } from 'react';
 import { ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogin';
 import { Password } from 'primereact/password';
 import { LabelComponent } from '@/presentation/components/source/LabelComponent';
-import { serverRequests } from '@/presentation/auth/ServerRequests';
+import { ResendTokenLink } from '@/presentation/auth/ResendTokenLink';
 
 export const SavePasswordClick = 'savePassword';
 
 export interface SavePasswordProps {}
 
 export const SavePasswordFooter: React.FC<any> = ({}) => {
-    const {loading, doAnAjaxRequest} = ModalLoginStore((state: IModalLoginStore) => ({
-        ...state,
-    }));
-
     return (
         <div className="border-t border-[#ebe9f1] p-5 dark:border-white/10">
-            {!loading && (
-                <p className="text-center text-sm text-white-dark dark:text-white-dark/70">
-                    Não recebeu ou perdeu o token?
-                    <button onClick={() => doAnAjaxRequest('requestResendToken')} type="button" className="text-[#515365] hover:underline ltr:ml-1 rtl:mr-1 dark:text-white-dark">
-                        Clique aqui para reenviar
-                    </button>
-                </p>
-            )}
+            <ResendTokenLink />
         </div>
     );
 };
@@ -34,7 +23,7 @@ export const SavePassword: React.FC<SavePasswordProps> = ({}) => {
     }));
 
     useEffect(() => {
-        serverRequests.sendToken.afterHttpRequest = () => setField(() => {}, error);
+        // setAfterHttpRequest('sendToken', () => setField(() => {}, error));
         doAnAjaxRequest('sendToken');
     }, []);
 

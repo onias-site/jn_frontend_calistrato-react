@@ -6,11 +6,13 @@ import { RequestEmail, RequestEmailFooter, RequestEmailClick } from '@/presentat
 import { ConfirmEmail, ConfirmEmailFooter, ConfirmEmailClick } from '@/presentation/auth/ConfirmEmail';
 import { SavePassword, SavePasswordClick, SavePasswordFooter } from '@/presentation/auth/SavePassword';
 import { RequestAnswers, RequestAnswersClick } from '@/presentation/auth/RequestAnswers';
+import { UnlockTokenLink } from '@/presentation/auth/UnlockTokenLink';
 import { LoadingButton } from '@/presentation/components/source/LoadingButton';
 import { serverRequests } from '@/presentation/auth/ServerRequests';
 import { Modal } from '@/presentation/components/source/Modal';
 import JnAjax from '@/app/JnAjax';
 import PubSub from 'pubsub-js';
+import { BackToLoginLink } from '@/presentation/auth/BackToLoginLink';
 
 export interface ModalLoginProps {}
 
@@ -26,7 +28,9 @@ export interface IModalLoginStore {
     error: string;
     email: string;
     context: any;
+    afterHttpRequest: any;
     hideModal: () => void;
+    requestFirstPassword: () => void;
     setEmail: (email: string) => void;
     setError: (error: string) => void;
     notifyAboutLoginNotFound: () => void;
@@ -36,34 +40,57 @@ export interface IModalLoginStore {
     clearRetryAfterAuthentication: () => void;
     setLockedToken: (lockedToken: boolean) => void;
     setContextField: (key: string, value: any) => void;
+    setAfterHttpRequest: (name: string, func: any) => void;
     executeRetryAfterAuthentication: (response: any) => void;
     showModal: (selectedScreen: string, title: string, retryAfterAuthenticationCallBack: any) => void;
 }
 
 export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
     retryAfterAuthentication: null,
+    afterHttpRequest: {},
     lockedToken: false,
-    doAnAjaxRequest: (requestName: string) =>{
-        const {email} = get();
-        const requestDetails = serverRequests[requestName];
+    setAfterHttpRequest: (name: string, func: any) => {
+        const { afterHttpRequest } = get();
+        afterHttpRequest[name] = func;
+        set({ afterHttpRequest });
+    },
+    requestFirstPassword: () => {
+        const { email, showModal } = get();
+        JnAjax.removeLoginPropery(email, 'checkEmail');
+        showModal('SavePassword', 'Criar uma nova senha');
+    },
+    doAnAjaxRequest: (requestName: string) => {
+        const state = get();
+        const { email, callbacks } = state;
+        const allRequests = serverRequests(state);
+        const requestDetails = allRequests[requestName];
 
-        if(requestDetails.mustInterruptRequest() === true){
+        if (requestDetails.mustInterruptRequest() === true) {
             return;
         }
 
         const tokenStatus = JnAjax.getLoginStatus(email, requestName, requestDetails.cached);
 
-        if(tokenStatus){
+        if (tokenStatus) {
             return;
         }
 
-        requestDetails.callbacks.onUnexpectedHttpStatus = (response: any, status: any) => requestDetails.cached[status](response) || JnAjax.setLoginStatus(email, requestName, status, response);
+        for (let status in callbacks) {
+            const callback = callbacks[status];
+            requestDetails.callbacks[status] = callback;
+        }
 
+        requestDetails.callbacks.onUnexpectedHttpStatus = (response: any, status: any) => {
+            if (!requestDetails.cached[status]) {
+                return;
+            }
+            requestDetails.cached[status](response);
+            JnAjax.setLoginStatus(email, requestName, status, response);
+        };
         JnAjax.doAnAjaxRequest(requestDetails.url, requestDetails.callbacks, requestDetails.method, requestDetails.getBody(), {}, 'http://localhost:8080');
-
     },
     notifyAboutLoginNotFound: () => {
-        const {email, showModal} = get();
+        const { email, showModal } = get();
         JnAjax.removeLogin(email);
         showModal('RequestEmail', '', null, 'O seu login não foi encontrado, por favor, informe um e-mail');
     },
@@ -72,7 +99,6 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
     clearRetryAfterAuthentication: () => set({ retryAfterAuthentication: null }),
 
     executeRetryAfterAuthentication: (response: any) => {
-
         const loginToSessionStorage = {
             email: response.email,
             sessionToken: response.sessionToken,
@@ -81,23 +107,21 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
             dateItWasSaved: response.dateItWasSaved,
         };
 
-
-        const loginToLocalStorage = (response.timestamp && response.expirationDate && response.dateItWasSaved)
-        && {
-            timestamp: response.timestamp,
-            expirationDate: response.expirationDate,
-            dateItWasSaved: response.dateItWasSaved,
-            stagesOvercome: ['email', 'token', 'password']
-        };
+        const loginToLocalStorage = response.timestamp &&
+            response.expirationDate &&
+            response.dateItWasSaved && {
+                timestamp: response.timestamp,
+                expirationDate: response.expirationDate,
+                dateItWasSaved: response.dateItWasSaved,
+            };
 
         const array = localStorage.getItem('logins');
         let logins = {};
         try {
-            logins = JSON.parse(array) ||{};
+            logins = JSON.parse(array) || {};
             const loginLoadedFromLocalStorage = loginToLocalStorage || logins[response.email];
             logins[response.email] = loginLoadedFromLocalStorage;
             localStorage.setItem('logins', JSON.stringify(logins));
-
         } catch (error) {
             console.error(error);
         }
@@ -134,7 +158,7 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
             loading: false,
             selectedScreen,
             lockedToken: false,
-            retryAfterAuthentication: retryAfter401
+            retryAfterAuthentication: retryAfter401,
         });
     },
     context: {},
@@ -175,15 +199,14 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
 }));
 
 export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
-    const { setLockedToken, lockedToken, invalid, title, selectedScreen, visible, hideModal, showModal, email, loading, setError, error } =
-        ModalLoginStore((state: IModalLoginStore) => ({
-            ...state,
-        }));
-        const estado =  ModalLoginStore((state: IModalLoginStore) => ({
-            ...state,
-        }));
+    const { setLockedToken, lockedToken, invalid, title, selectedScreen, visible, hideModal, showModal, email, loading, setError, error } = ModalLoginStore((state: IModalLoginStore) => ({
+        ...state,
+    }));
+    const estado = ModalLoginStore((state: IModalLoginStore) => ({
+        ...state,
+    }));
 
-        const allScreens = {
+    const allScreens = {
         RequestEmail: {
             footerComponent: <RequestEmailFooter />,
             headerLabel: 'Verificação de e-mail',
@@ -236,22 +259,15 @@ export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
                     onClick={() => {
                         setError('');
                         setLockedToken(false);
-                       estado.doAnAjaxRequest(screen.buttonClick);
+                        estado.doAnAjaxRequest(screen.buttonClick);
                     }}
                 />
             </form>
-            {!lockedToken ? (
-                screen.footerComponent
-            ) : (
-                <div className="border-t border-[#ebe9f1] p-5 dark:border-white/10">
-                    <p className="text-center text-sm text-red-600 dark:text-white-dark/70">
-                        Seu token está bloqueado!
-                        <button onClick={() => estado.doAnAjaxRequest('requestUnlockToken')} type="button" className="text-[#515365] hover:underline ltr:ml-1 rtl:mr-1 dark:text-white-dark">
-                            Clique aqui para solicitar desbloqueio
-                        </button>
-                    </p>
-                </div>
-            )}
+                {!lockedToken ? screen.footerComponent : <UnlockTokenLink />}
+                {
+                    selectedScreen != 'RequestEmail'
+                    && <BackToLoginLink/>
+                }
         </Modal>
     );
 };

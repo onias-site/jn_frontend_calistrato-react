@@ -16,9 +16,9 @@ export const RequestPasswordFooter: React.FC<any> = ({}) => {
     return (
         <div className="border-t border-[#ebe9f1] p-5 dark:border-white/10">
             <p className="text-center text-sm text-white-dark dark:text-white-dark/70">
-                Quer trocar a senha?
+                Esqueceu sua senha?
                 <button onClick= {() => showModal('SavePassword', 'Troque sua senha', null, 'Preencha os campos para atualizar sua senha')} type="button" className="text-[#515365] hover:underline ltr:ml-1 rtl:mr-1 dark:text-white-dark">
-                    clique aqui!
+                    Clique aqui!
                 </button>
             </p>
         </div>

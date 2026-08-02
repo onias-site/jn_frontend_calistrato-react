@@ -1,23 +1,12 @@
 'use client';
-import React, {useEffect} from 'react';
+import React, { useEffect } from 'react';
 import { ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogin';
 import IconUser from '@/presentation/icons/icon-user';
 
 export const ConfirmEmailClick = 'confirmEmail';
 
 export const ConfirmEmailFooter: React.FC<any> = ({}) => {
-    const { showModal } = ModalLoginStore((state: IModalLoginStore) => ({
-        ...state,
-    }));
-    return (
-        <div className="border-t border-[#ebe9f1] p-5 dark:border-white/10">
-            <p className="text-center text-sm text-white-dark dark:text-white-dark/70">
-                <button onClick={() => showModal('RequestEmail', 'Corrigir e-mail')} type="button" className="text-[#515365] hover:underline ltr:ml-1 rtl:mr-1 dark:text-white-dark">
-                    Corrigir e-mail
-                </button>
-            </p>
-        </div>
-    );
+    return null;
 };
 export interface ConfirmEmailProps {}
 
@@ -30,10 +19,9 @@ export const ConfirmEmail: React.FC<ConfirmEmailProps> = ({}) => {
         setInvalid(true);
     }, []);
     const confirmEmail = (value: any) => {
-
         const invalid = value != email;
 
-        const error = invalid ? `O e-mail '${value}' informado nesta tela, não é o mesmo e-mail '${email}' informado na tela anterior`: '';
+        const error = invalid ? `O e-mail '${value}' informado nesta tela, não é o mesmo e-mail '${email}' informado na tela anterior` : '';
         setInvalid(invalid);
         setError(error);
     };
