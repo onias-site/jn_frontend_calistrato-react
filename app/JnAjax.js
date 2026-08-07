@@ -169,14 +169,12 @@ export default class JnAjax {
         return login && login.sessionToken && login.email && true;
     }
 
-    static hasPastLogin(email){
+    static hasPastLogin(email) {
         try {
             const array = localStorage.getItem('logins');
             const logins = JSON.parse(array);
             return logins[email];
-        } catch (error) {
-
-        }
+        } catch (error) {}
     }
 
     static removeLogin(email) {
@@ -188,7 +186,7 @@ export default class JnAjax {
         } catch (error) {}
     }
 
-    static removeLoginPropery(email, property) {
+    static removeAllCachedRequests(email, property) {
         try {
             const array = localStorage.getItem('logins');
             const logins = JSON.parse(array);
@@ -199,7 +197,7 @@ export default class JnAjax {
         } catch (error) {}
     }
 
-    static setLoginStatus(email, informationType, status, response) {
+    static addCachedRequest(email, informationType, status, response) {
         try {
             const array = localStorage.getItem('logins');
             const logins = JSON.parse(array) || {};
@@ -212,7 +210,7 @@ export default class JnAjax {
         } catch (error) {}
     }
 
-    static getLoginStatus(email, property, callbacks) {
+    static getCachedRequest(email, property, callbacks) {
         try {
             const array = localStorage.getItem('logins');
 
@@ -256,16 +254,37 @@ export default class JnAjax {
             }
         } catch (e) {}
     }
-
-    static getLoginToken(email) {
+    static saveLogin(response){
+        let recoveredLogin;
         try {
             const array = localStorage.getItem('logins');
             const logins = JSON.parse(array);
-            const login = logins[email];
-            return login;
+            recoveredLogin = logins[response.email];
         } catch (error) {
-            return {};
+            recoveredLogin = {};
         }
+        const loginToSessionStorage = {
+            email: response.email,
+            sessionToken: response.sessionToken,
+            timestamp: response.timestamp || recoveredLogin.timestamp,
+            expirationDate: response.expirationDate || recoveredLogin.expirationDate,
+            dateItWasSaved: response.dateItWasSaved || recoveredLogin.dateItWasSaved,
+            };
+
+
+
+        sessionStorage.setItem('login', JSON.stringify(loginToSessionStorage));
+
+        const { timestamp, expirationDate, dateItWasSaved } = loginToSessionStorage;
+
+        const loginToLocalStorage = { timestamp, expirationDate, dateItWasSaved };
+
+        const logins = recoveredLogin;
+
+        logins[response.email] = loginToLocalStorage;
+        localStorage.setItem('logins', JSON.stringify(logins));
+
+        return loginToSessionStorage;
     }
 
     static getLogin() {
@@ -295,5 +314,84 @@ export default class JnAjax {
         } catch (error) {
             return login;
         }
+    }
+    static getOnUnexpectedHttpStatusCallback = (mappedRequest) => {
+        const onUnexpectedHttpStatusCallback =  (response, status) => {
+
+            const cachedRequests = mapedRequest.cached;
+            const callbacks = mapedRequest.callbacks;
+
+            const callback =
+                callbacks[status] ||
+                cachedRequests[status] ||
+                ((r, s) => {
+                    console.log('resposta', r, 'status imprevisto: ', s);
+                });
+
+            callback(response, status);
+
+            const statusName = JnAjax.getStatusName(mappedRequest, status);
+
+            const notMappedStatusName = !statusName;
+
+            if (notMappedStatusName) {
+                return;
+            }
+
+            for (let requestName in allMappedRequests) {
+                const otherMappedRequest = allMappedRequests[requestName];
+                const statusNumber = otherMappedRequest.mappedStatus[statusName];
+
+                const notMappedStatus = !statusNumber;
+
+                if (notMappedStatus) {
+                    continue;
+                }
+
+                JnAjax.removeAllCachedRequests(email, requestName);
+
+                const notCachedStatus = !otherMappedRequest.cached[statusNumber];
+
+                if (notCachedStatus) {
+                    continue;
+                }
+
+                JnAjax.addCachedRequest(email, requestName, statusNumber, response);
+            }
+        };
+        return onUnexpectedHttpStatusCallback;
+    }
+    static executeLoginRequest(state, requestName, getAllMappedRequests) {
+
+        const { email, callbacks } = state;
+
+        const allMappedRequests = getAllMappedRequests(state);
+
+        const mapedRequest = allMappedRequests[requestName];
+
+        if (mapedRequest.mustInterruptRequest() === true) {
+            return;
+        }
+
+        const alreadyCachedRequest = JnAjax.getCachedRequest(email, requestName, mapedRequest.cached);
+
+        if (alreadyCachedRequest) {
+            return;
+        }
+
+        mapedRequest.callbacks.onUnexpectedHttpStatus = JnAjax.getOnUnexpectedHttpStatusCallback(mapedRequest);
+
+        JnAjax.doAnAjaxRequest(mapedRequest.url, callbacks, mapedRequest.method, mapedRequest.getBody(), {}, 'http://localhost:8080');
+    }
+
+    static getStatusName(otherMapedRequest, status) {
+        for (let feedback in otherMapedRequest.mappedStatus) {
+            const otherStatus = otherMapedRequest.mappedStatus[feedback];
+            if (otherStatus == status) {
+                return feedback;
+            }
+        }
+
+        return '';
     }
 }

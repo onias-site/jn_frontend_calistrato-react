@@ -14,7 +14,7 @@ export const RequestEmailFooter: React.FC<RequestEmailProps> = ({}) => {
 };
 export const RequestEmailClick = 'checkEmail';
 export const RequestEmail: React.FC<RequestEmailProps> = ({}) => {
-    const { email, setInvalid, setError, setEmail, error } = ModalLoginStore((state: IModalLoginStore) => ({
+    const { email, setInvalid, setDetailMessage, setEmail, detailMessage } = ModalLoginStore((state: IModalLoginStore) => ({
         ...state,
     }));
 
@@ -25,18 +25,18 @@ export const RequestEmail: React.FC<RequestEmailProps> = ({}) => {
         const error = !value? `Favor informar um e-mail ao qual você tenha pleno acesso` :  invalid ? `O e-mail '${value}' está em formato inválido` : oldError;
         setInvalid(invalid);
         setEmail(value);
-        setError(error);
+        setDetailMessage(error);
     };
 
     useEffect(() => {
 
-        setError(error);
+        setDetailMessage(detailMessage);
         if (!email) {
-            setError(`Favor informar um e-mail ao qual você tenha pleno acesso`);
+            setDetailMessage(`Favor informar um e-mail ao qual você tenha pleno acesso`);
             setInvalid(true);
             return;
         }
-        validateEmail(email, error);
+        validateEmail(email, detailMessage);
     }, []);
 
     return (

@@ -25,108 +25,35 @@ export interface IModalLoginStore {
     invalid: boolean;
     callbacks: any;
     title: string;
-    error: string;
+    detailMessage: string;
     email: string;
     context: any;
-    afterHttpRequest: any;
     hideModal: () => void;
-    requestFirstPassword: () => void;
     setEmail: (email: string) => void;
-    setError: (error: string) => void;
-    notifyAboutLoginNotFound: () => void;
+    setDetailMessage: (detailMessage: string) => void;
     setLoading: (loading: boolean) => void;
     setInvalid: (invalid: boolean) => void;
-    doAnAjaxRequest: (requestName: string) => void;
     clearRetryAfterAuthentication: () => void;
+    doAnAjaxRequest: (requestName: string) => void;
     setLockedToken: (lockedToken: boolean) => void;
     setContextField: (key: string, value: any) => void;
-    setAfterHttpRequest: (name: string, func: any) => void;
     executeRetryAfterAuthentication: (response: any) => void;
     showModal: (selectedScreen: string, title: string, retryAfterAuthenticationCallBack: any) => void;
 }
 
 export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
     retryAfterAuthentication: null,
-    afterHttpRequest: {},
     lockedToken: false,
-    setAfterHttpRequest: (name: string, func: any) => {
-        const { afterHttpRequest } = get();
-        afterHttpRequest[name] = func;
-        set({ afterHttpRequest });
-    },
-    requestFirstPassword: () => {
-        const { email, showModal } = get();
-        JnAjax.removeLoginPropery(email, 'checkEmail');
-        showModal('SavePassword', 'Criar uma nova senha');
-    },
-    doAnAjaxRequest: (requestName: string) => {
-        const state = get();
-        const { email, callbacks } = state;
-        const allRequests = serverRequests(state);
-        const requestDetails = allRequests[requestName];
 
-        if (requestDetails.mustInterruptRequest() === true) {
-            return;
-        }
+    doAnAjaxRequest: (requestName: string) => JnAjax.executeLoginRequest(get(), requestName, serverRequests),
 
-        const tokenStatus = JnAjax.getLoginStatus(email, requestName, requestDetails.cached);
-
-        if (tokenStatus) {
-            return;
-        }
-
-        for (let status in callbacks) {
-            const callback = callbacks[status];
-            requestDetails.callbacks[status] = callback;
-        }
-
-        requestDetails.callbacks.onUnexpectedHttpStatus = (response: any, status: any) => {
-            if (!requestDetails.cached[status]) {
-                return;
-            }
-            requestDetails.cached[status](response);
-            JnAjax.setLoginStatus(email, requestName, status, response);
-        };
-        JnAjax.doAnAjaxRequest(requestDetails.url, requestDetails.callbacks, requestDetails.method, requestDetails.getBody(), {}, 'http://localhost:8080');
-    },
-    notifyAboutLoginNotFound: () => {
-        const { email, showModal } = get();
-        JnAjax.removeLogin(email);
-        showModal('RequestEmail', '', null, 'O seu login não foi encontrado, por favor, informe um e-mail');
-    },
     setLockedToken: (lockedToken: boolean) => set({ lockedToken, invalid: true }),
 
     clearRetryAfterAuthentication: () => set({ retryAfterAuthentication: null }),
 
     executeRetryAfterAuthentication: (response: any) => {
-        const loginToSessionStorage = {
-            email: response.email,
-            sessionToken: response.sessionToken,
-            timestamp: response.timestamp,
-            expirationDate: response.expirationDate,
-            dateItWasSaved: response.dateItWasSaved,
-        };
 
-        const loginToLocalStorage = response.timestamp &&
-            response.expirationDate &&
-            response.dateItWasSaved && {
-                timestamp: response.timestamp,
-                expirationDate: response.expirationDate,
-                dateItWasSaved: response.dateItWasSaved,
-            };
-
-        const array = localStorage.getItem('logins');
-        let logins = {};
-        try {
-            logins = JSON.parse(array) || {};
-            const loginLoadedFromLocalStorage = loginToLocalStorage || logins[response.email];
-            logins[response.email] = loginLoadedFromLocalStorage;
-            localStorage.setItem('logins', JSON.stringify(logins));
-        } catch (error) {
-            console.error(error);
-        }
-
-        sessionStorage.setItem('login', JSON.stringify(loginToSessionStorage));
+        JnAjax.saveLogin(response);
 
         const { retryAfterAuthentication, hideModal, email } = get();
         retryAfterAuthentication && retryAfterAuthentication();
@@ -134,8 +61,8 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
         PubSub.publish('showMessage', { summary: 'Sucesso!!!', detail: `O usuário '${email}' foi autenticado com sucesso!` });
         hideModal();
     },
-    showModal: (selectedScreen: string, title: string, retryAfterAuthenticationCallBack: any, error: string) => {
-        const { setError, setLoading, email, retryAfterAuthentication, setLockedToken } = get();
+    showModal: (selectedScreen: string, title: string, retryAfterAuthenticationCallBack: any, detailMessage: string) => {
+        const { setDetailMessage, setLoading, email, retryAfterAuthentication, setLockedToken } = get();
         const retryAfter401 = retryAfterAuthenticationCallBack || retryAfterAuthentication;
         const callbacks = {};
         callbacks['setLoading'] = () => setLoading(true);
@@ -143,13 +70,13 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
         callbacks['getLogin'] = () => {
             return {};
         };
-        callbacks['400'] = () => setError(`O e-mail '${email}' é inválido`);
+        callbacks['400'] = () => setDetailMessage(`O e-mail '${email}' é inválido`);
         callbacks['403'] = () => setLockedToken(true);
         const login = JnAjax.getLogin();
         const email2 = email || login.email;
         set({
             title,
-            error,
+            detailMessage,
             callbacks,
             context: {},
             visible: true,
@@ -179,14 +106,14 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
             context: {},
             email: '',
             title: '',
-            error: '',
+            detailMessage: '',
         });
         document.getElementById('cover').style.display = 'none';
     },
     setLoading: (loading: boolean) => set({ loading }),
     setInvalid: (invalid: boolean) => set({ invalid }),
     setEmail: (email: string) => set({ email }),
-    setError: (error: string) => set({ error }),
+    setDetailMessage: (detailMessage: string) => set({ detailMessage }),
 
     selectedScreen: 'RequestEmail',
     loading: false,
@@ -195,11 +122,11 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
     callbacks: {},
     title: '',
     email: '',
-    error: '',
+    detailMessage: '',
 }));
 
 export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
-    const { setLockedToken, lockedToken, invalid, title, selectedScreen, visible, hideModal, showModal, email, loading, setError, error } = ModalLoginStore((state: IModalLoginStore) => ({
+    const { setLockedToken, lockedToken, invalid, title, selectedScreen, visible, hideModal, showModal, email, loading, setDetailMessage, detailMessage } = ModalLoginStore((state: IModalLoginStore) => ({
         ...state,
     }));
     const estado = ModalLoginStore((state: IModalLoginStore) => ({
@@ -250,14 +177,14 @@ export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
             <form>
                 <div className="relative mb-4">
                     {screen.component}
-                    {error && <p className="text-red-600">{error}</p>}
+                    {detailMessage && <p className="text-red-600">{detailMessage}</p>}
                 </div>
                 <LoadingButton
                     invalid={lockedToken || invalid}
                     label={screen.buttonLabel}
                     loading={loading}
                     onClick={() => {
-                        setError('');
+                        setDetailMessage('');
                         setLockedToken(false);
                         estado.doAnAjaxRequest(screen.buttonClick);
                     }}

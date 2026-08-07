@@ -1,30 +1,87 @@
 export const serverRequests = (state: any) => {
-    const openModal = (selectedScreen: string) => state.showModal(selectedScreen, '');
+    const notifyAboutLoginConflict = () =>
+        state.showModal(
+            'SavePassword',
+            'Desbloqueie seu login',
+            null,
+            'Já há um login corrente em sua conta, pode ser que você não tenha feito a saída em seu último login, ou se trata de algum acesso concorrente em sua conta em outra estação de trabalho. De qualquer forma, preencha os campos deste formulário para desfazer o outro login corrente'
+        );
+
+    const notifyAboutLockedPassword = () =>
+        state.showModal(
+            'SavePassword',
+            'Desbloqueie a sua senha',
+            null,
+            'Devido a tentativas de acessos suspeitos, sua senha foi preventivamente bloqueada. Preencha os campos acima, para desbloqueá-la.'
+        );
+    const notifyAboutAlreadySentToken = (response: any) => {
+        state.setLockedToken(false);
+        state.setInvalid(false);
+        state.showModal(
+            'SavePassword',
+            'Criando um novo token',
+            null,
+            `Conforme sua solicitação, um novo token foi gerado para o e-mail '${state.email}', enviado no dia ${response.dateItWasSaved} e expirará no dia ${response.expirationDate}. Preencha os campos acima, refazê-lo.`
+        );
+    };
+    const unlockTokenRequestAlreadySolved = (response: any) =>
+        state.setDetailMessage(
+            `A solicitação de desbloqueio do token para o e-mail '${state.email}' já foi resolvida na data ${response.dateItWasSaved}, se necessário, poderá ser refeita na data ${response.expirationDate}`
+        );
+    const resendTokenRequestAlreadySolved = (response: any) =>
+        state.setDetailMessage(
+            `A solicitação de reenvio do token para o e-mail '${state.email}' já foi resolvida na data ${response.dateItWasSaved}, se necessário, poderá ser refeita na data ${response.expirationDate}`
+        );
+    const unlockTokenRequestAlreadyAsked = (response: any) =>
+        state.setDetailMessage(
+            `A solicitação de desbloqueio do token para o e-mail '${state.email}' já foi feita na data ${response.dateItWasSaved}, se necessário, poderá ser refeita na data ${response.expirationDate}`
+        );
+    const resendTokenRequestAlreadyAsked = (response: any) =>
+        state.setDetailMessage(
+            `A solicitação de reenvio do token para o e-mail '${state.email}' já foi feita na data ${response.dateItWasSaved}, se necessário, poderá ser refeita na data ${response.expirationDate}`
+        );
+    const notifyAboutWrongPassword = (response: any) =>
+        state.setDetailMessage(`A senha informada está incorreta, você ainda tem direito a ${3 - response.attempts} tentativa(s)`) || state.setContextField('password', '');
+    const notifyAboutWrongToken = (response: any) =>
+        state.setDetailMessage(`O token informado está incorreto, você ainda pode tentar mais ${3 - response.attempts} vez(es)`) || state.setContextField('token', '');
+    const notifyAboutLoginNotFound = () => state.showModal('RequestEmail', '', null, 'O seu login não foi encontrado, por favor, informe um e-mail');
+    const notifyAboutInvalidEmail = () => state.setDetailMessage(`O e-mail '${state.email}' informado é inválido, por favor, informe um e-mail válido`);
+    const executeRetryAfterAuthentication = (response: any) => state.executeRetryAfterAuthentication(response);
+    const setDetailMessage = (detailMessage: string) => () => state.setDetailMessage(detailMessage);
+    const requestFirstPassword = () => state.showModal('SavePassword', 'Criando uma nova senha');
+    const openModal = (selectedScreen: string) => () => state.showModal(selectedScreen, '');
+    const lockToken = () => state.setLockedToken(true);
+    const notifyAboutNotLockedToken = () =>
+    {
+        state.setDetailMessage(`O token informado não está bloqueado`);
+        state.setLockedToken(false);
+        state.setInvalid(false);
+    };
+
     const response = {
         checkEmail: {
             url: `login/${state.email}/token`,
             getBody: () => ({}),
-            callbacks: {
-                '202': state.requestFirstPassword,
-                '404': () => openModal('ConfirmEmail'),
-                '201': () => openModal('RequestAnswers'),
-                '427': () =>
-                    state.showModal(
-                        'SavePassword',
-                        'Desbloqueie a sua senha',
-                        null,
-                        'Devido a tentativas de acessos suspeitos, sua senha foi preventivamente bloqueada. Preencha os campos acima, para desbloqueá-la.'
-                    ),
-                '409': () =>
-                    state.showModal(
-                        'SavePassword',
-                        'Desbloqueie seu login',
-                        null,
-                        'Já há um login corrente em sua conta, pode ser que você não tenha feito a saída em seu último login, ou se trata de algum acesso concorrente em sua conta em outra estação de trabalho. De qualquer forma, preencha os campos deste formulário para desfazer o outro login corrente'
-                    ),
+            mappedStatus: {
+                nothingIsMissing: 200,
+                answersMissing: 201,
+                passwordMissing: 202,
+                invalidEmail: 400,
+                tokenBlocked: 403,
+                emailMissing: 404,
+                currentLogin: 409,
+                passwordBlocked: 427,
             },
+            callbacks: {},
             cached: {
-                '200': () => openModal('RequestPassword'),
+                '200': openModal('RequestPassword'),
+                '201': openModal('RequestAnswers'),
+                '404': openModal('ConfirmEmail'),
+                '427': notifyAboutLockedPassword,
+                '409': notifyAboutLoginConflict,
+                '400': notifyAboutInvalidEmail,
+                '202': requestFirstPassword,
+                '403': lockToken,
             },
             mustInterruptRequest: () => {},
             method: 'HEAD',
@@ -32,141 +89,132 @@ export const serverRequests = (state: any) => {
         confirmEmail: {
             url: `login/${state.email}/token`,
             getBody: () => ({}),
-            callbacks: {
-                '202': state.requestFirstPassword,
-                '201': () => openModal('RequestAnswers'),
-                '200': () => openModal('RequestPassword')
+            mappedStatus: {
+                nothingIsMissing: 200,
+                answersMissing: 201,
+                passwordMissing: 202,
+                invalidEmail: 400,
+                tokenBlocked: 403,
+                currentLogin: 409,
+                passwordBlocked: 427,
             },
-            cached: {},
+            callbacks: {},
+            cached: {
+                '200': openModal('RequestPassword'),
+                '201': openModal('RequestAnswers'),
+                '427': notifyAboutLockedPassword,
+                '409': notifyAboutLoginConflict,
+                '400': notifyAboutInvalidEmail,
+                '202': requestFirstPassword,
+                '403': lockToken,
+            },
             mustInterruptRequest: () => {},
             method: 'POST',
         },
         requestPassword: {
             url: `login/${state.email}`,
             getBody: () => state.context,
-            callbacks: {
-                '202': state.requestFirstPassword,
-                '201': () => openModal('RequestAnswers'),
-                '404': () => state.notifyAboutLoginNotFound(),
-                '200': (response: any) => state.executeRetryAfterAuthentication(response),
-                '409': () =>
-                    state.showModal(
-                        'SavePassword',
-                        'Desbloqueie seu login',
-                        null,
-                        'Já há um login corrente em sua conta, pode ser que você não tenha feito a saída em seu último login, ou se trata de algum acesso concorrente em sua conta em outra estação de trabalho. De qualquer forma, preencha os campos deste formulário para desfazer o outro login corrente'
-                    ),
-                '427': (response: any) => {
-                    state.setError(`Sua senha está incorreta!!! Você ainda tem direito a ${3 - response.attempts} tentativa(s)`);
-                    state.setContextField('password', '');
-                },
-                '423': () =>
-                    state.showModal(
-                        'SavePassword',
-                        'Crie uma nova senha',
-                        null,
-                        'Devido a tentativas de acessos suspeitos, sua senha foi preventivamente bloqueada. Preencha os campos acima, para desbloqueá-la.'
-                    ),
-                '429': () =>
-                    state.showModal(
-                        'SavePassword',
-                        'Crie uma nova senha',
-                        null,
-                        'Devido a tentativas de acessos suspeitos, sua senha foi preventivamente bloqueada. Preencha os campos acima, para desbloqueá-la.'
-                    ),
+            mappedStatus: {
+                nothingIsMissing: 200,
+                answersMissing: 201,
+                passwordMissing: 202,
+                invalidEmail: 400,
+                tokenBlocked: 403,
+                emailMissing: 404,
+                currentLogin: 409,
+                passwordBlocked: 423,
             },
-            cached: {},
+
+            callbacks: {
+                '200': executeRetryAfterAuthentication,
+                '429': notifyAboutLockedPassword,
+                '427': notifyAboutWrongPassword,
+            },
+            cached: {
+                '201': openModal('RequestAnswers'),
+                '423': notifyAboutLockedPassword,
+                '404': notifyAboutLoginNotFound,
+                '409': notifyAboutLoginConflict,
+                '400': notifyAboutInvalidEmail,
+                '202': requestFirstPassword,
+                '403': lockToken,
+            },
             mustInterruptRequest: () => {},
             method: 'POST',
         },
         requestAnswers: {
             url: `login/${state.email}/pre-registration`,
             getBody: () => state.context,
+            mappedStatus: {
+                passwordMissing: 202,
+                invalidEmail: 400,
+                tokenBlocked: 403,
+                emailMissing: 404,
+                currentLogin: 409,
+                passwordBlocked: 427,
+                nothingIsMissing: 999,
+
+            },
             callbacks: {
-                '202': state.requestFirstPassword,
-                '200': () => openModal('RequestPassword'),
-                '404': () => state.notifyAboutLoginNotFound(),
-                '409': () =>
-                    state.showModal(
-                        'SavePassword',
-                        'Desbloqueie seu login',
-                        null,
-                        'Já há um login corrente em sua conta, pode ser que você não tenha feito a saída em seu último login, ou se trata de algum acesso concorrente em sua conta em outra estação de trabalho. De qualquer forma, preencha os campos deste formulário para desfazer o outro login corrente'
-                    ),
-                    '427': () =>
-                    state.showModal(
-                        'SavePassword',
-                        'Desbloqueie a sua senha',
-                        null,
-                        'Devido a tentativas de acessos suspeitos, sua senha foi preventivamente bloqueada. Preencha os campos acima, para desbloqueá-la.'
-                    ),
-           },
-            cached: {},
+                '200': openModal('RequestPassword'),
+            },
+            cached: {
+                '427': notifyAboutLockedPassword,
+                '404': notifyAboutLoginNotFound,
+                '409': notifyAboutLoginConflict,
+                '400': notifyAboutInvalidEmail,
+                '202': requestFirstPassword,
+                '403': lockToken,
+            },
             mustInterruptRequest: () => {},
             method: 'POST',
         },
         savePassword: {
             url: `login/${state.email}/password`,
             getBody: () => state.context,
-            callbacks: {
-                '427': (response: any) => {
-                    state.setError(`O token informado está incorreto, você ainda pode tentar mais ${3 - response.attempts} vez(es)`);
-                    state.setContextField('token', '');
-                },
-                '200': (response: any) => state.executeRetryAfterAuthentication(response),
-                '404': () => state.notifyAboutLoginNotFound(),
-                '201': () => openModal('RequestAnswers'),
-                '429': () => state.setLockedToken(true),
-            },
-            cached: {},
-            mustInterruptRequest: () => state.setError(''),
-            method: 'POST',
-        },
-        requestResendToken: {
-            url: `login/${state.email}/token/request/resending`,
-            getBody: () => {
-                return {};
+            mappedStatus: {
+                nothingIsMissing: 200,
+                answersMissing: 201,
+                invalidEmail: 400,
+                tokenBlocked: 403,
+                emailMissing: 404,
             },
             callbacks: {
-                '200': () =>
-                    state.setError(
-                        `A solicitação de reenvio do token para o e-mail '${state.email}' foi efetuada com sucesso, por favor, verifique a caixa de entrada, spam / lixo eletrônico deste e-mail para localizar o token que enviamos.`
-                    ),
-                    '404': () => state.setError(`Seu token não não existe`),
-          },
+                '200': executeRetryAfterAuthentication,
+                '427': notifyAboutWrongToken,
+                '429': lockToken,
+            },
             cached: {
-                '409': (response: any) =>
-                    state.setError(
-                        `A solicitação de reenvio do token para o e-mail '${state.email}' já foi feita na data ${response.dateItWasSaved}, se necessário, poderá ser refeita na data ${response.expirationDate}. Assim que possível, será enviado em e-mail neste mesmo endereço de e-mail.`
-                    ),
-                '429': (response: any) =>
-                    state.setError(
-                        `A solicitação de reenvio do token para o e-mail '${state.email}' já foi atendida na data ${response.dateItWasSaved}, se necessário, poderá ser refeita na data ${response.expirationDate}`
-                    ),
+                '201': openModal('RequestAnswers'),
+                '404': notifyAboutLoginNotFound,
+                '400': notifyAboutInvalidEmail,
+                '403': lockToken,
             },
-            mustInterruptRequest: () => {},
+            mustInterruptRequest: () => state.setDetailMessage(''),
             method: 'POST',
         },
-
         sendToken: {
             url: `login/${state.email}/token/language/portuguese`,
             getBody: () => {
                 return {};
             },
+
+            mappedStatus: {
+                invalidEmail: 400,
+                tokenBlocked: 403,
+                emailMissing: 404,
+                tokenAlreadyRequested: 409,
+            },
+
             callbacks: {
-                '200': () =>
-                    state.setError(`Seu token está sendo enviado ao e-mail '${state.email}' nos próximos minutos. Por favor, verifique sua caixa de entrada e sua caixa de spam / lixo eletrônico.`),
-                '404': () => state.notifyAboutLoginNotFound(),
+                '200': setDetailMessage(`Seu token está sendo enviado ao e-mail '${state.email}' nos próximos minutos. Por favor, verifique sua caixa de entrada e sua caixa de spam / lixo eletrônico.`),
             },
             cached: {
-                '409': (response: any) =>
-                    !state.error &&
-                    state.setError(
-                        `Seu token já foi previamente enviado ao e-mail '${state.email}' no dia ${response.dateItWasSaved} e expirará no dia ${response.expirationDate}. Por favor, verifique sua caixa de entrada e sua caixa de spam / lixo eletrônico. Caso não tenha recebido o token, clique abaixo para reenviarmos.`
-                    ),
-                '403': () => state.setError('Seu token está bloqueado, por favor, solicite o desbloqueio no link mais abaixo'),
+                '409': notifyAboutAlreadySentToken,
+                '404': notifyAboutLoginNotFound,
+                '403': lockToken,
             },
-            mustInterruptRequest: () => state.setError(state.error),
+            mustInterruptRequest: () => state.setDetailMessage(state.detailMessage),
             method: 'POST',
         },
         requestUnlockToken: {
@@ -174,25 +222,43 @@ export const serverRequests = (state: any) => {
             getBody: () => {
                 return {};
             },
+            mappedStatus: {
+                nothingIsMissing: 999,
+                passwordMissing: 429,
+                tokenNotLocked: 404,
+                invalidEmail: 400,
+            },
             callbacks: {
-                '200': () =>
-                    state.setError(
-                        `A solicitação de desbloqueio do token para o e-mail '${state.email}' foi efetuada com sucesso, por favor, verifique a caixa de entrada, spam / lixo eletrônico deste e-mail para localizar o token que enviamos. Caso não o encontre, por favor, clique no link de reenvio de token, que reenviaremos o token a este e-mail.`
-                    ),
-                '404': () =>
-                    state.setError(
-                        `Seu token não está bloqueado, por favor, verifique a caixa de entrada, spam / lixo eletrônico do e-mail '${state.email}' para localizar o token que enviamos. Caso não o encontre, por favor, clique no link de reenvio de token, que reenviaremos o token a este e-mail.`
-                    ),
+                '409': unlockTokenRequestAlreadyAsked,
+                '200': setDetailMessage(
+                    `A solicitação de desbloqueio do token para o e-mail '${state.email}' foi efetuada com sucesso, por favor, verifique a caixa de entrada, spam / lixo eletrônico deste e-mail para localizar o token que enviamos. Caso não o encontre, por favor, clique no link de reenvio de token, que reenviaremos o token a este e-mail.`
+                ),
             },
             cached: {
-                '409': (response: any) =>
-                    state.setError(
-                        `A solicitação de desbloqueio do token para o e-mail '${state.email}' já foi feita na data ${response.dateItWasSaved}, se necessário, poderá ser refeita na data ${response.expirationDate}. Assim que possível, será enviado em e-mail neste mesmo endereço de e-mail`
-                    ),
-                '429': (response: any) =>
-                    state.setError(
-                        `A solicitação de desbloqueio do token para o e-mail '${state.email}' já foi atendida na data ${response.dateItWasSaved}, se necessário, poderá ser refeita na data ${response.expirationDate}`
-                    ),
+                '429': unlockTokenRequestAlreadySolved,
+                '404': notifyAboutNotLockedToken,
+            },
+            mustInterruptRequest: () => {},
+            method: 'POST',
+        },
+        requestResendToken: {
+            url: `login/${state.email}/token/request/resending`,
+            getBody: () => {
+                return {};
+            },
+             mappedStatus: {
+                nothingIsMissing: 999,
+                passwordMissing: 429,
+                invalidEmail: 400,
+            },
+           callbacks: {
+                '200': setDetailMessage(
+                    `A solicitação de reenvio do token para o e-mail '${state.email}' foi efetuada com sucesso, por favor, verifique a caixa de entrada, spam / lixo eletrônico deste e-mail para localizar o token que enviamos.`
+                ),
+                '409': resendTokenRequestAlreadyAsked,
+            },
+            cached: {
+                '429': resendTokenRequestAlreadySolved,
             },
             mustInterruptRequest: () => {},
             method: 'POST',

@@ -26,7 +26,7 @@ export const RequestPasswordFooter: React.FC<any> = ({}) => {
 };
 
 export const RequestPassword: React.FC<RequestPasswordProps> = ({}) => {
-    const {setInvalid, context, setContextField, setError } = ModalLoginStore((state: IModalLoginStore) => ({
+    const {setInvalid, context, setContextField, setDetailMessage } = ModalLoginStore((state: IModalLoginStore) => ({
         ...state,
     }));
 
@@ -43,14 +43,14 @@ export const RequestPassword: React.FC<RequestPasswordProps> = ({}) => {
         setter();
         const invalidPassword = context.password && !passwordRegex.test(context.password);
         if(invalidPassword){
-            !erro && setError('A senha está inválida, ela deve conter ao menos 8 caractéres, ao menos uma letra maiúscula, ao menos um número e ao menos um caractere especial');
+            !erro && setDetailMessage('A senha está inválida, ela deve conter ao menos 8 caractéres, ao menos uma letra maiúscula, ao menos um número e ao menos um caractere especial');
             setInvalid(true);
             return;
         }
-        !erro && setError('');
+        !erro && setDetailMessage('');
 
         if(!context.password){
-            !erro && setError('Informe a senha, ela deve conter ao menos 8 caractéres, ao menos uma letra maiúscula, ao menos um número e ao menos um caractere especial');
+            !erro && setDetailMessage('Informe a senha, ela deve conter ao menos 8 caractéres, ao menos uma letra maiúscula, ao menos um número e ao menos um caractere especial');
             setInvalid(true);
             return;
         }

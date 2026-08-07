@@ -11,11 +11,11 @@ export const ConfirmEmailFooter: React.FC<any> = ({}) => {
 export interface ConfirmEmailProps {}
 
 export const ConfirmEmail: React.FC<ConfirmEmailProps> = ({}) => {
-    const { email, setInvalid, setError } = ModalLoginStore((state: IModalLoginStore) => ({
+    const { email, setInvalid, setDetailMessage } = ModalLoginStore((state: IModalLoginStore) => ({
         ...state,
     }));
     useEffect(() => {
-        setError(`Por favor, confirme o e-mail '${email}' para que possamos prosseguir com sua autenticação, ou corrija seu e-mail caso tenha digitado errado`);
+        setDetailMessage(`Por favor, confirme o e-mail '${email}' para que possamos prosseguir com sua autenticação, ou corrija seu e-mail caso tenha digitado errado`);
         setInvalid(true);
     }, []);
     const confirmEmail = (value: any) => {
@@ -23,7 +23,7 @@ export const ConfirmEmail: React.FC<ConfirmEmailProps> = ({}) => {
 
         const error = invalid ? `O e-mail '${value}' informado nesta tela, não é o mesmo e-mail '${email}' informado na tela anterior` : '';
         setInvalid(invalid);
-        setError(error);
+        setDetailMessage(error);
     };
 
     return (
