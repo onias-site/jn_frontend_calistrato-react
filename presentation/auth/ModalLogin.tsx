@@ -171,11 +171,15 @@ export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
     };
 
     const screen = allScreens[selectedScreen];
-
+    const disabledDiv = {
+        pointerEvents:  'none',
+        opacity: 0.6,
+        cursor: 'not-allowed',
+    };
     return (
-        <Modal title={title || screen.headerLabel} visible={visible} setVisible={(show) => (show ? showModal(selectedScreen, title) : hideModal())}>
+        <Modal  title={title || screen.headerLabel} visible={visible} setVisible={(show) => (show ? showModal(selectedScreen, title) : hideModal())}>
             <form>
-                <div className="relative mb-4">
+                <div className="relative mb-4" style={lockedToken ? disabledDiv : {}}>
                     {screen.component}
                     {detailMessage && <p className="text-red-600">{detailMessage}</p>}
                 </div>

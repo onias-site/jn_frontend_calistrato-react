@@ -2,6 +2,7 @@
 import React, { useEffect } from 'react';
 import { ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogin';
 import IconUser from '@/presentation/icons/icon-user';
+import JnAjax from '@/app/JnAjax';
 
 export const ConfirmEmailClick = 'confirmEmail';
 
@@ -11,7 +12,7 @@ export const ConfirmEmailFooter: React.FC<any> = ({}) => {
 export interface ConfirmEmailProps {}
 
 export const ConfirmEmail: React.FC<ConfirmEmailProps> = ({}) => {
-    const { email, setInvalid, setDetailMessage } = ModalLoginStore((state: IModalLoginStore) => ({
+    const { email, setInvalid, setDetailMessage, setLockedToken } = ModalLoginStore((state: IModalLoginStore) => ({
         ...state,
     }));
     useEffect(() => {
@@ -24,6 +25,8 @@ export const ConfirmEmail: React.FC<ConfirmEmailProps> = ({}) => {
         const error = invalid ? `O e-mail '${value}' informado nesta tela, não é o mesmo e-mail '${email}' informado na tela anterior` : '';
         setInvalid(invalid);
         setDetailMessage(error);
+        !invalid && JnAjax.isCachedStatus(value, 'checkEmail', 403) && setLockedToken(true);
+
     };
 
     return (

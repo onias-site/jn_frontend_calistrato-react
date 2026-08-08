@@ -22,10 +22,9 @@ export const SavePassword: React.FC<SavePasswordProps> = ({}) => {
     const { setInvalid, email, context, setContextField, doAnAjaxRequest, setDetailMessage, detailMessage } = ModalLoginStore((state: IModalLoginStore) => ({
         ...state,
     }));
+        const [wrongTokens, setWrongTokens] = useState([]);
 
     useEffect(() => {
-        const mustSave = !JnAjax.getStatusName(email, 'checkEmail', {'200': () => {}})
-        mustSave && JnAjax.addCachedRequest(email, 'checkEmail', 200, {});
         doAnAjaxRequest('sendToken');
     }, []);
 
@@ -95,8 +94,26 @@ export const SavePassword: React.FC<SavePasswordProps> = ({}) => {
             setInvalid(true);
             return;
         }
+        const alreadyTyped = wrongTokens.includes(context.token);
+        if(alreadyTyped){
+            !erro && setDetailMessage('Este token já foi digitado e não é válido, por favor, verifique o token recebido no e-mail');
+            setContextField('token', '');
+            setInvalid(true);
+            return
+        }
+        wrongTokens.push(context.token);
+        setWrongTokens(wrongTokens);
         setInvalid(false);
     };
+
+
+    const setToken = (e: any) => {
+        if (wrongTokens.includes(e.target.value)) {
+            setField(() => setContextField('token', ''), `Este valor já foi digitado e não é válido, por favor, verifique o token recebido no e-mail '${email}'`);
+            return;
+        }
+        setField(() => setContextField('token', e.target.value), '');
+    }
 
     const explanation = 'Informe a senha para ser salva, ela deve ter 8 caracteres (no mínimo), ao menos um deles deve, necessariamente, ser maiúsculo e deve ter ao menos um caractere especial';
     return (

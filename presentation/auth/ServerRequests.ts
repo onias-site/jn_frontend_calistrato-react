@@ -63,6 +63,7 @@ export const serverRequests = (state: any) => {
             url: `login/${state.email}/token`,
             getBody: () => ({}),
             mappedStatus: {
+                tokenRecentlyBlocked: 403,
                 nothingIsMissing: 200,
                 answersMissing: 201,
                 passwordMissing: 202,
@@ -90,6 +91,7 @@ export const serverRequests = (state: any) => {
             url: `login/${state.email}/token`,
             getBody: () => ({}),
             mappedStatus: {
+                tokenRecentlyBlocked: 403,
                 nothingIsMissing: 200,
                 answersMissing: 201,
                 passwordMissing: 202,
@@ -123,7 +125,8 @@ export const serverRequests = (state: any) => {
                 emailMissing: 404,
                 currentLogin: 409,
                 passwordBlocked: 423,
-            },
+                tokenRecentlyBlocked: 403,
+         },
 
             callbacks: {
                 '200': executeRetryAfterAuthentication,
@@ -146,6 +149,7 @@ export const serverRequests = (state: any) => {
             url: `login/${state.email}/pre-registration`,
             getBody: () => state.context,
             mappedStatus: {
+                tokenRecentlyBlocked: 403,
                 passwordMissing: 202,
                 invalidEmail: 400,
                 tokenBlocked: 403,
@@ -153,6 +157,7 @@ export const serverRequests = (state: any) => {
                 currentLogin: 409,
                 passwordBlocked: 427,
                 nothingIsMissing: 999,
+                answersMissing: 999,
 
             },
             callbacks: {
@@ -173,7 +178,9 @@ export const serverRequests = (state: any) => {
             url: `login/${state.email}/password`,
             getBody: () => state.context,
             mappedStatus: {
+                tokenRecentlyBlocked: 429,
                 nothingIsMissing: 200,
+                passwordMissing: 999,
                 answersMissing: 201,
                 invalidEmail: 400,
                 tokenBlocked: 403,
@@ -189,6 +196,7 @@ export const serverRequests = (state: any) => {
                 '404': notifyAboutLoginNotFound,
                 '400': notifyAboutInvalidEmail,
                 '403': lockToken,
+                '429': lockToken,
             },
             mustInterruptRequest: () => state.setDetailMessage(''),
             method: 'POST',
@@ -204,14 +212,15 @@ export const serverRequests = (state: any) => {
                 tokenBlocked: 403,
                 emailMissing: 404,
                 tokenAlreadyRequested: 409,
+
             },
 
             callbacks: {
                 '200': setDetailMessage(`Seu token está sendo enviado ao e-mail '${state.email}' nos próximos minutos. Por favor, verifique sua caixa de entrada e sua caixa de spam / lixo eletrônico.`),
+                '404': notifyAboutLoginNotFound,
             },
             cached: {
                 '409': notifyAboutAlreadySentToken,
-                '404': notifyAboutLoginNotFound,
                 '403': lockToken,
             },
             mustInterruptRequest: () => state.setDetailMessage(state.detailMessage),

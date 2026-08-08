@@ -186,6 +186,17 @@ export default class JnAjax {
         } catch (error) {}
     }
 
+    static isCachedStatus(email, property, status) {
+        try {
+            const array = localStorage.getItem('logins');
+            const logins = JSON.parse(array);
+            const login = logins[email];
+            const responses = login[property];
+            const response = responses[status];
+            return !!response;
+        } catch (error) {}
+    }
+
     static removeAllCachedRequests(email, property) {
         try {
             const array = localStorage.getItem('logins');
@@ -315,11 +326,11 @@ export default class JnAjax {
             return login;
         }
     }
-    static getOnUnexpectedHttpStatusCallback = (mappedRequest) => {
+    static getOnUnexpectedHttpStatusCallback = (mappedRequest, allMappedRequests, email) => {
         const onUnexpectedHttpStatusCallback =  (response, status) => {
 
-            const cachedRequests = mapedRequest.cached;
-            const callbacks = mapedRequest.callbacks;
+            const cachedRequests = mappedRequest.cached;
+            const callbacks = mappedRequest.callbacks;
 
             const callback =
                 callbacks[status] ||
@@ -355,8 +366,9 @@ export default class JnAjax {
                 if (notCachedStatus) {
                     continue;
                 }
-
-                JnAjax.addCachedRequest(email, requestName, statusNumber, response);
+                const {timestamp, expirationDate, dateItWasSaved} = response;
+                const responseToCache = {timestamp, expirationDate, dateItWasSaved};
+                JnAjax.addCachedRequest(email, requestName, statusNumber, responseToCache);
             }
         };
         return onUnexpectedHttpStatusCallback;
@@ -364,29 +376,28 @@ export default class JnAjax {
     static executeLoginRequest(state, requestName, getAllMappedRequests) {
 
         const { email, callbacks } = state;
-
         const allMappedRequests = getAllMappedRequests(state);
 
-        const mapedRequest = allMappedRequests[requestName];
+        const mappedRequest = allMappedRequests[requestName];
 
-        if (mapedRequest.mustInterruptRequest() === true) {
+        if (mappedRequest.mustInterruptRequest() === true) {
             return;
         }
 
-        const alreadyCachedRequest = JnAjax.getCachedRequest(email, requestName, mapedRequest.cached);
+        const alreadyCachedRequest = JnAjax.getCachedRequest(email, requestName, mappedRequest.cached);
 
         if (alreadyCachedRequest) {
             return;
         }
 
-        mapedRequest.callbacks.onUnexpectedHttpStatus = JnAjax.getOnUnexpectedHttpStatusCallback(mapedRequest);
+        callbacks.onUnexpectedHttpStatus = JnAjax.getOnUnexpectedHttpStatusCallback(mappedRequest, allMappedRequests, email);
 
-        JnAjax.doAnAjaxRequest(mapedRequest.url, callbacks, mapedRequest.method, mapedRequest.getBody(), {}, 'http://localhost:8080');
+        JnAjax.doAnAjaxRequest(mappedRequest.url, callbacks, mappedRequest.method, mappedRequest.getBody(), {}, 'http://localhost:8080');
     }
 
-    static getStatusName(otherMapedRequest, status) {
-        for (let feedback in otherMapedRequest.mappedStatus) {
-            const otherStatus = otherMapedRequest.mappedStatus[feedback];
+    static getStatusName(othermappedRequest, status) {
+        for (let feedback in othermappedRequest.mappedStatus) {
+            const otherStatus = othermappedRequest.mappedStatus[feedback];
             if (otherStatus == status) {
                 return feedback;
             }
