@@ -19,9 +19,11 @@ export const serverRequests = (state: any) => {
         state.setInvalid(false);
         state.showModal(
             'SavePassword',
-            'Criando um novo token',
+           state.title,
             null,
-            `Conforme sua solicitação, um novo token foi gerado para o e-mail '${state.email}', enviado no dia ${response.dateItWasSaved} e expirará no dia ${response.expirationDate}. Preencha os campos acima, refazê-lo.`
+           state.detailMessage ?
+           `${state.detailMessage}. Seu token foi enviado ao e-mail '${state.email}' no dia ${response.dateItWasSaved} e expirará no dia ${response.expirationDate}.`
+           :  `Seu token foi enviado ao e-mail '${state.email}' no dia ${response.dateItWasSaved} e expirará no dia ${response.expirationDate}.`
         );
     };
     const unlockTokenRequestAlreadySolved = (response: any) =>
@@ -48,15 +50,24 @@ export const serverRequests = (state: any) => {
     const notifyAboutInvalidEmail = () => state.setDetailMessage(`O e-mail '${state.email}' informado é inválido, por favor, informe um e-mail válido`);
     const executeRetryAfterAuthentication = (response: any) => state.executeRetryAfterAuthentication(response);
     const setDetailMessage = (detailMessage: string) => () => state.setDetailMessage(detailMessage);
-    const requestFirstPassword = () => state.showModal('SavePassword', 'Criando uma nova senha');
+    const requestFirstPassword = () => state.showModal('SavePassword', '');
     const openModal = (selectedScreen: string) => () => state.showModal(selectedScreen, '');
+    const setAttempts = (fieldName: string) => () => {
+        state.setDetailMessage('');
+        state.context.attempts = state.context.attempts || [];
+        const attempt = state.context[fieldName]
+        state.context.attempts.push(attempt);
+        state.setContextField('attempts', state.context.attempts);
+    };
     const lockToken = () => state.setLockedToken(true);
-    const notifyAboutNotLockedToken = () =>
-    {
+    const notifyAboutNotLockedToken = () => {
         state.setDetailMessage(`O token informado não está bloqueado`);
         state.setLockedToken(false);
         state.setInvalid(false);
     };
+
+
+
 
     const response = {
         checkEmail: {
@@ -72,6 +83,7 @@ export const serverRequests = (state: any) => {
                 emailMissing: 404,
                 currentLogin: 409,
                 passwordBlocked: 427,
+                passwordRecentlyBlocked: 427,
             },
             callbacks: {},
             cached: {
@@ -99,6 +111,7 @@ export const serverRequests = (state: any) => {
                 tokenBlocked: 403,
                 currentLogin: 409,
                 passwordBlocked: 427,
+                passwordRecentlyBlocked: 427,
             },
             callbacks: {},
             cached: {
@@ -124,9 +137,10 @@ export const serverRequests = (state: any) => {
                 tokenBlocked: 403,
                 emailMissing: 404,
                 currentLogin: 409,
-                passwordBlocked: 423,
+                passwordBlocked: 427,
+                passwordRecentlyBlocked: 429,
                 tokenRecentlyBlocked: 403,
-         },
+            },
 
             callbacks: {
                 '200': executeRetryAfterAuthentication,
@@ -142,7 +156,7 @@ export const serverRequests = (state: any) => {
                 '202': requestFirstPassword,
                 '403': lockToken,
             },
-            mustInterruptRequest: () => {},
+            mustInterruptRequest: setAttempts('password'),
             method: 'POST',
         },
         requestAnswers: {
@@ -158,7 +172,6 @@ export const serverRequests = (state: any) => {
                 passwordBlocked: 427,
                 nothingIsMissing: 999,
                 answersMissing: 999,
-
             },
             callbacks: {
                 '200': openModal('RequestPassword'),
@@ -198,7 +211,7 @@ export const serverRequests = (state: any) => {
                 '403': lockToken,
                 '429': lockToken,
             },
-            mustInterruptRequest: () => state.setDetailMessage(''),
+            mustInterruptRequest: setAttempts('token'),
             method: 'POST',
         },
         sendToken: {
@@ -212,11 +225,12 @@ export const serverRequests = (state: any) => {
                 tokenBlocked: 403,
                 emailMissing: 404,
                 tokenAlreadyRequested: 409,
-
             },
 
             callbacks: {
-                '200': setDetailMessage(`Seu token está sendo enviado ao e-mail '${state.email}' nos próximos minutos. Por favor, verifique sua caixa de entrada e sua caixa de spam / lixo eletrônico.`),
+                '200': setDetailMessage(
+                    `Seu token está sendo enviado ao e-mail '${state.email}' nos próximos minutos. Por favor, verifique sua caixa de entrada e sua caixa de spam / lixo eletrônico.`
+                ),
                 '404': notifyAboutLoginNotFound,
             },
             cached: {
@@ -255,12 +269,12 @@ export const serverRequests = (state: any) => {
             getBody: () => {
                 return {};
             },
-             mappedStatus: {
+            mappedStatus: {
                 nothingIsMissing: 999,
                 passwordMissing: 429,
                 invalidEmail: 400,
             },
-           callbacks: {
+            callbacks: {
                 '200': setDetailMessage(
                     `A solicitação de reenvio do token para o e-mail '${state.email}' foi efetuada com sucesso, por favor, verifique a caixa de entrada, spam / lixo eletrônico deste e-mail para localizar o token que enviamos.`
                 ),

@@ -19,7 +19,7 @@ export const SavePasswordFooter: React.FC<any> = ({}) => {
 };
 
 export const SavePassword: React.FC<SavePasswordProps> = ({}) => {
-    const { setInvalid, email, context, setContextField, doAnAjaxRequest, setDetailMessage, detailMessage } = ModalLoginStore((state: IModalLoginStore) => ({
+    const { isInvalidAttempt, setInvalid, email, context, setContextField, doAnAjaxRequest, setDetailMessage, detailMessage } = ModalLoginStore((state: IModalLoginStore) => ({
         ...state,
     }));
         const [wrongTokens, setWrongTokens] = useState([]);
@@ -94,15 +94,11 @@ export const SavePassword: React.FC<SavePasswordProps> = ({}) => {
             setInvalid(true);
             return;
         }
-        const alreadyTyped = wrongTokens.includes(context.token);
-        if(alreadyTyped){
-            !erro && setDetailMessage('Este token já foi digitado e não é válido, por favor, verifique o token recebido no e-mail');
-            setContextField('token', '');
-            setInvalid(true);
-            return
+
+        if(isInvalidAttempt('token', 'Este token já foi digitado antes e está incorreto, tente outro!')){
+            return;
         }
-        wrongTokens.push(context.token);
-        setWrongTokens(wrongTokens);
+
         setInvalid(false);
     };
 

@@ -17,7 +17,7 @@ export const RequestPasswordFooter: React.FC<any> = ({}) => {
         <div className="border-t border-[#ebe9f1] p-5 dark:border-white/10">
             <p className="text-center text-sm text-white-dark dark:text-white-dark/70">
                 Esqueceu sua senha?
-                <button onClick= {() => showModal('SavePassword', 'Troque sua senha', null, 'Preencha os campos para atualizar sua senha')} type="button" className="text-[#515365] hover:underline ltr:ml-1 rtl:mr-1 dark:text-white-dark">
+                <button onClick= {() => showModal('SavePassword', 'Refazer sua senha', null, 'Preencha os campos para refazer a sua senha')} type="button" className="text-[#515365] hover:underline ltr:ml-1 rtl:mr-1 dark:text-white-dark">
                     Clique aqui!
                 </button>
             </p>
@@ -26,7 +26,7 @@ export const RequestPasswordFooter: React.FC<any> = ({}) => {
 };
 
 export const RequestPassword: React.FC<RequestPasswordProps> = ({}) => {
-    const {setInvalid, context, setContextField, setDetailMessage } = ModalLoginStore((state: IModalLoginStore) => ({
+    const {setInvalid, context, setContextField, setDetailMessage, isInvalidAttempt } = ModalLoginStore((state: IModalLoginStore) => ({
         ...state,
     }));
 
@@ -54,7 +54,9 @@ export const RequestPassword: React.FC<RequestPasswordProps> = ({}) => {
             setInvalid(true);
             return;
         }
-
+        if(isInvalidAttempt('password', 'Esta senha já foi digitada antes e está incorreta, tente outra senha!')){
+            return;
+        }
         setInvalid(false);
     };
 

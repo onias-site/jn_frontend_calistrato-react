@@ -177,14 +177,6 @@ export default class JnAjax {
         } catch (error) {}
     }
 
-    static removeLogin(email) {
-        try {
-            const array = localStorage.getItem('logins');
-            const logins = JSON.parse(array);
-            delete logins[email];
-            localStorage.setItem('logins', JSON.stringify(logins));
-        } catch (error) {}
-    }
 
     static isCachedStatus(email, property, status) {
         try {
@@ -267,12 +259,14 @@ export default class JnAjax {
     }
     static saveLogin(response){
         let recoveredLogin;
+        let logins;
         try {
             const array = localStorage.getItem('logins');
-            const logins = JSON.parse(array);
+            logins = JSON.parse(array);
             recoveredLogin = logins[response.email];
         } catch (error) {
             recoveredLogin = {};
+            logins = {};
         }
         const loginToSessionStorage = {
             email: response.email,
@@ -290,9 +284,9 @@ export default class JnAjax {
 
         const loginToLocalStorage = { timestamp, expirationDate, dateItWasSaved };
 
-        const logins = recoveredLogin;
-
         logins[response.email] = loginToLocalStorage;
+
+        logins[response.email] = {...recoveredLogin, ...loginToLocalStorage};
         localStorage.setItem('logins', JSON.stringify(logins));
 
         return loginToSessionStorage;

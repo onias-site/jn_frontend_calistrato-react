@@ -71,7 +71,7 @@ const Header = () => {
         if(!login){
             return;
         }
-        showModal('SavePassword', 'Troque sua senha', null, 'Preencha os campos para atualizar sua senha');
+        showModal('SavePassword', 'Atualize sua senha', null, 'Preencha os campos para atualizar sua senha');
     };
 
 

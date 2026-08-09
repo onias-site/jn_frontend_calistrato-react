@@ -14,7 +14,7 @@ export const RequestEmailFooter: React.FC<RequestEmailProps> = ({}) => {
 };
 export const RequestEmailClick = 'checkEmail';
 export const RequestEmail: React.FC<RequestEmailProps> = ({}) => {
-    const { email, setInvalid, setDetailMessage, setEmail, detailMessage, setLockedToken } = ModalLoginStore((state: IModalLoginStore) => ({
+    const {lockedToken, email, setInvalid, setDetailMessage, setEmail, detailMessage, setLockedToken } = ModalLoginStore((state: IModalLoginStore) => ({
         ...state,
     }));
 
@@ -44,7 +44,7 @@ export const RequestEmail: React.FC<RequestEmailProps> = ({}) => {
             <span className="absolute top-1/2 -translate-y-1/2 ltr:left-3 rtl:right-3 dark:text-white-dark">
                 <IconUser className="h-5 w-5" />
             </span>
-            <input value={email} onChange={(e) => validateEmail(e.target.value, '')} type="email" placeholder="Email" className="form-input ltr:pl-10 rtl:pr-10" />
+            <input readOnly={lockedToken} value={email} onChange={(e) => validateEmail(e.target.value, '')} type="email" placeholder="Email" className="form-input ltr:pl-10 rtl:pr-10" />
         </div>
     );
 };

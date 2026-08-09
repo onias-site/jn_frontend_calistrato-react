@@ -12,7 +12,7 @@ export const ConfirmEmailFooter: React.FC<any> = ({}) => {
 export interface ConfirmEmailProps {}
 
 export const ConfirmEmail: React.FC<ConfirmEmailProps> = ({}) => {
-    const { email, setInvalid, setDetailMessage, setLockedToken } = ModalLoginStore((state: IModalLoginStore) => ({
+    const { email, setInvalid, setDetailMessage, setLockedToken, lockedToken } = ModalLoginStore((state: IModalLoginStore) => ({
         ...state,
     }));
     useEffect(() => {
@@ -34,7 +34,7 @@ export const ConfirmEmail: React.FC<ConfirmEmailProps> = ({}) => {
             <span className="absolute top-1/2 -translate-y-1/2 ltr:left-3 rtl:right-3 dark:text-white-dark">
                 <IconUser className="h-5 w-5" />
             </span>
-            <input onChange={(e) => confirmEmail(e.target.value)} type="email" placeholder="Email" className="form-input ltr:pl-10 rtl:pr-10" />
+            <input readOnly={lockedToken} onChange={(e) => confirmEmail(e.target.value)} type="email" placeholder="Email" className="form-input ltr:pl-10 rtl:pr-10" />
         </div>
     );
 };

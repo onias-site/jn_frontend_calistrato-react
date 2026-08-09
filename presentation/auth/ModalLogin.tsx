@@ -30,20 +30,37 @@ export interface IModalLoginStore {
     context: any;
     hideModal: () => void;
     setEmail: (email: string) => void;
-    setDetailMessage: (detailMessage: string) => void;
     setLoading: (loading: boolean) => void;
     setInvalid: (invalid: boolean) => void;
     clearRetryAfterAuthentication: () => void;
     doAnAjaxRequest: (requestName: string) => void;
     setLockedToken: (lockedToken: boolean) => void;
+    setDetailMessage: (detailMessage: string) => void;
     setContextField: (key: string, value: any) => void;
     executeRetryAfterAuthentication: (response: any) => void;
+    isInvalidAttempt: (fieldName: string, phrase: string) => any;
     showModal: (selectedScreen: string, title: string, retryAfterAuthenticationCallBack: any) => void;
 }
 
 export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
     retryAfterAuthentication: null,
+
     lockedToken: false,
+
+    isInvalidAttempt: (fieldName: string, phrase: string) => {
+        const {context, setDetailMessage, setInvalid} = get();
+        const value = context[fieldName];
+        context.attempts = context.attempts || [];
+
+        if(!context.attempts.includes(value)){
+            return false;
+        }
+
+        setDetailMessage(phrase);
+        setInvalid(true);
+        return true;
+
+    },
 
     doAnAjaxRequest: (requestName: string) => JnAjax.executeLoginRequest(get(), requestName, serverRequests),
 
@@ -52,7 +69,6 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
     clearRetryAfterAuthentication: () => set({ retryAfterAuthentication: null }),
 
     executeRetryAfterAuthentication: (response: any) => {
-
         JnAjax.saveLogin(response);
 
         const { retryAfterAuthentication, hideModal, email } = get();
@@ -126,9 +142,11 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
 }));
 
 export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
-    const { setLockedToken, lockedToken, invalid, title, selectedScreen, visible, hideModal, showModal, email, loading, setDetailMessage, detailMessage } = ModalLoginStore((state: IModalLoginStore) => ({
-        ...state,
-    }));
+    const { setLockedToken, lockedToken, invalid, title, selectedScreen, visible, hideModal, showModal, email, loading, setDetailMessage, detailMessage } = ModalLoginStore(
+        (state: IModalLoginStore) => ({
+            ...state,
+        })
+    );
     const estado = ModalLoginStore((state: IModalLoginStore) => ({
         ...state,
     }));
@@ -143,7 +161,7 @@ export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
         },
         SavePassword: {
             footerComponent: <SavePasswordFooter />,
-            headerLabel: 'Criar senha',
+            headerLabel: 'Criando uma nova senha',
             buttonClick: SavePasswordClick,
             component: <SavePassword />,
             buttonLabel: 'Salvar senha',
@@ -172,12 +190,12 @@ export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
 
     const screen = allScreens[selectedScreen];
     const disabledDiv = {
-        pointerEvents:  'none',
+        pointerEvents: 'none',
         opacity: 0.6,
         cursor: 'not-allowed',
     };
     return (
-        <Modal  title={title || screen.headerLabel} visible={visible} setVisible={(show) => (show ? showModal(selectedScreen, title) : hideModal())}>
+        <Modal title={title || screen.headerLabel} visible={visible} setVisible={(show) => (show ? showModal(selectedScreen, title) : hideModal())}>
             <form>
                 <div className="relative mb-4" style={lockedToken ? disabledDiv : {}}>
                     {screen.component}
@@ -194,11 +212,8 @@ export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
                     }}
                 />
             </form>
-                {!lockedToken ? screen.footerComponent : <UnlockTokenLink />}
-                {
-                    selectedScreen != 'RequestEmail'
-                    && <BackToLoginLink/>
-                }
+            {!lockedToken ? screen.footerComponent : <UnlockTokenLink />}
+            {selectedScreen != 'RequestEmail' && <BackToLoginLink />}
         </Modal>
     );
 };
