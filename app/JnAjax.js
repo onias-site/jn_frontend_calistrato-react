@@ -276,8 +276,6 @@ export default class JnAjax {
             dateItWasSaved: response.dateItWasSaved || recoveredLogin.dateItWasSaved,
             };
 
-
-
         sessionStorage.setItem('login', JSON.stringify(loginToSessionStorage));
 
         const { timestamp, expirationDate, dateItWasSaved } = loginToSessionStorage;
@@ -287,6 +285,7 @@ export default class JnAjax {
         logins[response.email] = loginToLocalStorage;
 
         logins[response.email] = {...recoveredLogin, ...loginToLocalStorage};
+
         localStorage.setItem('logins', JSON.stringify(logins));
 
         return loginToSessionStorage;
