@@ -45,12 +45,6 @@ export default class JnAjax {
 
                 callbacks['setNotLoading']();
 
-                callbacks[420] = callbacks[420] || JnAjax.getHandler420();
-
-                callbacks[403] = callbacks[403] || JnAjax.getHandler403(uri);
-
-                callbacks[410] = callbacks[410] || JnAjax.getHandler410(uri);
-
                 const afterHttpRequest = callbacks['afterHttpRequest'] || (() => {});
 
                 const responseBody = JnAjax.parseToObject(a.responseText);
@@ -89,42 +83,6 @@ export default class JnAjax {
         return () => PubSub.publish('httpStatus401', retryAfterAuthentication);
     };
 
-    static getHandler420 = () => {
-        let resultado = () => {
-            window.location.href = '#/login?mensagem=foraDoHorario';
-        };
-
-        return resultado;
-    };
-
-    static getHandler403 = (uri) => {
-        let resultado = (reason) => {
-            const email = uri.split('/')[1];
-            if (!email) {
-                return;
-            }
-
-            sessionStorage.removeItem('sessao');
-            const queryParameters = `?email=${email}&msgType=danger&msgValue=${reason}`;
-            window.location.href = '#/tokenToSetPassword' + queryParameters;
-        };
-
-        return resultado;
-    };
-
-    static getHandler410 = (uri) => {
-        let resultado = () => {
-            const email = uri.split('/')[1];
-            if (!email) {
-                return;
-            }
-
-            sessionStorage.removeItem('sessao');
-            window.location.href = `#/blockedToken?email=${email}`;
-        };
-
-        return resultado;
-    };
 
     static getEmailFromUrl = () => {
         alert(window.location.href);

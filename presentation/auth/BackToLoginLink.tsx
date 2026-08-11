@@ -6,9 +6,14 @@ export interface BackToLoginLinkProps {
 }
 
 export const BackToLoginLink: React.FC<BackToLoginLinkProps> = () => {
-    const { showModal } = ModalLoginStore((state: IModalLoginStore) => ({
+    const { showModal, loading } = ModalLoginStore((state: IModalLoginStore) => ({
         ...state,
     }));
+
+    if(loading){
+        return null;
+    }
+
     return (
         <p className="text-center text-sm text-white-dark dark:text-white-dark/70">
             <button onClick={() => showModal('RequestEmail', 'Trocar o e-mail')} type="button" className="text-[#515365] hover:underline ltr:ml-1 rtl:mr-1 dark:text-white-dark">

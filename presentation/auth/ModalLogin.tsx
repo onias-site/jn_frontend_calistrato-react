@@ -86,8 +86,6 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
         callbacks['getLogin'] = () => {
             return {};
         };
-        callbacks['400'] = () => setDetailMessage(`O e-mail '${email}' é inválido`);
-        callbacks['403'] = () => setLockedToken(true);
         const login = JnAjax.getLogin();
         const email2 = email || login.email;
         set({

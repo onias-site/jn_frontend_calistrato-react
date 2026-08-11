@@ -247,7 +247,6 @@ export const serverRequests = (state: any) => {
             },
             mappedStatus: {
                 nothingIsMissing: 999,
-                passwordMissing: 429,
                 tokenNotLocked: 404,
                 invalidEmail: 400,
             },
