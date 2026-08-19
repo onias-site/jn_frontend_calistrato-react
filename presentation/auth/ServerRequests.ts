@@ -270,7 +270,6 @@ export const serverRequests = (state: any) => {
             },
             mappedStatus: {
                 nothingIsMissing: 999,
-                passwordMissing: 429,
                 invalidEmail: 400,
             },
             callbacks: {
