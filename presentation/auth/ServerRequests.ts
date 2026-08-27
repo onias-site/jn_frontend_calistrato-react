@@ -224,6 +224,7 @@ export const serverRequests = (state: any) => {
                 invalidEmail: 400,
                 tokenBlocked: 403,
                 emailMissing: 404,
+                reportedAsSpam: 409,
                 tokenAlreadyRequested: 409,
             },
 
@@ -235,6 +236,7 @@ export const serverRequests = (state: any) => {
             },
             cached: {
                 '409': notifyAboutAlreadySentToken,
+                '422': setDetailMessage(`o e-mail ${state.email} nos reportou como spam, sendo assim, não podemos enviar o token, clique em "Reenviar token" para que nosso time de suporte lhe envie este token manualmente`),
                 '403': lockToken,
             },
             mustInterruptRequest: () => state.setDetailMessage(state.detailMessage),
