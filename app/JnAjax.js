@@ -158,6 +158,36 @@ export default class JnAjax {
         } catch (error) {}
     }
 
+    static removeAllCachedStatus(status) {
+        try {
+            const array = localStorage.getItem('logins');
+
+            if (!array) {
+                return;
+            }
+
+            const logins = JSON.parse(array);
+
+            if (!logins) {
+                return;
+            }
+
+            const removeStatus = (node) => {
+                if (!node || typeof node !== 'object') {
+                    return;
+                }
+                delete node[status];
+                for (let key in node) {
+                    removeStatus(node[key]);
+                }
+            };
+
+            removeStatus(logins);
+
+            localStorage.setItem('logins', JSON.stringify(logins));
+        } catch (error) {}
+    }
+
     static addCachedRequest(email, informationType, status, response) {
         try {
             const array = localStorage.getItem('logins');

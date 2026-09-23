@@ -1,3 +1,7 @@
+import JnAjax from '@/app/JnAjax';
+
+export const supportEmail = 'onias85@gmail.com';
+
 export const serverRequests = (state: any) => {
     const notifyAboutLoginConflict = () =>
         state.showModal(
@@ -26,21 +30,20 @@ export const serverRequests = (state: any) => {
            :  `Seu token foi enviado ao e-mail '${state.email}' no dia ${response.dateItWasSaved} e expirará no dia ${response.expirationDate}.`
         );
     };
-    const unlockTokenRequestAlreadySolved = (response: any) =>
-        state.setDetailMessage(
-            `A solicitação de desbloqueio do token para o e-mail '${state.email}' já foi resolvida na data ${response.dateItWasSaved}, se necessário, poderá ser refeita na data ${response.expirationDate}`
+
+    const requestAlreadySolved = (ticketType: any) =>
+        (response: any) => state.setDetailMessage(
+            `A solicitação de ${ticketType} do token para o e-mail '${state.email}' já foi resolvida na data ${response.dateItWasSaved}, por favor, verifique a caixa de entrada, spam / lixo eletrônico deste e-mail para localizar o e-mail com instruções. Caso a mensagem não tenha chegado, envie-nos um e-mail ao endereço ${supportEmail}  ou se preferir, aguarde até a data ${response.expirationDate} para refazer a sua solicitação de ${ticketType} do token, que reenviaremos o token a este e-mail.`
         );
-    const resendTokenRequestAlreadySolved = (response: any) =>
-        state.setDetailMessage(
-            `A solicitação de reenvio do token para o e-mail '${state.email}' já foi resolvida na data ${response.dateItWasSaved}, se necessário, poderá ser refeita na data ${response.expirationDate}`
+
+    const requestAlreadyAsked = (ticketType: any) =>
+        (response: any) => state.setDetailMessage(
+            `A solicitação de ${ticketType} do token para o e-mail '${state.email}' já foi feita na data ${response.dateItWasSaved}, se necessário, poderá ser refeita na data ${response.expirationDate}`
         );
-    const unlockTokenRequestAlreadyAsked = (response: any) =>
-        state.setDetailMessage(
-            `A solicitação de desbloqueio do token para o e-mail '${state.email}' já foi feita na data ${response.dateItWasSaved}, se necessário, poderá ser refeita na data ${response.expirationDate}`
-        );
-    const resendTokenRequestAlreadyAsked = (response: any) =>
-        state.setDetailMessage(
-            `A solicitação de reenvio do token para o e-mail '${state.email}' já foi feita na data ${response.dateItWasSaved}, se necessário, poderá ser refeita na data ${response.expirationDate}`
+
+    const requestSuccessfullyMade = (ticketType: any, complement: string = '') =>
+        () => state.setDetailMessage(
+            `A solicitação de ${ticketType} do token para o e-mail '${state.email}' foi efetuada com sucesso, por favor, verifique a caixa de entrada, spam / lixo eletrônico deste e-mail para localizar o token que enviamos.${complement}`
         );
     const notifyAboutWrongPassword = (response: any) =>
         state.setDetailMessage(`A senha informada está incorreta, você ainda tem direito a ${3 - response.attempts} tentativa(s)`) || state.setContextField('password', '');
@@ -251,15 +254,22 @@ export const serverRequests = (state: any) => {
                 nothingIsMissing: 999,
                 tokenNotLocked: 404,
                 invalidEmail: 400,
+                alreadySolved: 429,
             },
             callbacks: {
-                '409': unlockTokenRequestAlreadyAsked,
-                '200': setDetailMessage(
-                    `A solicitação de desbloqueio do token para o e-mail '${state.email}' foi efetuada com sucesso, por favor, verifique a caixa de entrada, spam / lixo eletrônico deste e-mail para localizar o token que enviamos. Caso não o encontre, por favor, clique no link de reenvio de token, que reenviaremos o token a este e-mail.`
+                '409': requestAlreadyAsked('desbloqueio'),
+                '200': requestSuccessfullyMade(
+                    'desbloqueio',
+                    ' Caso não o encontre, por favor, clique no link de reenvio de token, que reenviaremos o token a este e-mail.'
                 ),
             },
             cached: {
-                '429': unlockTokenRequestAlreadySolved,
+                '429': (response: any) => {
+                    JnAjax.removeAllCachedStatus('403');
+                    state.setLockedToken(false);
+                    state.setInvalid(false);
+                    return requestAlreadySolved('desbloqueio')(response);
+                },
                 '404': notifyAboutNotLockedToken,
             },
             mustInterruptRequest: () => {},
@@ -273,15 +283,14 @@ export const serverRequests = (state: any) => {
             mappedStatus: {
                 nothingIsMissing: 999,
                 invalidEmail: 400,
+                alreadySolved: 429
             },
             callbacks: {
-                '200': setDetailMessage(
-                    `A solicitação de reenvio do token para o e-mail '${state.email}' foi efetuada com sucesso, por favor, verifique a caixa de entrada, spam / lixo eletrônico deste e-mail para localizar o token que enviamos.`
-                ),
-                '409': resendTokenRequestAlreadyAsked,
+                '200': requestSuccessfullyMade('reenvio'),
+                '409': requestAlreadyAsked('reenvio'),
             },
             cached: {
-                '429': resendTokenRequestAlreadySolved,
+                '429': requestAlreadySolved('reenvio'),
             },
             mustInterruptRequest: () => {},
             method: 'POST',
