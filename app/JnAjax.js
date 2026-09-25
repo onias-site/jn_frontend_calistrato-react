@@ -79,6 +79,10 @@ export default class JnAjax {
         return () => PubSub.publish('httpStatus422', response);
     };
 
+    static getHandler404 = (summary, detail) => {
+        return () => PubSub.publish('showMessage', { summary, detail, severity: 'error' });
+    };
+
     static getHandler401 = (retryAfterAuthentication) => {
         return () => PubSub.publish('httpStatus401', retryAfterAuthentication);
     };
