@@ -7,9 +7,12 @@ export interface LoadingButtonProps {
     loading: boolean;
     invalid: boolean;
     label: string;
+    // padrão: o botão primário de largura total do ModalLogin
+    className?: string;
+    style?: React.CSSProperties;
 }
 
-export const LoadingButton: React.FC<LoadingButtonProps> = ({ onClick, label, loading, invalid }) => {
+export const LoadingButton: React.FC<LoadingButtonProps> = ({ onClick, label, loading, invalid, className = 'btn btn-primary w-full', style }) => {
     const getInconLoader = () => {
         if (!loading) {
             return null;
@@ -19,7 +22,7 @@ export const LoadingButton: React.FC<LoadingButtonProps> = ({ onClick, label, lo
     };
 
     return (
-        <button disabled={loading || invalid} type="button" className="btn btn-primary w-full" onClick={onClick}>
+        <button disabled={loading || invalid} type="button" className={className} style={style} onClick={onClick}>
             {getInconLoader()}
             {label}
         </button>

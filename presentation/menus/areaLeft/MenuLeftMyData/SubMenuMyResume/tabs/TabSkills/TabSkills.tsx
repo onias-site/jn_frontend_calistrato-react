@@ -18,6 +18,7 @@ import { InputTextarea } from 'primereact/inputtextarea';
 import { MultiSelect } from 'primereact/multiselect';
 import { ConfirmDialog } from 'primereact/confirmdialog';
 import { LabelComponent } from '@/presentation/components/source/LabelComponent';
+import { LoadingButton } from '@/presentation/components/source/LoadingButton';
 import PubSub from 'pubsub-js';
 import JnAjax from '@/app/JnAjax';
 
@@ -485,12 +486,28 @@ const isValidDescription = (description: string) => {
 };
 
 /**
+ * Loading no botão que disparou a requisição, como no ModalLogin, em vez da capa que cobre a página inteira.
+ * Sem email na sessão o JnAjax chama o 401 antes de requisitar, sem passar pelo complete (que é quem chama o
+ * setNotLoading), por isso o 401 também desliga o loading antes de seguir para o tratamento que já tinha.
+ * Chamar depois de definir retryAfterAuthentication e o 401 próprio, se houver.
+ */
+const withButtonLoading = (callbacks: any, setLoading: (loading: boolean) => void) => {
+    callbacks['setLoading'] = () => setLoading(true);
+    callbacks['setNotLoading'] = () => setLoading(false);
+    const handle401 = callbacks[401] || JnAjax.getHandler401(callbacks['retryAfterAuthentication'] || (() => {}));
+    callbacks[401] = () => {
+        setLoading(false);
+        handle401();
+    };
+};
+
+/**
  * Envia, numa única requisição, a sugestão de correção de hierarquia com todas as skills em lista.
  * Não pode ser uma requisição por skill: a chave da sugestão é email + parent + type, então uma sobrescreveria a outra.
  */
-const sendSkillFixHierarchy = (parent: string, skills: string[], type: SkillFixHierarchyType, description: string, onSuccess: () => void) => {
+const sendSkillFixHierarchy = (parent: string, skills: string[], type: SkillFixHierarchyType, description: string, onSuccess: () => void, setLoading: (loading: boolean) => void) => {
     const callbacks: any = {};
-    callbacks['retryAfterAuthentication'] = () => sendSkillFixHierarchy(parent, skills, type, description, onSuccess);
+    callbacks['retryAfterAuthentication'] = () => sendSkillFixHierarchy(parent, skills, type, description, onSuccess, setLoading);
     callbacks[200] = () => {
         PubSub.publish('showMessage', {
             summary: 'Sugestão enviada',
@@ -505,6 +522,7 @@ const sendSkillFixHierarchy = (parent: string, skills: string[], type: SkillFixH
             severity: 'error',
         });
     };
+    withButtonLoading(callbacks, setLoading);
     const body = { parent, skill: skills, type, description: description.trim() };
     JnAjax.doAnAjaxRequest('resume/{email}/skills/hierarchy', callbacks, 'POST', body, {}, 'http://localhost:8081');
 };
@@ -528,18 +546,21 @@ const SKILL_FIX_HIERARCHY_STATUS_LABELS: Record<SkillFixHierarchyStatus, string>
  * Busca a sugestão já feita pelo candidato para este parent e type. É POST, e não GET, porque o filtro de
  * sessão do backend só valida o login quando a requisição tem corpo. Sem sugestão, o backend devolve json vazio
  * e onFound não é chamado.
+ * Abrir o modal não exige login (só enviar ou desistir exige): o 401 aqui equivale a "nenhuma sugestão" e não
+ * abre a tela de login.
  */
-const getSkillFixHierarchy = (parent: string, type: SkillFixHierarchyType, onFound: (suggestion: SkillFixHierarchySuggestion) => void, retry: () => void) => {
+const getSkillFixHierarchy = (parent: string, type: SkillFixHierarchyType, onFound: (suggestion: SkillFixHierarchySuggestion) => void, setLoading: (loading: boolean) => void) => {
     const callbacks: any = {};
-    callbacks['retryAfterAuthentication'] = retry;
+    callbacks[401] = () => {};
     callbacks[200] = (response: any) => response && response.status && onFound(response);
     callbacks['onUnexpectedHttpStatus'] = () => warn('Falha ao carregar sugestão', 'Não conseguimos carregar a sua sugestão anterior para este conhecimento.');
+    withButtonLoading(callbacks, setLoading);
     JnAjax.doAnAjaxRequest('resume/{email}/skills/hierarchy/search', callbacks, 'POST', { parent, type }, {}, 'http://localhost:8081');
 };
 
-const deleteSkillFixHierarchy = (parent: string, type: SkillFixHierarchyType, onSuccess: () => void, onNotFound: () => void) => {
+const deleteSkillFixHierarchy = (parent: string, type: SkillFixHierarchyType, onSuccess: () => void, onNotFound: () => void, setLoading: (loading: boolean) => void) => {
     const callbacks: any = {};
-    callbacks['retryAfterAuthentication'] = () => deleteSkillFixHierarchy(parent, type, onSuccess, onNotFound);
+    callbacks['retryAfterAuthentication'] = () => deleteSkillFixHierarchy(parent, type, onSuccess, onNotFound, setLoading);
     callbacks[200] = () => {
         PubSub.publish('showMessage', {
             summary: 'Sugestão retirada',
@@ -560,6 +581,7 @@ const deleteSkillFixHierarchy = (parent: string, type: SkillFixHierarchyType, on
             severity: 'error',
         });
     };
+    withButtonLoading(callbacks, setLoading);
     JnAjax.doAnAjaxRequest('resume/{email}/skills/hierarchy', callbacks, 'DELETE', { parent, type }, {}, 'http://localhost:8081');
 };
 
@@ -610,17 +632,28 @@ const SkillFixHierarchyModal: React.FC<SkillFixHierarchyModalProps> = ({
     const [reason, setReason] = useState('');
     const [suggestion, setSuggestion] = useState<SkillFixHierarchySuggestion | null>(null);
 
+    // Requisição em andamento, para o loading ficar no botão que a disparou (a carga ao abrir fica no botão
+    // principal, cujo rótulo depende da sugestão carregada) e os demais botões ficarem desabilitados até ela voltar.
+    const [loadingRequest, setLoadingRequest] = useState<'load' | 'save' | 'withdraw' | null>(null);
+    const setLoadingOf = (request: 'load' | 'save' | 'withdraw') => (loading: boolean) => setLoadingRequest(loading ? request : null);
+    const busy = loadingRequest !== null;
+
     const stopPropagation = (e: React.SyntheticEvent) => e.stopPropagation();
 
     const loadSuggestion = () => {
         setSelectedSkills([]);
         setReason('');
         setSuggestion(null);
-        getSkillFixHierarchy(accordionItem.skill, type, (found) => {
-            setSelectedSkills(found.skill || []);
-            setReason(found.description || '');
-            setSuggestion(found);
-        }, loadSuggestion);
+        getSkillFixHierarchy(
+            accordionItem.skill,
+            type,
+            (found) => {
+                setSelectedSkills(found.skill || []);
+                setReason(found.description || '');
+                setSuggestion(found);
+            },
+            setLoadingOf('load'),
+        );
     };
 
     // Skills da sugestão que já não estão entre as opções (ex.: uma adição aprovada passa a ser filha do
@@ -646,11 +679,18 @@ const SkillFixHierarchyModal: React.FC<SkillFixHierarchyModalProps> = ({
         if (!isValidDescription(reason)) {
             return;
         }
-        sendSkillFixHierarchy(accordionItem.skill, selectedSkills, type, reason, () => {
-            setSelectedSkills([]);
-            setReason('');
-            close();
-        });
+        sendSkillFixHierarchy(
+            accordionItem.skill,
+            selectedSkills,
+            type,
+            reason,
+            () => {
+                setSelectedSkills([]);
+                setReason('');
+                close();
+            },
+            setLoadingOf('save'),
+        );
     };
 
     // Só existe o que desistir enquanto a sugestão está pendente; aprovada/reprovada é histórico da análise
@@ -667,6 +707,7 @@ const SkillFixHierarchyModal: React.FC<SkillFixHierarchyModalProps> = ({
             },
             // o modal mostrava "Pendente", que já não é verdade: recarrega para exibir o status real
             loadSuggestion,
+            setLoadingOf('withdraw'),
         );
     };
 
@@ -685,9 +726,14 @@ const SkillFixHierarchyModal: React.FC<SkillFixHierarchyModalProps> = ({
                     rejectLabel="Não"
                     accept={() => withdraw(close)}
                 />
-                <button onClick={() => setConfirmingWithdraw(true)} style={{ minWidth: '15%' }} type="button" className="btn btn-outline-danger">
-                    Desistir da sugestão
-                </button>
+                <LoadingButton
+                    onClick={() => setConfirmingWithdraw(true)}
+                    label="Desistir da sugestão"
+                    loading={loadingRequest === 'withdraw'}
+                    invalid={busy}
+                    style={{ minWidth: '15%' }}
+                    className="btn btn-outline-danger"
+                />
             </>
         );
 
@@ -696,6 +742,8 @@ const SkillFixHierarchyModal: React.FC<SkillFixHierarchyModalProps> = ({
             <LinkModal
                 onSave={alreadyReviewed ? startNewSuggestion : save}
                 saveButtonLabel={alreadyReviewed ? 'Nova sugestão' : 'Enviar'}
+                saveLoading={loadingRequest === 'load' || loadingRequest === 'save'}
+                saveDisabled={busy}
                 extraActions={withdrawButton}
                 onOpen={loadSuggestion}
                 headerModal={headerModal} labelText={reasonExplanation} linkText={linkText} icon={icon}>
@@ -772,13 +820,17 @@ interface LinkModalProps {
     onOpen?: () => void;
     // texto do botão que chama onSave (padrão: 'Enviar')
     saveButtonLabel?: string;
+    // ícone de loading no botão que chama onSave, enquanto a requisição dele está em andamento
+    saveLoading?: boolean;
+    // desabilita o botão que chama onSave (ex.: enquanto outra requisição do modal está em andamento)
+    saveDisabled?: boolean;
     // botões adicionais, à esquerda do principal; recebem a função que fecha o modal
     extraActions?: (close: () => void) => React.ReactNode;
     labelText: string;
     linkText: string;
     icon?: string;
 }
-const LinkModal: React.FC<LinkModalProps> = ({ onSave, onOpen, saveButtonLabel = 'Enviar', extraActions, labelText, linkText, headerModal, icon, children }) => {
+const LinkModal: React.FC<LinkModalProps> = ({ onSave, onOpen, saveButtonLabel = 'Enviar', saveLoading = false, saveDisabled = false, extraActions, labelText, linkText, headerModal, icon, children }) => {
     const [visible, setVisible] = useState(false);
     const open = () => {
         setVisible(true);
@@ -822,9 +874,14 @@ const LinkModal: React.FC<LinkModalProps> = ({ onSave, onOpen, saveButtonLabel =
                 <div className="mb-5 text-center">
                     <div className="flex justify-end gap-2">
                         {extraActions && extraActions(() => setVisible(false))}
-                        <button onClick={() => onSave(() => setVisible(false))} style={{ minWidth: '15%' }} type="button" className="btn btn-danger">
-                            {saveButtonLabel}
-                        </button>
+                        <LoadingButton
+                            onClick={() => onSave(() => setVisible(false))}
+                            label={saveButtonLabel}
+                            loading={saveLoading}
+                            invalid={saveDisabled}
+                            style={{ minWidth: '15%' }}
+                            className="btn btn-danger"
+                        />
                     </div>
                 </div>
             </Dialog>
