@@ -840,14 +840,18 @@ const LinkModal: React.FC<LinkModalProps> = ({ onSave, onOpen, saveButtonLabel =
         <div className={icon ? 'inline-flex items-center' : undefined}>
             {labelText && !icon && <label style={{ fontSize: '10px' }}>{labelText}</label>}
             {icon ? (
-                // span em vez de <a>: o ícone pode ficar dentro do cabeçalho do AccordionTab, que já é um <a>
+                // span em vez de <a>: o ícone pode ficar dentro do cabeçalho do AccordionTab, que já é um <a>; o
+                // preventDefault impede que o clique siga o href desse <a> e troque o hash da URL
                 <span
                     role="button"
                     tabIndex={0}
                     className="linkParaAbrirModal inline-flex cursor-pointer items-center"
                     title={linkText}
                     aria-label={linkText}
-                    onClick={open}
+                    onClick={(e) => {
+                        e.preventDefault();
+                        open();
+                    }}
                     onKeyDown={(e) => e.key === 'Enter' && open()}
                 >
                     <i className={`pi ${icon}`} style={{ fontSize: '12px', lineHeight: 1 }} />
