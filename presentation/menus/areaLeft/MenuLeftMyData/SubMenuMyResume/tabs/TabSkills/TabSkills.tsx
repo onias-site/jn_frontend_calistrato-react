@@ -527,7 +527,7 @@ const sendSkillFixHierarchy = (parent: string, skills: string[], type: SkillFixH
     JnAjax.doAnAjaxRequest('resume/{email}/skills/hierarchy', callbacks, 'POST', body, {}, 'http://localhost:8081');
 };
 
-type SkillFixHierarchyStatus = 'pending' | 'approved' | 'rejected';
+type SkillFixHierarchyStatus = 'pending' | 'fulfiled';
 
 interface SkillFixHierarchySuggestion {
     skill: string[];
@@ -538,8 +538,7 @@ interface SkillFixHierarchySuggestion {
 
 const SKILL_FIX_HIERARCHY_STATUS_LABELS: Record<SkillFixHierarchyStatus, string> = {
     pending: 'Pendente',
-    approved: 'Aprovado',
-    rejected: 'Reprovado',
+    fulfiled: 'Avaliado',
 };
 
 /**
@@ -662,7 +661,7 @@ const SkillFixHierarchyModal: React.FC<SkillFixHierarchyModalProps> = ({
     const missingOptions = selectedSkills.filter((skill) => !optionSkills.includes(skill)).map((skill) => ({ label: skill, skill }));
     const allOptions = [...options, ...missingOptions];
 
-    // Sugestão já avaliada: em vez de reenviar o que foi aprovado/reprovado, o botão oferece começar uma nova
+    // Sugestão já avaliada: em vez de reenviar o que já foi avaliado, o botão oferece começar uma nova
     const alreadyReviewed = !!suggestion && suggestion.status !== 'pending';
 
     const startNewSuggestion = () => {
@@ -693,7 +692,7 @@ const SkillFixHierarchyModal: React.FC<SkillFixHierarchyModalProps> = ({
         );
     };
 
-    // Só existe o que desistir enquanto a sugestão está pendente; aprovada/reprovada é histórico da análise
+    // Só existe o que desistir enquanto a sugestão está pendente; avaliada (fulfiled) é histórico da análise
     const pending = !!suggestion && suggestion.status === 'pending';
     const [confirmingWithdraw, setConfirmingWithdraw] = useState(false);
 
