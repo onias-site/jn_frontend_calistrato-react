@@ -16,11 +16,13 @@ import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { InputTextarea } from 'primereact/inputtextarea';
 import { MultiSelect } from 'primereact/multiselect';
+import { Chips } from 'primereact/chips';
 import { ConfirmDialog } from 'primereact/confirmdialog';
 import { LabelComponent } from '@/presentation/components/source/LabelComponent';
 import { LoadingButton } from '@/presentation/components/source/LoadingButton';
 import PubSub from 'pubsub-js';
 import JnAjax from '@/app/JnAjax';
+import { TabResumeStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabResume/FormResume';
 
 export class SkillListModel {
     constructor(main: boolean = false, filter: string = '', list: any[] = [], originalList: any[] = [], title: string, name: string) {}
@@ -188,7 +190,26 @@ const getSkillsContext = (context: any, groups: any[], accordionList: any[]) => 
     return skillsContext;
 };
 
-const sendSkillSuggest = (word: string, context: any, groups: any[], accordionList: any[]) => {
+// A habilidade sugerida precisa constar no texto do currículo exatamente como foi escrita: a frase inteira, sem ser
+// pedaço de outra palavra (maiúsculas e espaços repetidos não contam). Devolve true (e avisa o candidato) quando não consta.
+const isSkillOutOfTheResume = (word: string) => {
+    const resumeText = TabResumeStore.getState().resumeText || '';
+    const normalizedResume = resumeText.toUpperCase().replace(/\s+/g, ' ');
+    const escapedWord = word.toUpperCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/ /g, '\\s');
+    const wholePhrase = new RegExp(`(?<![\\p{L}\\p{N}])${escapedWord}(?![\\p{L}\\p{N}])`, 'u');
+    if (wholePhrase.test(normalizedResume)) {
+        return false;
+    }
+    PubSub.publish('showMessage', {
+        summary: 'Habilidade fora do currículo',
+        detail: `A habilidade '${word}' não aparece no texto do seu currículo. Só é possível sugerir uma habilidade escrita exatamente como consta nele.`,
+        severity: 'warn',
+    });
+    return true;
+};
+
+// Checagens locais antes de sugerir uma habilidade: devolve true (e avisa o candidato) quando ela já aparece no currículo
+const isSkillSuggestionBlocked = (word: string, context: any, groups: any[], accordionList: any[]) => {
     const skillsContext = getSkillsContext(context, groups, accordionList);
 
     const numbers = {};
@@ -214,7 +235,7 @@ const sendSkillSuggest = (word: string, context: any, groups: any[], accordionLi
                 summary: `Palavra já relacionada`,
                 severity: 'warn',
             });
-            return;
+            return true;
         }
     }
     {
@@ -225,7 +246,7 @@ const sendSkillSuggest = (word: string, context: any, groups: any[], accordionLi
                 summary: `Palavra já relacionada`,
                 severity: 'warn',
             });
-            return;
+            return true;
         }
     }
 
@@ -244,7 +265,7 @@ const sendSkillSuggest = (word: string, context: any, groups: any[], accordionLi
                     summary: `Palavra já relacionada`,
                     severity: 'warn',
                 });
-                return;
+                return true;
             }
         }
         {
@@ -255,7 +276,7 @@ const sendSkillSuggest = (word: string, context: any, groups: any[], accordionLi
                     summary: `Palavra já relacionada`,
                     severity: 'warn',
                 });
-                return;
+                return true;
             }
         }
 
@@ -278,7 +299,7 @@ const sendSkillSuggest = (word: string, context: any, groups: any[], accordionLi
             const error = errors[index];
 
             if (errorHasFound(context, error, word)) {
-                return;
+                return true;
             }
         }
 
@@ -291,10 +312,11 @@ const sendSkillSuggest = (word: string, context: any, groups: any[], accordionLi
                     summary: `Palavra já relacionada como pré requisito de outras palavras`,
                     severity: 'warn',
                 });
-                return;
+                return true;
             }
         }
     }
+    return false;
 };
 
 const errorHasFound = (context: any, error: any, word: string) => {
@@ -329,11 +351,7 @@ const errorHasFound = (context: any, error: any, word: string) => {
 };
 
 const SkillList: React.FC<SkillListProps> = ({ title, width, list, filter, setFilter, setList, transferToAnotherList, main }) => {
-    const [skill, setSkill] = useState('');
     const filtro = (item: any) => !filter || item.label.toUpperCase().startsWith(filter.trim().toUpperCase());
-    const { context, groups, accordionList } = TabSkillStore((state: ITabSkillStore) => ({
-        ...state,
-    }));
     return (
         <ScrollPanel style={{ width, padding: '10px' }}>
             <div className="mb-5" style={{ fontSize: '10px' }}>
@@ -348,14 +366,7 @@ const SkillList: React.FC<SkillListProps> = ({ title, width, list, filter, setFi
                     />
                 )}
                 {main ? (
-                    <LinkModal
-                        onSave={() => sendSkillSuggest(skill, context, groups, accordionList)}
-                        headerModal="Descreva a habilidade técnica que CONSTA no texto do seu currículo e que deixamos de listar aqui"
-                        labelText={``}
-                        linkText="Deixamos de listar alguma habilidade?"
-                    >
-                        <InputText placeholder="" style={{ width: '75%' }} value={skill} onChange={(e) => setSkill(e.target.value)} rows={10} cols={100} />
-                    </LinkModal>
+                    <SkillSuggestionModal />
                 ) : (
                     <div>
                         <br />
@@ -515,6 +526,16 @@ const sendSkillFixHierarchy = (parent: string, skills: string[], type: SkillFixH
         });
         onSuccess();
     };
+    // todas as habilidades do pedido já foram avaliadas antes: nada fica pendente e o resultado vai por e-mail
+    callbacks[208] = () => {
+        PubSub.publish('showMessage', {
+            summary: 'Solicitação já atendida',
+            detail: 'Sua solicitação está completa: todas as habilidades dela já foram avaliadas pelo nosso time. Estamos enviando um e-mail com o resultado.',
+        });
+        onSuccess();
+    };
+    // o modal não deixa enviar com sugestão pendente; o 409 só chega se ela ficou pendente por outra aba ou janela
+    callbacks[409] = () => warn('Sugestão já pendente', `Você já tem uma sugestão pendente para ${parent}. Para alterá-la, desista dela e envie uma nova.`);
     callbacks['onUnexpectedHttpStatus'] = () => {
         PubSub.publish('showMessage', {
             summary: 'Falha ao enviar sugestão',
@@ -526,6 +547,13 @@ const sendSkillFixHierarchy = (parent: string, skills: string[], type: SkillFixH
     const body = { parent, skill: skills, type, description: description.trim() };
     JnAjax.doAnAjaxRequest('resume/{email}/skills/hierarchy', callbacks, 'POST', body, {}, 'http://localhost:8081');
 };
+
+// Sugestão pendente fica só para leitura nos dois modais (sugerir habilidade e ajuste de hierarquia)
+const PendingSuggestionHint: React.FC = () => (
+    <p className="m-0 text-left" style={{ fontSize: '12px' }}>
+        Esta sugestão está em análise. Para alterá-la, desista dela e envie uma nova.
+    </p>
+);
 
 type SkillFixHierarchyStatus = 'pending' | 'fulfiled';
 
@@ -593,7 +621,7 @@ const SkillFixHierarchyStatusView: React.FC<SkillFixHierarchyStatusViewProps> = 
         {suggestion.status !== 'pending' && (
             <Accordion className="mt-2">
                 <AccordionTab header="Motivo">
-                    <p className="m-0">{suggestion.explanation}</p>
+                    <p className="m-0" style={{ whiteSpace: 'pre-line' }}>{suggestion.explanation}</p>
                 </AccordionTab>
             </Accordion>
         )}
@@ -736,11 +764,24 @@ const SkillFixHierarchyModal: React.FC<SkillFixHierarchyModalProps> = ({
             </>
         );
 
+    // Pendente é só leitura: editar daria 409 (já há sugestão pendente para este conhecimento e tipo), e permitir a edição
+    // abriria corrida com o operador, que pode estar revisando os itens. Para alterar, o candidato desiste e envia de novo.
+    const getMainButton = () => {
+        if (pending) {
+            return { label: 'Fechar', onSave: (close: () => void) => close() };
+        }
+        if (alreadyReviewed) {
+            return { label: 'Nova sugestão', onSave: startNewSuggestion };
+        }
+        return { label: 'Enviar', onSave: save };
+    };
+    const mainButton = getMainButton();
+
     return (
         <span onClick={stopPropagation} onKeyDown={stopPropagation}>
             <LinkModal
-                onSave={alreadyReviewed ? startNewSuggestion : save}
-                saveButtonLabel={alreadyReviewed ? 'Nova sugestão' : 'Enviar'}
+                onSave={mainButton.onSave}
+                saveButtonLabel={mainButton.label}
                 saveLoading={loadingRequest === 'load' || loadingRequest === 'save'}
                 saveDisabled={busy}
                 extraActions={withdrawButton}
@@ -760,9 +801,11 @@ const SkillFixHierarchyModal: React.FC<SkillFixHierarchyModalProps> = ({
                         placeholder={multiSelectPlaceholder}
                         // por padrão a lista de opções vai para o body e rola com a página, descolando do Dialog (fixo)
                         appendTo="self"
+                        disabled={!!suggestion}
                     />
-                    <InputTextarea className="w-full" placeholder={reasonExplanation} value={reason} onChange={(e) => setReason(e.target.value)} rows={6} />
+                    <InputTextarea className="w-full" placeholder={reasonExplanation} value={reason} onChange={(e) => setReason(e.target.value)} rows={6} disabled={!!suggestion} />
                     {suggestion && <SkillFixHierarchyStatusView suggestion={suggestion} />}
+                    {pending && <PendingSuggestionHint />}
                 </div>
             </LinkModal>
         </span>
@@ -809,6 +852,303 @@ const RemoveSkillsFromAccordion: React.FC<AccordionSkillsProps> = ({ accordionIt
         noSkillSelectedDetail={`Selecione ao menos uma habilidade para desassociar de ${accordionItem.skill}.`}
     />
 );
+
+// Mesmas regras de VisJsonCommonsFields no backend (skill e synonym), checadas aqui para não gastar requisição
+const SKILL_MIN_LENGTH = 2;
+const SKILL_MAX_LENGTH = 50;
+
+// A habilidade é gravada como as do sistema: maiúsculas e com um só espaço entre as palavras
+const normalizeSkill = (text: string) => text.trim().replace(/\s+/g, ' ').toUpperCase();
+
+const isValidSkillName = (name: string, summary: string) => {
+    if (name.length < SKILL_MIN_LENGTH || name.length > SKILL_MAX_LENGTH) {
+        warn(summary, `'${name}' deve ter entre ${SKILL_MIN_LENGTH} e ${SKILL_MAX_LENGTH} caracteres.`);
+        return false;
+    }
+    return true;
+};
+
+type SkillSuggestionStatus = 'pending' | 'approved' | 'rejected';
+
+interface SkillSuggestion {
+    skill: string;
+    synonym?: string[];
+    description: string;
+    status: SkillSuggestionStatus;
+    explanation?: string;
+}
+
+const SKILL_SUGGESTION_STATUS_LABELS: Record<SkillSuggestionStatus, string> = {
+    pending: 'Pendente',
+    approved: 'Aprovada',
+    rejected: 'Rejeitada',
+};
+
+/**
+ * Envia a sugestão de habilidade com os sinônimos e a justificativa. A chave da sugestão é email + skill: o mesmo
+ * candidato não tem duas sugestões pendentes da mesma habilidade (409).
+ */
+const sendSkillSuggestion = (skill: string, synonyms: string[], description: string, onSuccess: () => void, setLoading: (loading: boolean) => void) => {
+    const callbacks: any = {};
+    callbacks['retryAfterAuthentication'] = () => sendSkillSuggestion(skill, synonyms, description, onSuccess, setLoading);
+    callbacks[200] = () => {
+        PubSub.publish('showMessage', {
+            summary: 'Sugestão enviada',
+            detail: 'Obrigado! Sua sugestão será analisada e você será avisado do resultado.',
+        });
+        onSuccess();
+    };
+    callbacks[409] = () => warn('Sugestão já pendente', `Você já sugeriu a habilidade '${skill}' e ela ainda está em análise.`);
+    callbacks[412] = () => warn('Habilidade já reconhecida', `A habilidade '${skill}' já é reconhecida pelo sistema.`);
+    // a tela mostra a rejeição ao digitar a habilidade; o 410 só chega se ela foi rejeitada depois de carregada
+    callbacks[410] = () => warn('Sugestão já avaliada', `A habilidade '${skill}' já foi sugerida por você e rejeitada pelo suporte. Digite-a de novo no modal para ver o motivo.`);
+    callbacks['onUnexpectedHttpStatus'] = () => {
+        PubSub.publish('showMessage', {
+            summary: 'Falha ao enviar sugestão',
+            detail: 'Não conseguimos registrar a sua sugestão. Tente novamente mais tarde.',
+            severity: 'error',
+        });
+    };
+    withButtonLoading(callbacks, setLoading);
+    const body = { skill, synonym: synonyms, description: description.trim() };
+    JnAjax.doAnAjaxRequest('resume/{email}/skills/suggestion', callbacks, 'POST', body, {}, 'http://localhost:8081');
+};
+
+/**
+ * Busca a sugestão que o candidato já fez desta habilidade. É POST, e não GET, porque o filtro de sessão do backend
+ * só valida o login quando a requisição tem corpo. Sem sugestão, o backend devolve json vazio e onFound não é chamado.
+ * Digitar a habilidade não exige login (só enviar ou desistir exige): o 401 aqui equivale a "nenhuma sugestão".
+ */
+const getSkillSuggestion = (skill: string, onFound: (suggestion: SkillSuggestion) => void, setLoading: (loading: boolean) => void) => {
+    const callbacks: any = {};
+    callbacks[401] = () => {};
+    callbacks[200] = (response: any) => response && response.status && onFound(response);
+    callbacks['onUnexpectedHttpStatus'] = () => warn('Falha ao carregar sugestão', 'Não conseguimos carregar a sua sugestão anterior para esta habilidade.');
+    withButtonLoading(callbacks, setLoading);
+    JnAjax.doAnAjaxRequest('resume/{email}/skills/suggestion/search', callbacks, 'POST', { skill }, {}, 'http://localhost:8081');
+};
+
+const deleteSkillSuggestion = (skill: string, onSuccess: () => void, onNotFound: () => void, setLoading: (loading: boolean) => void) => {
+    const callbacks: any = {};
+    callbacks['retryAfterAuthentication'] = () => deleteSkillSuggestion(skill, onSuccess, onNotFound, setLoading);
+    callbacks[200] = () => {
+        PubSub.publish('showMessage', {
+            summary: 'Sugestão retirada',
+            detail: 'Sua sugestão não será mais analisada.',
+        });
+        onSuccess();
+    };
+    // a sugestão pode ter sido analisada (e saído da pendente) entre carregá-la e desistir
+    const showNotFound = JnAjax.getHandler404('Sugestão não encontrada', 'Não encontramos uma sugestão pendente para desistir. Ela pode já ter sido analisada.');
+    callbacks[404] = () => {
+        showNotFound();
+        onNotFound();
+    };
+    callbacks['onUnexpectedHttpStatus'] = () => {
+        PubSub.publish('showMessage', {
+            summary: 'Falha ao retirar sugestão',
+            detail: 'Não conseguimos retirar a sua sugestão. Tente novamente mais tarde.',
+            severity: 'error',
+        });
+    };
+    withButtonLoading(callbacks, setLoading);
+    JnAjax.doAnAjaxRequest('resume/{email}/skills/suggestion', callbacks, 'DELETE', { skill }, {}, 'http://localhost:8081');
+};
+
+interface SkillSuggestionStatusViewProps {
+    suggestion: SkillSuggestion;
+}
+const SkillSuggestionStatusView: React.FC<SkillSuggestionStatusViewProps> = ({ suggestion }) => (
+    <div className="text-left">
+        <label className="font-semibold">{`status: ${SKILL_SUGGESTION_STATUS_LABELS[suggestion.status]}`}</label>
+        {suggestion.status !== 'pending' && (
+            <Accordion className="mt-2">
+                <AccordionTab header="Motivo">
+                    <p className="m-0" style={{ whiteSpace: 'pre-line' }}>{suggestion.explanation}</p>
+                </AccordionTab>
+            </Accordion>
+        )}
+    </div>
+);
+
+/**
+ * Modal "Deixamos de listar alguma habilidade?": o candidato sugere uma habilidade que consta no texto do currículo e
+ * não foi listada, com os sinônimos (várias frases) e a justificativa. Ao sair do campo da habilidade, carrega a
+ * sugestão que ele já tenha feito dela, com o status; enquanto pendente, ele pode desistir.
+ */
+const SkillSuggestionModal: React.FC = () => {
+    const { context, groups, accordionList } = TabSkillStore((state: ITabSkillStore) => ({
+        ...state,
+    }));
+    const [skill, setSkill] = useState('');
+    const [synonyms, setSynonyms] = useState<string[]>([]);
+    const [reason, setReason] = useState('');
+    const [suggestion, setSuggestion] = useState<SkillSuggestion | null>(null);
+    // habilidade da última busca, para não repetir a busca quando o campo perde o foco sem ter mudado
+    const [searchedSkill, setSearchedSkill] = useState('');
+
+    const [loadingRequest, setLoadingRequest] = useState<'load' | 'save' | 'withdraw' | null>(null);
+    const setLoadingOf = (request: 'load' | 'save' | 'withdraw') => (loading: boolean) => setLoadingRequest(loading ? request : null);
+    const busy = loadingRequest !== null;
+
+    const startNewSuggestion = () => {
+        setSkill('');
+        setSynonyms([]);
+        setReason('');
+        setSuggestion(null);
+        setSearchedSkill('');
+    };
+
+    const loadSuggestion = (skillToSearch: string) => {
+        setSuggestion(null);
+        setSearchedSkill(skillToSearch);
+        if (skillToSearch.length < SKILL_MIN_LENGTH || skillToSearch.length > SKILL_MAX_LENGTH) {
+            return;
+        }
+        getSkillSuggestion(
+            skillToSearch,
+            (found) => {
+                setSynonyms(found.synonym || []);
+                setReason(found.description || '');
+                setSuggestion(found);
+            },
+            setLoadingOf('load'),
+        );
+    };
+
+    const onSkillBlur = () => {
+        const normalizedSkill = normalizeSkill(skill);
+        setSkill(normalizedSkill);
+        if (normalizedSkill === searchedSkill) {
+            return;
+        }
+        loadSuggestion(normalizedSkill);
+    };
+
+    const pending = !!suggestion && suggestion.status === 'pending';
+
+    const save = (close: () => void) => {
+        const normalizedSkill = normalizeSkill(skill);
+        setSkill(normalizedSkill);
+        if (!isValidSkillName(normalizedSkill, 'Habilidade inválida')) {
+            return;
+        }
+        const invalidSynonym = synonyms.filter((synonym) => synonym.length < SKILL_MIN_LENGTH || synonym.length > SKILL_MAX_LENGTH)[0];
+        if (invalidSynonym && !isValidSkillName(invalidSynonym, 'Sinônimo inválido')) {
+            return;
+        }
+        if (!isValidDescription(reason)) {
+            return;
+        }
+        if (isSkillSuggestionBlocked(normalizedSkill, context, groups, accordionList)) {
+            return;
+        }
+        // depois das checagens acima: elas explicam melhor os casos que também ficariam fora (ASP dentro de ASPECTJ)
+        if (isSkillOutOfTheResume(normalizedSkill)) {
+            return;
+        }
+        const otherSynonyms = synonyms.filter((synonym) => synonym !== normalizedSkill);
+        sendSkillSuggestion(
+            normalizedSkill,
+            otherSynonyms,
+            reason,
+            () => {
+                startNewSuggestion();
+                close();
+            },
+            setLoadingOf('save'),
+        );
+    };
+
+    const [confirmingWithdraw, setConfirmingWithdraw] = useState(false);
+
+    const withdraw = (close: () => void) => {
+        deleteSkillSuggestion(
+            skill,
+            () => {
+                startNewSuggestion();
+                close();
+            },
+            // o modal mostrava "Pendente", que já não é verdade: recarrega para exibir o status real
+            () => loadSuggestion(skill),
+            setLoadingOf('withdraw'),
+        );
+    };
+
+    const withdrawButton = (close: () => void) =>
+        pending && (
+            <>
+                <ConfirmDialog
+                    visible={confirmingWithdraw}
+                    onHide={() => setConfirmingWithdraw(false)}
+                    header="Desistir da sugestão"
+                    message="Tem certeza de que deseja desistir desta sugestão? Ela deixará de ser analisada."
+                    icon="pi pi-exclamation-triangle"
+                    acceptLabel="Sim, desistir"
+                    rejectLabel="Não"
+                    accept={() => withdraw(close)}
+                />
+                <LoadingButton
+                    onClick={() => setConfirmingWithdraw(true)}
+                    label="Desistir da sugestão"
+                    loading={loadingRequest === 'withdraw'}
+                    invalid={busy}
+                    style={{ minWidth: '15%' }}
+                    className="btn btn-outline-danger"
+                />
+            </>
+        );
+
+    // Com sugestão carregada (pendente ou avaliada) o modal é só leitura: pendente se altera desistindo e enviando de novo,
+    // e avaliada não se reenvia (a rejeição é definitiva; aprovada já é reconhecida). "Nova sugestão" limpa para outra habilidade.
+    const hasSuggestion = !!suggestion;
+
+    return (
+        <LinkModal
+            onSave={hasSuggestion ? startNewSuggestion : save}
+            saveButtonLabel={hasSuggestion ? 'Nova sugestão' : 'Enviar'}
+            saveLoading={loadingRequest === 'load' || loadingRequest === 'save'}
+            saveDisabled={busy}
+            extraActions={withdrawButton}
+            onOpen={startNewSuggestion}
+            headerModal="Descreva a habilidade técnica que CONSTA no texto do seu currículo e que deixamos de listar aqui"
+            labelText=""
+            linkText="Deixamos de listar alguma habilidade?"
+        >
+            <div className="flex w-full flex-col items-stretch gap-3">
+                <InputText
+                    className="w-full"
+                    placeholder="Habilidade que consta no seu currículo (ex.: REACT NATIVE)"
+                    value={skill}
+                    disabled={hasSuggestion}
+                    maxLength={SKILL_MAX_LENGTH}
+                    onChange={(e) => setSkill(e.target.value.toUpperCase())}
+                    onBlur={onSkillBlur}
+                />
+                <Chips
+                    className="w-full"
+                    // a raiz do Chips é inline-flex e a lista de frases não ocupa a largura do modal sem isso
+                    pt={{ container: { className: 'w-full' } }}
+                    value={synonyms}
+                    disabled={hasSuggestion}
+                    onChange={(e) => setSynonyms(Array.from(new Set((e.value || []).map(normalizeSkill).filter((synonym: string) => !!synonym))))}
+                    separator=","
+                    placeholder="Sinônimos: digite cada um e tecle Enter (ou separe por vírgula)"
+                />
+                <InputTextarea
+                    className="w-full"
+                    placeholder="Explique por que esta habilidade deveria ser reconhecida (ex.: em que parte do currículo ela aparece)"
+                    value={reason}
+                    disabled={hasSuggestion}
+                    onChange={(e) => setReason(e.target.value)}
+                    rows={6}
+                />
+                {suggestion && <SkillSuggestionStatusView suggestion={suggestion} />}
+                {pending && <PendingSuggestionHint />}
+            </div>
+        </LinkModal>
+    );
+};
 
 interface LinkModalProps {
     children: React.ReactNode;

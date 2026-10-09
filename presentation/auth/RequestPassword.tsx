@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogin';
 import { Password } from 'primereact/password';
 import { LabelComponent } from '@/presentation/components/source/LabelComponent';
@@ -29,6 +29,11 @@ export const RequestPassword: React.FC<RequestPasswordProps> = ({}) => {
     const {setInvalid, context, setContextField, setDetailMessage, isInvalidAttempt } = ModalLoginStore((state: IModalLoginStore) => ({
         ...state,
     }));
+
+    // começa desabilitado: a senha está vazia
+    useEffect(() => {
+        setInvalid(true);
+    }, []);
 
     const fieldErrors = {};
     const passwordOptions = {

@@ -25,6 +25,8 @@ export const SavePassword: React.FC<SavePasswordProps> = ({}) => {
         const [wrongTokens, setWrongTokens] = useState([]);
 
     useEffect(() => {
+        // começa desabilitado: os três campos estão vazios
+        setInvalid(true);
         doAnAjaxRequest('sendToken');
     }, []);
 

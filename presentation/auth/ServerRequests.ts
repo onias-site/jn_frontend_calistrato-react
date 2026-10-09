@@ -63,11 +63,31 @@ export const serverRequests = (state: any) => {
         state.setContextField('attempts', state.context.attempts);
     };
     const lockToken = () => state.setLockedToken(true);
+    // O bloqueio do token fica guardado no cache de respostas do localStorage (403 da verificação do e-mail, 429 da
+    // gravação da senha); sem limpá-lo, depois de o suporte desbloquear, "Salvar senha" voltava a bloquear a tela sem
+    // consultar o servidor.
+    const clearCachedTokenLock = () => {
+        JnAjax.removeAllCachedStatus('403');
+        JnAjax.removeAllCachedStatus('429');
+    };
     const notifyAboutNotLockedToken = () => {
+        clearCachedTokenLock();
         state.setDetailMessage(`O token informado não está bloqueado`);
         state.setLockedToken(false);
         state.setInvalid(false);
     };
+    // Campos vazios não vão ao servidor: até 2026-10-08 o botão ficava habilitado com os campos vazios e o clique
+    // terminava num 422 sem nenhuma mensagem na tela.
+    const isMissingAnyField = (fieldNames: string[], message: string) => {
+        const missing = fieldNames.some((fieldName) => !state.context[fieldName]);
+        if (!missing) {
+            return false;
+        }
+        state.setDetailMessage(message);
+        state.setInvalid(true);
+        return true;
+    };
+    const passwordRules = 'ela deve conter ao menos 8 caractéres, ao menos uma letra maiúscula, ao menos um número e ao menos um caractere especial';
 
 
 
@@ -159,7 +179,13 @@ export const serverRequests = (state: any) => {
                 '202': requestFirstPassword,
                 '403': lockToken,
             },
-            mustInterruptRequest: setAttempts('password'),
+            mustInterruptRequest: () => {
+                if (isMissingAnyField(['password'], `Informe a senha, ${passwordRules}`)) {
+                    return true;
+                }
+                setAttempts('password')();
+                return false;
+            },
             method: 'POST',
         },
         requestAnswers: {
@@ -214,7 +240,13 @@ export const serverRequests = (state: any) => {
                 '403': lockToken,
                 '429': lockToken,
             },
-            mustInterruptRequest: setAttempts('token'),
+            mustInterruptRequest: () => {
+                if (isMissingAnyField(['password', 'confirmPassword', 'token'], `Preencha a senha, a confirmação de senha e o token recebido por e-mail. A senha ${passwordRules.replace('ela ', '')}`)) {
+                    return true;
+                }
+                setAttempts('token')();
+                return false;
+            },
             method: 'POST',
         },
         sendToken: {
@@ -223,12 +255,14 @@ export const serverRequests = (state: any) => {
                 return {};
             },
 
+            // O backend responde 429 para "token já enviado" e 422 para "e-mail nos reportou como spam"
+            // (JnProcessStatusCreateLoginToken); até 2026-10-08 a tela esperava 409 nos dois e ficava calada.
             mappedStatus: {
                 invalidEmail: 400,
                 tokenBlocked: 403,
                 emailMissing: 404,
-                reportedAsSpam: 409,
-                tokenAlreadyRequested: 409,
+                reportedAsSpam: 422,
+                tokenAlreadySent: 429,
             },
 
             callbacks: {
@@ -238,7 +272,7 @@ export const serverRequests = (state: any) => {
                 '404': notifyAboutLoginNotFound,
             },
             cached: {
-                '409': notifyAboutAlreadySentToken,
+                '429': notifyAboutAlreadySentToken,
                 '422': setDetailMessage(`o e-mail ${state.email} nos reportou como spam, sendo assim, não podemos enviar o token, clique em "Reenviar token" para que nosso time de suporte lhe envie este token manualmente`),
                 '403': lockToken,
             },
@@ -265,7 +299,7 @@ export const serverRequests = (state: any) => {
             },
             cached: {
                 '429': (response: any) => {
-                    JnAjax.removeAllCachedStatus('403');
+                    clearCachedTokenLock();
                     state.setLockedToken(false);
                     state.setInvalid(false);
                     return requestAlreadySolved('desbloqueio')(response);
