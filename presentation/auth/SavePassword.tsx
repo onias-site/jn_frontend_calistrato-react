@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogin';
 import { Password } from 'primereact/password';
 import { LabelComponent } from '@/presentation/components/source/LabelComponent';
+import { loginFieldsHelp } from '@/presentation/auth/LoginFieldsHelp';
 import { ResendTokenLink } from '@/presentation/auth/ResendTokenLink';
 import JnAjax from '@/app/JnAjax';
 import { serverRequests } from '@/presentation/auth/ServerRequests';
@@ -113,19 +114,18 @@ export const SavePassword: React.FC<SavePasswordProps> = ({}) => {
         setField(() => setContextField('token', e.target.value), '');
     }
 
-    const explanation = 'Informe a senha para ser salva, ela deve ter 8 caracteres (no mínimo), ao menos um deles deve, necessariamente, ser maiúsculo e deve ter ao menos um caractere especial';
     return (
         <div className="relative">
-            <LabelComponent explanation={explanation} labelValue="Senha:" property="password" errors={fieldErrors}>
-                <Password {...passwordOptions} promptLabel="Digite uma senha" value={context.password} onChange={(e) => setField(() => setContextField('password', e.target.value), '')} toggleMask />
+            <LabelComponent explanation={loginFieldsHelp.newPassword} labelValue="Senha:" property="loginPassword" errors={fieldErrors}>
+                <Password inputId="loginPassword" {...passwordOptions} promptLabel="Digite uma senha" value={context.password} onChange={(e) => setField(() => setContextField('password', e.target.value), '')} toggleMask />
             </LabelComponent>
             <LabelComponent
-                explanation="A senha a ser digitada neste campo deve ser a mesma senha digitada no campo anterior"
+                explanation={loginFieldsHelp.confirmPassword}
                 labelValue="Confirme a senha:"
-                property="confirmPassword"
+                property="loginConfirmPassword"
                 errors={fieldErrors}
             >
-                <Password
+                <Password inputId="loginConfirmPassword"
                     {...passwordOptions}
                     promptLabel="Confirme a senha"
                     value={context.confirmPassword}
@@ -133,8 +133,8 @@ export const SavePassword: React.FC<SavePasswordProps> = ({}) => {
                     toggleMask
                 />
             </LabelComponent>
-            <LabelComponent explanation={detailMessage} labelValue={`Token recebido no e-mail '${email}':`} property="token" errors={fieldErrors}>
-                <Password {...emptyPasswordOptions} value={context.token} onChange={(e) => setField(() => setContextField('token', e.target.value), '')} toggleMask />
+            <LabelComponent explanation={loginFieldsHelp.token(email)} labelValue={`Token recebido no e-mail '${email}':`} property="loginToken" errors={fieldErrors}>
+                <Password inputId="loginToken" {...emptyPasswordOptions} value={context.token} onChange={(e) => setField(() => setContextField('token', e.target.value), '')} toggleMask />
             </LabelComponent>
         </div>
     );

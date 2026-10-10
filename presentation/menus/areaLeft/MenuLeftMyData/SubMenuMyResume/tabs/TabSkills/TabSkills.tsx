@@ -99,7 +99,9 @@ export const TabSkills2: React.FC<TabSkillsProps> = ({ getAccordionList }) => {
         for (let index in groups) {
             const group = groups[index];
             if (group.name == name) {
-                group.list = [...group.list, obj];
+                // o ReactSortable pode já ter inserido o item via setList; evita duplicá-lo
+                const listWithoutTransferred = group.list.filter((x: any) => x.label != obj.label);
+                group.list = [...listWithoutTransferred, obj];
                 continue;
             }
 
@@ -120,7 +122,8 @@ export const TabSkills2: React.FC<TabSkillsProps> = ({ getAccordionList }) => {
 
     const width = groups.length ? 100 / (groups.length + 1) + '%' : '';
     return (
-        <div className="flex-column flex" style={{ maxHeight: '1000px' }}>
+        // no celular as três colunas ficam uma embaixo da outra; a partir do md, lado a lado, cada uma com a sua fração
+        <div className="flex flex-col md:max-h-[1000px] md:flex-row">
             <AccordionList width={width} />
             {groups.map((group: any) => (
                 <SkillList
@@ -352,10 +355,34 @@ const errorHasFound = (context: any, error: any, word: string) => {
 
 const SkillList: React.FC<SkillListProps> = ({ title, width, list, filter, setFilter, setList, transferToAnotherList, main }) => {
     const filtro = (item: any) => !filter || item.label.toUpperCase().startsWith(filter.trim().toUpperCase());
+    // o ReactSortable localiza o item arrastado pelo índice no DOM, então precisa receber a mesma lista que é renderizada (a filtrada)
+    const filteredList = list.filter(filtro);
+    // ao devolver a lista filtrada alterada, os itens escondidos pelo filtro são preservados
+    const setFilteredList = (newFilteredList: any[]) => {
+        const hiddenByFilter = list.filter((item: any) => !filtro(item));
+        setList([...hiddenByFilter, ...newFilteredList]);
+    };
+    const [helpVisible, setHelpVisible] = useState(false);
+    const helpButtonId = main ? 'btnHelpSkillsFromResume' : 'btnHelpExcludedSkillsFromResume';
     return (
-        <ScrollPanel style={{ width, padding: '10px' }}>
+        <ScrollPanel className="w-full md:w-[var(--skills-column-width)]" style={{ ['--skills-column-width' as any]: width, padding: '10px' }}>
+            <Dialog
+                header={title}
+                visible={helpVisible}
+                style={{ width: '50vw' }}
+                onHide={() => {
+                    if (!helpVisible) return;
+                    setHelpVisible(false);
+                }}
+            >
+                <p className="m-0">{main ? SKILLS_FROM_RESUME_HELP : EXCLUDED_SKILLS_FROM_RESUME_HELP}</p>
+            </Dialog>
             <div className="mb-5" style={{ fontSize: '10px' }}>
-                <label>{`${title} (${list.length})`}</label>
+                <Tooltip target={`#${helpButtonId}`} content="Clique aqui para saber mais detalhes sobre esta lista" position="bottom" />
+                <label>
+                    <Button icon="pi pi-question-circle" id={helpButtonId} onClick={() => setHelpVisible(true)} />
+                    {`${title} (${list.length})`}
+                </label>
 
                 {(list.length >= 7 || filter) && (
                     <InputText
@@ -377,8 +404,8 @@ const SkillList: React.FC<SkillListProps> = ({ title, width, list, filter, setFi
                 <div className="gap-x-12 sm:grid-cols-2">
                     <ul>
                         <ReactSortable
-                            list={list}
-                            setList={(myList: any[]) => setList(myList)}
+                            list={filteredList}
+                            setList={setFilteredList}
                             animation={200}
                             delay={1}
                             ghostClass="gu-transit"
@@ -386,7 +413,7 @@ const SkillList: React.FC<SkillListProps> = ({ title, width, list, filter, setFi
                             onAdd={(evt) => transferToAnotherList(evt.item.textContent)}
                         >
                             {list.length ? (
-                                list.filter(filtro).map((skill: any, id: number) => (
+                                filteredList.map((skill: any, id: number) => (
                                     <li key={id} className="mb-2.5 cursor-grab ">
                                         <div className="items-md-center flex flex-col rounded-md border border-white-light bg-white px-6 py-3.5 text-center dark:border-dark dark:bg-[#1b2e4b] md:flex-row ltr:md:text-left rtl:md:text-right">
                                             <div className="flex flex-1 flex-col items-center justify-between md:flex-row">
@@ -422,7 +449,7 @@ const AccordionList: React.FC<AccordionListProps> = ({ width }) => {
     }));
     const [visible, setVisible] = useState(false);
     return (
-        <ScrollPanel style={{ width, padding: '10px' }}>
+        <ScrollPanel className="w-full md:w-[var(--skills-column-width)]" style={{ ['--skills-column-width' as any]: width, padding: '10px' }}>
             {accordionList && !!accordionList.length && (
                 <div>
                     <div className="align-items-center flex">
@@ -638,6 +665,9 @@ interface SkillFixHierarchyModalProps {
     reasonExplanation: string;
     multiSelectPlaceholder: string;
     noSkillSelectedDetail: string;
+    // textos do botão de ajuda de cada campo: o que é o campo e como usá-lo
+    skillsHelp: string;
+    reasonHelp: string;
 }
 /**
  * Modal de sugestão de correção de hierarquia de um accordion: multi-select das skills e memo de justificativa.
@@ -654,6 +684,8 @@ const SkillFixHierarchyModal: React.FC<SkillFixHierarchyModalProps> = ({
     reasonExplanation,
     multiSelectPlaceholder,
     noSkillSelectedDetail,
+    skillsHelp,
+    reasonHelp,
 }) => {
     const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
     const [reason, setReason] = useState('');
@@ -786,24 +818,38 @@ const SkillFixHierarchyModal: React.FC<SkillFixHierarchyModalProps> = ({
                 saveDisabled={busy}
                 extraActions={withdrawButton}
                 onOpen={loadSuggestion}
+                fieldsHaveOwnHelp
                 headerModal={headerModal} labelText={reasonExplanation} linkText={linkText} icon={icon}>
-                <div className="flex w-full flex-col items-stretch gap-3">
-                    <MultiSelect
-                        className="w-full"
-                        value={selectedSkills}
-                        onChange={(e) => setSelectedSkills(e.value)}
-                        options={allOptions}
-                        optionLabel="label"
-                        optionValue="skill"
-                        filter
-                        maxSelectedLabels={3}
-                        selectedItemsLabel="{0} habilidades selecionadas"
-                        placeholder={multiSelectPlaceholder}
-                        // por padrão a lista de opções vai para o body e rola com a página, descolando do Dialog (fixo)
-                        appendTo="self"
-                        disabled={!!suggestion}
-                    />
-                    <InputTextarea className="w-full" placeholder={reasonExplanation} value={reason} onChange={(e) => setReason(e.target.value)} rows={6} disabled={!!suggestion} />
+                <div className="flex w-full flex-col items-stretch">
+                    <LabelComponent explanation={skillsHelp} labelValue="Habilidades" property={`skillFixHierarchySkills-${type}`} errors={{}}>
+                        <MultiSelect
+                            id={`skillFixHierarchySkills-${type}`}
+                            className="w-full"
+                            value={selectedSkills}
+                            onChange={(e) => setSelectedSkills(e.value)}
+                            options={allOptions}
+                            optionLabel="label"
+                            optionValue="skill"
+                            filter
+                            maxSelectedLabels={3}
+                            selectedItemsLabel="{0} habilidades selecionadas"
+                            placeholder={multiSelectPlaceholder}
+                            // por padrão a lista de opções vai para o body e rola com a página, descolando do Dialog (fixo)
+                            appendTo="self"
+                            disabled={!!suggestion}
+                        />
+                    </LabelComponent>
+                    <LabelComponent explanation={reasonHelp} labelValue="Justificativa" property={`skillFixHierarchyReason-${type}`} errors={{}}>
+                        <InputTextarea
+                            id={`skillFixHierarchyReason-${type}`}
+                            className="w-full"
+                            placeholder={reasonExplanation}
+                            value={reason}
+                            onChange={(e) => setReason(e.target.value)}
+                            rows={6}
+                            disabled={!!suggestion}
+                        />
+                    </LabelComponent>
                     {suggestion && <SkillFixHierarchyStatusView suggestion={suggestion} />}
                     {pending && <PendingSuggestionHint />}
                 </div>
@@ -835,6 +881,18 @@ const AddSkillsToAccordion: React.FC<AccordionSkillsProps> = ({ accordionItem })
             reasonExplanation={`Explique por que as habilidades selecionadas acima deveriam ser associadas a ${accordionItem.skill}`}
             multiSelectPlaceholder="Selecione as habilidades do seu currículo"
             noSkillSelectedDetail={`Selecione ao menos uma habilidade para associar a ${accordionItem.skill}.`}
+            skillsHelp={
+                `São as habilidades do seu currículo que, na sua opinião, dependem do conhecimento em ${accordionItem.skill}: quem domina cada uma delas precisa conhecer ${accordionItem.skill} ` +
+                '(ex.: SPRING BOOT depende de JAVA), mas hoje elas não aparecem associadas a ele. ' +
+                'Como usar: abra a lista e marque uma ou mais habilidades; a busca no topo da lista encontra cada uma pelo nome. ' +
+                `A lista mostra só as habilidades do seu currículo que ainda não estão associadas a ${accordionItem.skill}. Selecione ao menos uma.`
+            }
+            reasonHelp={
+                'É a sua explicação para o nosso time de suporte, que vai avaliar a sugestão. ' +
+                `Como usar: conte por que as habilidades marcadas dependem de ${accordionItem.skill} (ex.: são bibliotecas, frameworks ou ferramentas construídas sobre ele). ` +
+                `Escreva entre ${DESCRIPTION_MIN_LENGTH} e ${DESCRIPTION_MAX_LENGTH} caracteres. ` +
+                'Cada habilidade marcada é avaliada separadamente; o resultado chega por e-mail e também aparece aqui, no painel Motivo, quando você abrir este modal de novo.'
+            }
         />
     );
 };
@@ -850,6 +908,17 @@ const RemoveSkillsFromAccordion: React.FC<AccordionSkillsProps> = ({ accordionIt
         reasonExplanation={`Explique por que as habilidades selecionadas acima não deveriam estar associadas a ${accordionItem.skill}`}
         multiSelectPlaceholder={`Selecione as habilidades associadas a ${accordionItem.skill}`}
         noSkillSelectedDetail={`Selecione ao menos uma habilidade para desassociar de ${accordionItem.skill}.`}
+        skillsHelp={
+            `São as habilidades hoje associadas a ${accordionItem.skill} que, na sua opinião, não dependem desse conhecimento: é possível dominá-las sem conhecer ${accordionItem.skill}. ` +
+            'Como usar: abra a lista e marque uma ou mais habilidades; a busca no topo da lista encontra cada uma pelo nome. ' +
+            `A lista mostra só as habilidades associadas a ${accordionItem.skill}. Selecione ao menos uma.`
+        }
+        reasonHelp={
+            'É a sua explicação para o nosso time de suporte, que vai avaliar a sugestão. ' +
+            `Como usar: conte por que as habilidades marcadas não dependem de ${accordionItem.skill} (ex.: funcionam sem ele ou pertencem a outra tecnologia). ` +
+            `Escreva entre ${DESCRIPTION_MIN_LENGTH} e ${DESCRIPTION_MAX_LENGTH} caracteres. ` +
+            'Cada habilidade marcada é avaliada separadamente; o resultado chega por e-mail e também aparece aqui, no painel Motivo, quando você abrir este modal de novo.'
+        }
     />
 );
 
@@ -888,9 +957,9 @@ const SKILL_SUGGESTION_STATUS_LABELS: Record<SkillSuggestionStatus, string> = {
  * Envia a sugestão de habilidade com os sinônimos e a justificativa. A chave da sugestão é email + skill: o mesmo
  * candidato não tem duas sugestões pendentes da mesma habilidade (409).
  */
-const sendSkillSuggestion = (skill: string, synonyms: string[], description: string, onSuccess: () => void, setLoading: (loading: boolean) => void) => {
+const sendSkillSuggestion = (skill: string, synonyms: string[], description: string, onSuccess: () => void, onAlreadyDecided: () => void, setLoading: (loading: boolean) => void) => {
     const callbacks: any = {};
-    callbacks['retryAfterAuthentication'] = () => sendSkillSuggestion(skill, synonyms, description, onSuccess, setLoading);
+    callbacks['retryAfterAuthentication'] = () => sendSkillSuggestion(skill, synonyms, description, onSuccess, onAlreadyDecided, setLoading);
     callbacks[200] = () => {
         PubSub.publish('showMessage', {
             summary: 'Sugestão enviada',
@@ -899,9 +968,16 @@ const sendSkillSuggestion = (skill: string, synonyms: string[], description: str
         onSuccess();
     };
     callbacks[409] = () => warn('Sugestão já pendente', `Você já sugeriu a habilidade '${skill}' e ela ainda está em análise.`);
-    callbacks[412] = () => warn('Habilidade já reconhecida', `A habilidade '${skill}' já é reconhecida pelo sistema.`);
-    // a tela mostra a rejeição ao digitar a habilidade; o 410 só chega se ela foi rejeitada depois de carregada
-    callbacks[410] = () => warn('Sugestão já avaliada', `A habilidade '${skill}' já foi sugerida por você e rejeitada pelo suporte. Digite-a de novo no modal para ver o motivo.`);
+    // nos dois casos o modal carrega a decisão do suporte sobre a habilidade, ainda que a sugestão tenha sido de outro candidato
+    callbacks[412] = () => {
+        warn('Habilidade já reconhecida', `A habilidade '${skill}' já é reconhecida pelo sistema.`);
+        onAlreadyDecided();
+    };
+    // a tela mostra a decisão ao digitar a habilidade; o 410 só chega se ela foi avaliada depois de carregada
+    callbacks[410] = () => {
+        warn('Sugestão já avaliada', `A habilidade '${skill}' já foi avaliada pelo suporte. Veja abaixo o resultado e o motivo.`);
+        onAlreadyDecided();
+    };
     callbacks['onUnexpectedHttpStatus'] = () => {
         PubSub.publish('showMessage', {
             summary: 'Falha ao enviar sugestão',
@@ -970,6 +1046,38 @@ const SkillSuggestionStatusView: React.FC<SkillSuggestionStatusViewProps> = ({ s
         )}
     </div>
 );
+
+// textos do botão de ajuda das duas listas de habilidades do currículo: o que é a lista e como usá-la
+const SKILLS_FROM_RESUME_HELP =
+    'São as habilidades técnicas que encontramos no texto do seu currículo. São por elas que os recrutadores encontram o seu currículo nas buscas. ' +
+    'Como usar: se não quer ser encontrado por alguma delas (ex.: uma tecnologia com a qual não quer mais trabalhar), arraste-a para a lista de habilidades pelas quais você NÃO quer ser encontrado. ' +
+    'Com 7 habilidades ou mais, aparece um campo para filtrar a lista pelo começo do nome. ' +
+    'Se faltar alguma habilidade que consta no seu currículo, use o link "Deixamos de listar alguma habilidade?" para sugeri-la.';
+
+const EXCLUDED_SKILLS_FROM_RESUME_HELP =
+    'São habilidades que constam no seu currículo, mas pelas quais você escolheu NÃO ser encontrado nas buscas dos recrutadores. ' +
+    'Como usar: para esconder uma habilidade, arraste-a para cá a partir da lista de habilidades pelas quais você quer ser encontrado; ' +
+    'para voltar a ser encontrado por ela, arraste-a de volta. ' +
+    'Com 7 habilidades ou mais, aparece um campo para filtrar a lista pelo começo do nome.';
+
+// textos do botão de ajuda de cada campo do modal de sugestão de habilidade: o que é o campo e como usá-lo
+const SKILL_SUGGESTION_SKILL_HELP =
+    'É a habilidade técnica (ferramenta, linguagem, framework, metodologia) que CONSTA no texto do seu currículo e que deixamos de listar entre as suas habilidades. ' +
+    'Como usar: digite-a exatamente como está escrita no currículo (ex.: REACT NATIVE); o texto vira maiúsculas e os espaços repetidos são removidos. ' +
+    'Ao sair do campo, se esta habilidade já foi sugerida antes, por você ou por outro candidato, mostramos a situação dela e, se já foi avaliada, o motivo da decisão. ' +
+    'Não é possível sugerir uma habilidade que já está na sua lista ou que só aparece dentro de outra palavra do currículo.';
+
+const SKILL_SUGGESTION_SYNONYMS_HELP =
+    'São outras formas de escrever a mesma habilidade: siglas, abreviações e grafias alternativas (ex.: para PICK BY LIGHT, os sinônimos PICK TO LIGHT e PTL). ' +
+    'Se a sugestão for aprovada, os sinônimos também passam a ser reconhecidos nos currículos. ' +
+    'Como usar: digite um sinônimo e tecle Enter para transformá-lo em etiqueta, ou digite vários separados por vírgula; para remover um, clique no x da etiqueta. ' +
+    `Cada sinônimo deve ter entre ${SKILL_MIN_LENGTH} e ${SKILL_MAX_LENGTH} caracteres. O campo é opcional.`;
+
+const SKILL_SUGGESTION_REASON_HELP =
+    'É a sua explicação para o nosso time de suporte, que vai avaliar a sugestão. ' +
+    'Como usar: conte por que esta habilidade deveria ser reconhecida e em que parte do currículo ela aparece (ex.: o projeto, a empresa, o período). ' +
+    `Escreva entre ${DESCRIPTION_MIN_LENGTH} e ${DESCRIPTION_MAX_LENGTH} caracteres. ` +
+    'O resultado da avaliação chega por e-mail e também aparece aqui, no painel Motivo, quando você digitar a habilidade de novo.';
 
 /**
  * Modal "Deixamos de listar alguma habilidade?": o candidato sugere uma habilidade que consta no texto do currículo e
@@ -1056,6 +1164,7 @@ const SkillSuggestionModal: React.FC = () => {
                 startNewSuggestion();
                 close();
             },
+            () => loadSuggestion(normalizedSkill),
             setLoadingOf('save'),
         );
     };
@@ -1111,38 +1220,48 @@ const SkillSuggestionModal: React.FC = () => {
             saveDisabled={busy}
             extraActions={withdrawButton}
             onOpen={startNewSuggestion}
+            fieldsHaveOwnHelp
             headerModal="Descreva a habilidade técnica que CONSTA no texto do seu currículo e que deixamos de listar aqui"
             labelText=""
             linkText="Deixamos de listar alguma habilidade?"
         >
-            <div className="flex w-full flex-col items-stretch gap-3">
-                <InputText
-                    className="w-full"
-                    placeholder="Habilidade que consta no seu currículo (ex.: REACT NATIVE)"
-                    value={skill}
-                    disabled={hasSuggestion}
-                    maxLength={SKILL_MAX_LENGTH}
-                    onChange={(e) => setSkill(e.target.value.toUpperCase())}
-                    onBlur={onSkillBlur}
-                />
-                <Chips
-                    className="w-full"
-                    // a raiz do Chips é inline-flex e a lista de frases não ocupa a largura do modal sem isso
-                    pt={{ container: { className: 'w-full' } }}
-                    value={synonyms}
-                    disabled={hasSuggestion}
-                    onChange={(e) => setSynonyms(Array.from(new Set((e.value || []).map(normalizeSkill).filter((synonym: string) => !!synonym))))}
-                    separator=","
-                    placeholder="Sinônimos: digite cada um e tecle Enter (ou separe por vírgula)"
-                />
-                <InputTextarea
-                    className="w-full"
-                    placeholder="Explique por que esta habilidade deveria ser reconhecida (ex.: em que parte do currículo ela aparece)"
-                    value={reason}
-                    disabled={hasSuggestion}
-                    onChange={(e) => setReason(e.target.value)}
-                    rows={6}
-                />
+            <div className="flex w-full flex-col items-stretch">
+                <LabelComponent explanation={SKILL_SUGGESTION_SKILL_HELP} labelValue="Habilidade" property="skillSuggestionSkill" errors={{}}>
+                    <InputText
+                        id="skillSuggestionSkill"
+                        className="w-full"
+                        placeholder="Habilidade que consta no seu currículo (ex.: REACT NATIVE)"
+                        value={skill}
+                        disabled={hasSuggestion}
+                        maxLength={SKILL_MAX_LENGTH}
+                        onChange={(e) => setSkill(e.target.value.toUpperCase())}
+                        onBlur={onSkillBlur}
+                    />
+                </LabelComponent>
+                <LabelComponent explanation={SKILL_SUGGESTION_SYNONYMS_HELP} labelValue="Sinônimos" property="skillSuggestionSynonyms" errors={{}}>
+                    <Chips
+                        id="skillSuggestionSynonyms"
+                        className="w-full"
+                        // a raiz do Chips é inline-flex e a lista de frases não ocupa a largura do modal sem isso
+                        pt={{ container: { className: 'w-full' } }}
+                        value={synonyms}
+                        disabled={hasSuggestion}
+                        onChange={(e) => setSynonyms(Array.from(new Set((e.value || []).map(normalizeSkill).filter((synonym: string) => !!synonym))))}
+                        separator=","
+                        placeholder="Sinônimos: digite cada um e tecle Enter (ou separe por vírgula)"
+                    />
+                </LabelComponent>
+                <LabelComponent explanation={SKILL_SUGGESTION_REASON_HELP} labelValue="Justificativa" property="skillSuggestionReason" errors={{}}>
+                    <InputTextarea
+                        id="skillSuggestionReason"
+                        className="w-full"
+                        placeholder="Explique por que esta habilidade deveria ser reconhecida (ex.: em que parte do currículo ela aparece)"
+                        value={reason}
+                        disabled={hasSuggestion}
+                        onChange={(e) => setReason(e.target.value)}
+                        rows={6}
+                    />
+                </LabelComponent>
                 {suggestion && <SkillSuggestionStatusView suggestion={suggestion} />}
                 {pending && <PendingSuggestionHint />}
             </div>
@@ -1168,8 +1287,10 @@ interface LinkModalProps {
     labelText: string;
     linkText: string;
     icon?: string;
+    // os campos trazem o próprio botão de ajuda (um LabelComponent por campo): o modal não põe o botão único do topo
+    fieldsHaveOwnHelp?: boolean;
 }
-const LinkModal: React.FC<LinkModalProps> = ({ onSave, onOpen, saveButtonLabel = 'Enviar', saveLoading = false, saveDisabled = false, extraActions, labelText, linkText, headerModal, icon, children }) => {
+const LinkModal: React.FC<LinkModalProps> = ({ onSave, onOpen, saveButtonLabel = 'Enviar', saveLoading = false, saveDisabled = false, extraActions, labelText, linkText, headerModal, icon, fieldsHaveOwnHelp = false, children }) => {
     const [visible, setVisible] = useState(false);
     const open = () => {
         setVisible(true);
@@ -1210,9 +1331,13 @@ const LinkModal: React.FC<LinkModalProps> = ({ onSave, onOpen, saveButtonLabel =
                     setVisible(false);
                 }}
             >
-                <LabelComponent explanation={headerModal} labelValue="" property="resumeText" errors={{}}>
-                    {children}
-                </LabelComponent>
+                {fieldsHaveOwnHelp ? (
+                    <div className="mb-5">{children}</div>
+                ) : (
+                    <LabelComponent explanation={headerModal} labelValue="" property="resumeText" errors={{}}>
+                        {children}
+                    </LabelComponent>
+                )}
 
                 <div className="mb-5 text-center">
                     <div className="flex justify-end gap-2">

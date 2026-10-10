@@ -6,6 +6,8 @@ import React, { useEffect } from 'react';
 import { ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogin';
 import JnAjax from '@/app/JnAjax';
 import { WelcomeMessage } from '@/presentation/auth/WelcomeMessage';
+import { LabelComponent } from '@/presentation/components/source/LabelComponent';
+import { loginFieldsHelp } from '@/presentation/auth/LoginFieldsHelp';
 
 export interface RequestEmailProps {}
 
@@ -40,11 +42,13 @@ export const RequestEmail: React.FC<RequestEmailProps> = ({}) => {
     }, []);
 
     return (
-        <div className="relative">
-            <span className="absolute top-1/2 -translate-y-1/2 ltr:left-3 rtl:right-3 dark:text-white-dark">
-                <IconUser className="h-5 w-5" />
-            </span>
-            <input readOnly={lockedToken} value={email} onChange={(e) => validateEmail(e.target.value, '')} type="email" placeholder="Email" className="form-input ltr:pl-10 rtl:pr-10" />
-        </div>
+        <LabelComponent explanation={loginFieldsHelp.email} labelValue="E-mail:" property="loginEmail" errors={{}}>
+            <div className="relative w-full">
+                <span className="absolute top-1/2 -translate-y-1/2 ltr:left-3 rtl:right-3 dark:text-white-dark">
+                    <IconUser className="h-5 w-5" />
+                </span>
+                <input id="loginEmail" readOnly={lockedToken} value={email} onChange={(e) => validateEmail(e.target.value, '')} type="email" placeholder="Email" className="form-input ltr:pl-10 rtl:pr-10" />
+            </div>
+        </LabelComponent>
     );
 };

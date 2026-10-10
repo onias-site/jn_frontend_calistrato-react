@@ -30,11 +30,15 @@ export const IntegerFieldComponent: React.FC<IntegerFieldProps> = ({ explanation
     };
     const [visible, setVisible] = useState(false);
     return (
-        <div className="flex flex-row gap-8">
+        // a partir do sm, duas colunas de largura igual (checkbox | campo numérico): como todas as linhas do formulário
+        // usam a mesma grade, os campos de linhas diferentes ficam alinhados um embaixo do outro, e os textos quebram
+        // dentro da sua coluna. No celular o campo desce para a linha de baixo, em vez de espremer os dois
+        <div className="mb-5 flex flex-wrap items-center gap-x-8 gap-y-3 sm:grid sm:grid-cols-2">
             <Dialog
                 header={checkBoxLabel}
                 visible={visible}
                 style={{ width: '50vw' }}
+                breakpoints={{ '960px': '75vw', '641px': '95vw' }}
                 onHide={() => {
                     if (!visible) return;
                     setVisible(false);
@@ -43,26 +47,22 @@ export const IntegerFieldComponent: React.FC<IntegerFieldProps> = ({ explanation
                 <p className="m-0">{explanation}</p>
             </Dialog>
 
-            <div className="mb-5 text-center">
-                <div className="align-items-center flex">
-                    <Tooltip target="#btnHelp" content="Clique aqui para saber mais detalhes sobre este campo" position="bottom" />
-                    <Button icon="pi pi-question-circle" id="btnHelp" onClick={() => setVisible(true)} />
-                    <Checkbox onChange={(e) => (e.checked ? setValue(0) : setValue(defaultValue))} checked={value == 0} />
-                    <label onClick = { () => value != 0 ? setValue(0) : setValue(defaultValue)} className="letraPequena ml-2">{checkBoxLabel}</label>
-                </div>
+            <div className="flex min-w-0 items-center gap-2">
+                <Tooltip target="#btnHelp" content="Clique aqui para saber mais detalhes sobre este campo" position="bottom" />
+                <Button icon="pi pi-question-circle" id="btnHelp" className="shrink-0" onClick={() => setVisible(true)} />
+                <Checkbox className="shrink-0" onChange={(e) => (e.checked ? setValue(0) : setValue(defaultValue))} checked={value == 0} />
+                <label onClick={() => (value != 0 ? setValue(0) : setValue(defaultValue))} className="letraPequena min-w-0" style={{ maxWidth: '300px' }}>
+                    {checkBoxLabel}
+                </label>
             </div>
 
-            <div className="mb-5 text-center">&nbsp;</div>
-            <div className="mb-5 text-center">&nbsp;</div>
-
             {value != 0 && (
-                <div className="mb-5 text-center">
-                    <div className="align-items-center flex">
-                        <label htmlFor = {textFieldLabel} className="letraPequena ml-2" style={{ width: '300px', color: isInvalid() ? '#e24c4c' : 'black' }}>
-                            {textFieldLabel}
-                        </label>
-                        <InputText id = {textFieldLabel} keyfilter="pint" invalid={isInvalid()} value={value} onChange={(e) => setValue(e.target.value)} style={{ width: '100px' }} />
-                    </div>
+                <div className="flex min-w-0 items-center gap-2">
+                    {/* o rótulo ocupa o que sobra da coluna: o campo fica na borda direita, alinhado entre as linhas */}
+                    <label htmlFor={textFieldLabel} className="letraPequena min-w-0 flex-1" style={{ color: isInvalid() ? '#e24c4c' : 'black' }}>
+                        {textFieldLabel}
+                    </label>
+                    <InputText id={textFieldLabel} className="shrink-0" keyfilter="pint" invalid={isInvalid()} value={value} onChange={(e) => setValue(e.target.value)} style={{ width: '100px' }} />
                 </div>
             )}
         </div>

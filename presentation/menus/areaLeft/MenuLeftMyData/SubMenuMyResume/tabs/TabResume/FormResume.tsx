@@ -23,6 +23,7 @@ export interface ITabResumeStore {
     resumeType: any;
 
     onMoveOnFowardTabs: () => string[];
+    getPendingRequirements: () => string[];
     setLastJob: (lastJob: string) => void;
     setResumeType: (resumeType: any) => void;
     setFieldErrors: (fieldErrors: any) => void;
@@ -54,19 +55,28 @@ export const TabResumeStore = create<ITabResumeStore>((set, get) => ({
     setLinkedinAddress: (linkedinAddress: string) => set({ linkedinAddress }),
     setNotAllowedCompany: (notAllowedCompany: string[]) => set({ notAllowedCompany }),
 
-    onMoveOnFowardTabs: () => {
-        const { resumeType, desiredJob, linkedinAddress, resumeText, setFieldErrors } = get();
-        let errors: any = [];
-        const fieldErrors = {};
-        !desiredJob && (fieldErrors['desiredJob'] = true) && errors.push('Deve-se informar a função desejada');
-        !linkedinAddress && (fieldErrors['linkedinAddress'] = true) && errors.push('Deve-se informar a endereço (URL do linkedin)');
-        (!resumeType || !resumeType.id) && (fieldErrors['resumeType'] = true) && errors.push('Por favor escolha o tipo do currículo');
-        resumeType && resumeType.id == 1 && !resumeText && (fieldErrors['resumeText'] = true) && errors.push('Deve-se informar a texto contido no currículo');
-        setFieldErrors(fieldErrors);
+    getPendingRequirements: () => {
+        const { errors } = validateResume(get());
+        return errors;
+    },
 
+    onMoveOnFowardTabs: () => {
+        const { errors, fieldErrors } = validateResume(get());
+        get().setFieldErrors(fieldErrors);
         return errors;
     },
 }));
+
+// sem efeitos colaterais: serve tanto para destacar os campos ao avançar quanto para desabilitar o botão de avançar
+const validateResume = ({ resumeType, desiredJob, linkedinAddress, resumeText }: ITabResumeStore) => {
+    const errors: string[] = [];
+    const fieldErrors = {};
+    !desiredJob && (fieldErrors['desiredJob'] = true) && errors.push('Deve-se informar a função desejada');
+    !linkedinAddress && (fieldErrors['linkedinAddress'] = true) && errors.push('Deve-se informar a endereço (URL do linkedin)');
+    (!resumeType || !resumeType.id) && (fieldErrors['resumeType'] = true) && errors.push('Por favor escolha o tipo do currículo');
+    resumeType && resumeType.id == 1 && !resumeText && (fieldErrors['resumeText'] = true) && errors.push('Deve-se informar a texto contido no currículo');
+    return { errors, fieldErrors };
+};
 
 export const TabResume: React.FC<TabResumeProps> = ({}) => {
     const {
@@ -143,7 +153,7 @@ export const TabResume: React.FC<TabResumeProps> = ({}) => {
             </LabelComponent>
             {resumeType.id == 1 && (
                 <LabelComponent
-                    explanation="Para evitar problemas com a LGPD (Lei Geral de Proteção de Dados), não guardamos o texto do seu currículo. A cada nova atualização no seu currículo, você precisará copiar o texto de dentro dele e colar aqui novamente. O texto aqui colado é usado para alimentar as listas de habilidade da aba 'Habilidades' mais à frente."
+                    explanation="Para evitar problemas com a LGPD (Lei Geral de Proteção de Dados), não guardamos o texto do seu currículo, em vez disso, guardamos o link do seu linkedin. A cada nova atualização no seu currículo, você precisará copiar o texto de dentro dele e colar aqui novamente. O texto aqui colado é usado para alimentar as listas de habilidade da aba 'Habilidades' mais à frente."
                     labelValue="Todo o texto que copiei do meu currículo:"
                     property="resumeText"
                     errors={fieldErrors}

@@ -14,6 +14,7 @@ export interface ITabLanguagesStore {
     speakOtherLanguages: boolean;
     getSelectedLanguages: () => any[];
     onMoveOnFowardTabs: () => string[];
+    getPendingRequirements: () => string[];
     setLanguage: (language: any[]) => void;
     setSelectedLanguages: (selectedLanguages: any[]) => void;
     setSpeakOtherLanguages: (speakOtherLanguages: boolean) => void;
@@ -35,7 +36,8 @@ export const TabLanguagesStore = create<ITabLanguagesStore>((set, get) => ({
         const { selectedLanguages } = get();
         set({ speakOtherLanguages, selectedLanguages: speakOtherLanguages ? selectedLanguages : [] });
     },
-    onMoveOnFowardTabs: () => {
+    onMoveOnFowardTabs: () => get().getPendingRequirements(),
+    getPendingRequirements: () => {
         const { speakOtherLanguages, selectedLanguages } = get();
 
 
@@ -322,8 +324,9 @@ export const TabLanguages: React.FC<TabResumeProps> = ({}) => {
 
         return (
             <div>
-                <div className="flex-column flex">
-                    <label htmlFor="lastJob" style={{ width: '30%', marginTop: '10px' }} className="letraPequena">
+                {/* no celular o rótulo fica acima do nível; a partir do sm, ao lado */}
+                <div className="flex flex-col sm:flex-row">
+                    <label htmlFor="lastJob" style={{ marginTop: '10px' }} className="letraPequena w-full sm:w-[30%]">
                         Meu nível em idioma {language.name} é:
                     </label>
 
@@ -357,9 +360,9 @@ export const TabLanguages: React.FC<TabResumeProps> = ({}) => {
     return (
         <div>
             <div className="mb-5 text-center">
-                <div className="align-items-center flex">
-                    <Checkbox id = "doNotSpeakAnyLanguage" onChange={(e) => setSpeakOtherLanguages(e.checked)} checked={speakOtherLanguages} name="doNotSpeakAnyLanguage" />
-                    <label onClick={() => setSpeakOtherLanguages(!speakOtherLanguages)} className="letraPequena ml-2" style={{width:'500px'}}>
+                <div className="flex items-center">
+                    <Checkbox id = "doNotSpeakAnyLanguage" className="shrink-0" onChange={(e) => setSpeakOtherLanguages(e.checked)} checked={speakOtherLanguages} name="doNotSpeakAnyLanguage" />
+                    <label onClick={() => setSpeakOtherLanguages(!speakOtherLanguages)} className="letraPequena ml-2 min-w-0" style={{maxWidth:'500px'}}>
                         Tenho conhecimento em outro(s) idioma(s) além do meu idioma nativo
                     </label>
                 </div>

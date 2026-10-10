@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import { ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogin';
 import { Password } from 'primereact/password';
 import { LabelComponent } from '@/presentation/components/source/LabelComponent';
+import { loginFieldsHelp } from '@/presentation/auth/LoginFieldsHelp';
 
 export const RequestPasswordClick = 'requestPassword';
 
@@ -66,11 +67,10 @@ export const RequestPassword: React.FC<RequestPasswordProps> = ({}) => {
     };
 
 
-    const explanation = 'Informe a senha para ser salva, ela deve ter 8 caracteres (no mínimo), ao menos um deles deve, necessariamente, ser maiúsculo e deve ter ao menos um caractere especial';
     return (
         <div className="relative">
-            <LabelComponent explanation={explanation} labelValue="Senha:" property="password" errors={fieldErrors}>
-                <Password
+            <LabelComponent explanation={loginFieldsHelp.loginPassword} labelValue="Senha:" property="loginPassword" errors={fieldErrors}>
+                <Password inputId="loginPassword"
                  {...passwordOptions}
                  promptLabel= "Digite uma senha"
                  value={context.password}

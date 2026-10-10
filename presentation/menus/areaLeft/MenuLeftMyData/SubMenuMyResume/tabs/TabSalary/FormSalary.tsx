@@ -17,6 +17,7 @@ export interface ITabSalaryStore {
     setClt: (clt: number) => void;
     setBtc: (btc: number) => void;
     onMoveOnFowardTabs: () => string[];
+    getPendingRequirements: () => string[];
     setNegotiableClaim: (negotiableClaim: boolean) => void;
 }
 
@@ -29,7 +30,8 @@ export const TabSalaryStore = create<ITabSalaryStore>((set, get) => ({
     setClt: (clt: number) => set({ clt }),
     setBtc: (btc: number) => set({ btc }),
     setNegotiableClaim: (negotiableClaim: boolean) => set({ negotiableClaim }),
-    onMoveOnFowardTabs: () => {
+    onMoveOnFowardTabs: () => get().getPendingRequirements(),
+    getPendingRequirements: () => {
         const { clt, pj } = get();
 
         if (clt) {

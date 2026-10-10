@@ -3,6 +3,8 @@ import React, { useEffect } from 'react';
 import { ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogin';
 import IconUser from '@/presentation/icons/icon-user';
 import JnAjax from '@/app/JnAjax';
+import { LabelComponent } from '@/presentation/components/source/LabelComponent';
+import { loginFieldsHelp } from '@/presentation/auth/LoginFieldsHelp';
 
 export const ConfirmEmailClick = 'confirmEmail';
 
@@ -30,11 +32,13 @@ export const ConfirmEmail: React.FC<ConfirmEmailProps> = ({}) => {
     };
 
     return (
-        <div className="relative">
-            <span className="absolute top-1/2 -translate-y-1/2 ltr:left-3 rtl:right-3 dark:text-white-dark">
-                <IconUser className="h-5 w-5" />
-            </span>
-            <input readOnly={lockedToken} onChange={(e) => confirmEmail(e.target.value)} type="email" placeholder="Email" className="form-input ltr:pl-10 rtl:pr-10" />
-        </div>
+        <LabelComponent explanation={loginFieldsHelp.confirmEmail} labelValue="Confirme o e-mail:" property="loginConfirmEmail" errors={{}}>
+            <div className="relative w-full">
+                <span className="absolute top-1/2 -translate-y-1/2 ltr:left-3 rtl:right-3 dark:text-white-dark">
+                    <IconUser className="h-5 w-5" />
+                </span>
+                <input id="loginConfirmEmail" readOnly={lockedToken} onChange={(e) => confirmEmail(e.target.value)} type="email" placeholder="Email" className="form-input ltr:pl-10 rtl:pr-10" />
+            </div>
+        </LabelComponent>
     );
 };

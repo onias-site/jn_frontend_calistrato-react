@@ -2,6 +2,8 @@
 import React, { useEffect } from 'react';
 import { ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogin';
 import Select from 'react-select';
+import { LabelComponent } from '@/presentation/components/source/LabelComponent';
+import { loginFieldsHelp } from '@/presentation/auth/LoginFieldsHelp';
 
 export interface RequestAnswersProps {}
 export const RequestAnswersClick = 'requestAnswers';
@@ -33,14 +35,16 @@ export const RequestAnswers: React.FC<RequestAnswersProps> = ({}) => {
 
     return (
         <div className="relative">
-            <h5>Como você nos conheceu?</h5>
-            <div className="mb-5 pb-2">
-                <Select defaultValue={context.channel || channels[0]} options={channels} isSearchable={false} onChange={hadleChannel} />
-            </div>
-            <h5>Qual seu objetivo?</h5>
-            <div className="mb-12">
-                <Select defaultValue={context.goal || goals[0]} options={goals} isSearchable={false} onChange={handleGoal} />
-            </div>
+            <LabelComponent explanation={loginFieldsHelp.channel} labelValue="Como você nos conheceu?" property="loginChannel" errors={{}}>
+                <div className="w-full text-left">
+                    <Select inputId="loginChannel" defaultValue={context.channel || channels[0]} options={channels} isSearchable={false} onChange={hadleChannel} />
+                </div>
+            </LabelComponent>
+            <LabelComponent explanation={loginFieldsHelp.goal} labelValue="Qual seu objetivo?" property="loginGoal" errors={{}}>
+                <div className="mb-7 w-full text-left">
+                    <Select inputId="loginGoal" defaultValue={context.goal || goals[0]} options={goals} isSearchable={false} onChange={handleGoal} />
+                </div>
+            </LabelComponent>
         </div>
     );
 };

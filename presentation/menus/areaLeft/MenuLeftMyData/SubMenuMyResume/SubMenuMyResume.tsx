@@ -104,13 +104,26 @@ const SubMenuMyResume = () => {
     const stateRegioes = RegioesStore((state: IRegioesStore) => ({ ...state }));
 
     const tabs = [
-        { label: 'Currículo', icon: 'pi pi-file-pdf', onMoveOnFowardTabs: () => loadSkillsFromBackEnd(stateResume, stateSkills, stateSubMenuMyResume) },
-        { label: 'Idiomas', icon: 'pi pi-language', onMoveOnFowardTabs: stateLanguage.onMoveOnFowardTabs },
-        { label: 'Opções', icon: 'pi pi-cog', onMoveOnFowardTabs: stateRegioes.onMoveOnFowardTabs },
-        { label: 'Salários', icon: 'pi pi-dollar', onMoveOnFowardTabs: () => saveResume(stateSkills, stateResume, stateLanguage, stateSalary, stateRegioes, stateOptions) },
+        {
+            label: 'Currículo',
+            icon: 'pi pi-file-pdf',
+            onMoveOnFowardTabs: () => loadSkillsFromBackEnd(stateResume, stateSkills, stateSubMenuMyResume),
+            getPendingRequirements: stateResume.getPendingRequirements,
+        },
+        { label: 'Idiomas', icon: 'pi pi-language', onMoveOnFowardTabs: stateLanguage.onMoveOnFowardTabs, getPendingRequirements: stateLanguage.getPendingRequirements },
+        { label: 'Opções', icon: 'pi pi-cog', onMoveOnFowardTabs: stateRegioes.onMoveOnFowardTabs, getPendingRequirements: stateRegioes.getPendingRequirements },
+        {
+            label: 'Salários',
+            icon: 'pi pi-dollar',
+            onMoveOnFowardTabs: () => saveResume(stateSkills, stateResume, stateLanguage, stateSalary, stateRegioes, stateOptions),
+            getPendingRequirements: stateSalary.getPendingRequirements,
+        },
     ];
+    // mesmo número que aparece ao lado do título da lista principal (habilidades pelas quais o currículo é ENCONTRADO)
+    const mainSkillsGroup: any = stateSkills.groups.filter((group: any) => group.main)[0];
+    const mainSkillsCount = mainSkillsGroup && mainSkillsGroup.list ? mainSkillsGroup.list.length : 0;
     const tabSkills = {
-        label: 'Habilidades',
+        label: `${mainSkillsCount} Habilidades`,
         icon: 'pi pi-github',
         title: 'Caso as habilidades estiverem desatualizadas / incorretas, volte à aba currículo e preencha o texto do currículo, para que possamos atualizar corretamente a sua lista de habilidades',
     };
@@ -120,7 +133,7 @@ const SubMenuMyResume = () => {
     return (
         <div className="card">
             {hasTabSkills ? (
-                <Tabs tabs={tabs} lastButtonLabel="Salvar dados">
+                <Tabs tabs={tabs} lastButtonLabel="Salvar dados" lastButtonIcon="pi pi-save">
                     <TabResume />
                     <TabLanguages />
                     <TabSkills2 getAccordionList={getImplicitSkills} />
@@ -128,7 +141,7 @@ const SubMenuMyResume = () => {
                     <TabSalary />
                 </Tabs>
             ) : (
-                <Tabs tabs={tabs} lastButtonLabel="Salvar dados">
+                <Tabs tabs={tabs} lastButtonLabel="Salvar dados" lastButtonIcon="pi pi-save">
                     <TabResume />
                     <TabLanguages />
                     <TabOptions />

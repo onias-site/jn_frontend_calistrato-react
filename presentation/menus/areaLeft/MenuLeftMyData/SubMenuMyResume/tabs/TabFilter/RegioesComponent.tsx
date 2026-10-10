@@ -11,12 +11,14 @@ export interface RegioesProps {
 export interface IRegioesStore {
     regioesSelecionadas: any[];
     onMoveOnFowardTabs: () => string[];
+    getPendingRequirements: () => string[];
     setRegioesSelecionadas: (regioesSelecionadas: any[]) => void;
 }
 
 export const RegioesStore = create<IRegioesStore>((set, get) => ({
     regioesSelecionadas: [],
-    onMoveOnFowardTabs: () => {
+    onMoveOnFowardTabs: () => get().getPendingRequirements(),
+    getPendingRequirements: () => {
         const { regioesSelecionadas } = get();
         if (regioesSelecionadas.length) {
             return [];

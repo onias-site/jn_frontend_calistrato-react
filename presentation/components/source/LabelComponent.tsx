@@ -4,6 +4,9 @@ import React, { useState } from 'react';
 import { Tooltip } from 'primereact/tooltip';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
+// o ícone do botão de ajuda (pi-question-circle) vem desta fonte; sem o import aqui, ele some nas páginas que não a
+// importam por conta própria (o modal de login, por exemplo, abre em qualquer página)
+import 'primeicons/primeicons.css';
 
 export interface LabelComponentProps {
     children: React.ReactNode;
@@ -34,6 +37,8 @@ export const LabelComponent: React.FC<LabelComponentProps> = ({ children, labelV
                 <Button
                     icon="pi pi-question-circle"
                     id="btnHelp"
+                    // sem isso, um campo de largura total ao lado espreme o botão até sumir
+                    className="shrink-0"
                     onClick={(e) => {
                         e && e.preventDefault && e.preventDefault()
                         setVisible(true);

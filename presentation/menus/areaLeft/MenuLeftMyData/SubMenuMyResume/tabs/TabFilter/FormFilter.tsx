@@ -46,20 +46,20 @@ export const TabOptions: React.FC<TabOptionsProps> = ({}) => {
                 labelTodasAsRegioes="Aceito trabalhar presencialmente ou de forma 'híbrida' em qualquer estado / cidade"
                 labelHomeOffice="Aceito somente vagas homeoffice"
             />
-            <div className="flex flex-row gap-8">
-                <CheckBoxComponent
-                    explanation="Caso esta opção estiver marcada, seu perfil estará à disposição de todos os recrutadores que tiverem vagas que buscam por perfis de pessoas com deficiência (PCD)."
-                    checkBoxLabel="Possuo necessidades especiais (PCD)"
-                    setValue={setPcd}
-                    value={pcd}
-                />
-                <CheckBoxComponent
-                    explanation="Caso esta opção estiver marcada, seu perfil estará à disposição de todos os recrutadores que tiverem vagas que buscam por perfis de pessoas que estão disponíveis para viagens nacionais ou internacionais."
-                    checkBoxLabel="Tenho disponibilidade para viagens nacionais ou internacionais"
-                    setValue={setTravel}
-                    value={travel}
-                />
-            </div>
+            {/* um checkbox por linha, como os de baixo (IntegerFieldComponent): todos os checkboxes ficam na mesma coluna,
+                e a coluna da direita fica só com os campos numéricos */}
+            <CheckBoxComponent
+                explanation="Caso esta opção estiver marcada, seu perfil estará à disposição de todos os recrutadores que tiverem vagas que buscam por perfis de pessoas com deficiência (PCD)."
+                checkBoxLabel="Possuo necessidades especiais (PCD)"
+                setValue={setPcd}
+                value={pcd}
+            />
+            <CheckBoxComponent
+                explanation="Caso esta opção estiver marcada, seu perfil estará à disposição de todos os recrutadores que tiverem vagas que buscam por perfis de pessoas que estão disponíveis para viagens nacionais ou internacionais."
+                checkBoxLabel="Tenho disponibilidade para viagens nacionais ou internacionais"
+                setValue={setTravel}
+                value={travel}
+            />
             <IntegerFieldComponent
                 explanation="Caso esta opção estiver marcada, seu perfil ficará limitado apenas às vagas de estágio / trainee. Caso esta opção não estiver marcada, você deverá informar no campo de texto que será mostrado, quantos anos de experiência comprovada você tem na area de atuação onde está buscando oportunidade."
                 checkBoxLabel="Estou pleiteando meu primeiro emprego nesta área"
