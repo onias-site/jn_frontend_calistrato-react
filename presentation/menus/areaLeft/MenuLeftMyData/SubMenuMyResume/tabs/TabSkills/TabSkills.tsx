@@ -5,7 +5,7 @@ import { ReactSortable } from 'react-sortablejs';
 
 import { InputText } from 'primereact/inputtext';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 
 import { ScrollPanel } from 'primereact/scrollpanel';
 
@@ -230,6 +230,10 @@ const isSkillSuggestionBlocked = (word: string, context: any, groups: any[], acc
 
     const mainGroup = groups.filter((group) => group.main)[0];
 
+    if (isSynonymOfAListedSkill(word, groups)) {
+        return true;
+    }
+
     {
         const showMessage = mainGroup.list.filter((sk: any) => sk.word.toUpperCase() == word.toUpperCase())[0];
         if (showMessage) {
@@ -318,6 +322,22 @@ const isSkillSuggestionBlocked = (word: string, context: any, groups: any[], acc
                 return true;
             }
         }
+    }
+    return false;
+};
+
+// A habilidade digitada é sinônimo de uma que já está em alguma das listas (PTL, sinônimo de PICK BY LIGHT): o sistema
+// já a reconhece pelo outro nome, e sugeri-la seria sugerir a mesma habilidade de novo. Os sinônimos vêm do skills/fromText.
+const isSynonymOfAListedSkill = (word: string, groups: any[]) => {
+    const comparableWord = toComparable(word);
+    for (const group of groups) {
+        const list = group.list || [];
+        const listedSkill = list.filter((sk: any) => (sk.synonym || []).some((synonym: string) => toComparable(synonym) === comparableWord))[0];
+        if (!listedSkill) {
+            continue;
+        }
+        warn('Habilidade já cadastrada por meio de sinônimo', `'${word}' é sinônimo de '${listedSkill.skill}', que já está na lista '${group.title}'.`);
+        return true;
     }
     return false;
 };
@@ -448,6 +468,9 @@ const AccordionList: React.FC<AccordionListProps> = ({ width }) => {
         ...state,
     }));
     const [visible, setVisible] = useState(false);
+    // mesmo filtro das outras duas listas: aparece a partir de 7 itens (ou enquanto houver texto digitado) e filtra pelo começo do nome
+    const [filter, setFilter] = useState('');
+    const filteredAccordionList = (accordionList || []).filter((item: any) => !filter || ('' + item.skill).toUpperCase().startsWith(filter.trim().toUpperCase()));
     return (
         <ScrollPanel className="w-full md:w-[var(--skills-column-width)]" style={{ ['--skills-column-width' as any]: width, padding: '10px' }}>
             {accordionList && !!accordionList.length && (
@@ -473,31 +496,39 @@ const AccordionList: React.FC<AccordionListProps> = ({ width }) => {
                                 <Button icon="pi pi-question-circle" id="btnHelp" onClick={() => setVisible(true)} />
                                 {`Conhecimentos implícitos (${accordionList.length})`}
                             </label>
+
+                            {(accordionList.length >= 7 || filter) && (
+                                <InputText
+                                    style={{ padding: '10px', width: '100%' }}
+                                    placeholder="Digite o conhecimento para filtrar da listagem abaixo"
+                                    value={filter}
+                                    onChange={(e) => setFilter(e.target.value)}
+                                />
+                            )}
                         </div>
                     </div>
                     <div className="panel mb-3" style={{ maxHeight: '400px', overflow: 'auto', boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.2)' }}>
                         <div className="gap-x-12 sm:grid-cols-2">
                             <Accordion>
-                                {accordionList &&
-                                    accordionList.map((item: any, id: any) => (
-                                        <AccordionTab
-                                            key={id}
-                                            header={
-                                                <span className="inline-flex items-center gap-2">
-                                                    <span>{`${item.skill} (${item.children.length})`}</span>
-                                                    <AddSkillsToAccordion accordionItem={item} />
-                                                    <RemoveSkillsFromAccordion accordionItem={item} />
-                                                </span>
-                                            }
-                                        >
-                                            <h1 style={{ fontSize: '7px' }}>Habilidades associadas a {item.skill}:</h1>
-                                            {item.children.map((child: any, counter: any) => (
-                                                <p className="m-0" key={child.label} style={{ fontSize: '12px' }}>
-                                                    {counter + 1 + ': ' + child.label}
-                                                </p>
-                                            ))}
-                                        </AccordionTab>
-                                    ))}
+                                {filteredAccordionList.map((item: any) => (
+                                    <AccordionTab
+                                        key={item.skill}
+                                        header={
+                                            <span className="inline-flex items-center gap-2">
+                                                <span>{`${item.skill} (${item.children.length})`}</span>
+                                                <AddSkillsToAccordion accordionItem={item} />
+                                                <RemoveSkillsFromAccordion accordionItem={item} />
+                                            </span>
+                                        }
+                                    >
+                                        <h1 style={{ fontSize: '7px' }}>Habilidades associadas a {item.skill}:</h1>
+                                        {item.children.map((child: any, counter: any) => (
+                                            <p className="m-0" key={child.label} style={{ fontSize: '12px' }}>
+                                                {counter + 1 + ': ' + child.label}
+                                            </p>
+                                        ))}
+                                    </AccordionTab>
+                                ))}
                             </Accordion>
                         </div>
                     </div>
@@ -517,7 +548,7 @@ const warn = (summary: string, detail: string) => PubSub.publish('showMessage', 
 const isValidDescription = (description: string) => {
     const length = description.trim().length;
     if (length < DESCRIPTION_MIN_LENGTH || length > DESCRIPTION_MAX_LENGTH) {
-        warn('Explicação inválida', `A explicação deve ter entre ${DESCRIPTION_MIN_LENGTH} e ${DESCRIPTION_MAX_LENGTH} caracteres.`);
+        warn('Justificativa inválida', `A justificativa deve ter entre ${DESCRIPTION_MIN_LENGTH} e ${DESCRIPTION_MAX_LENGTH} caracteres.`);
         return false;
     }
     return true;
@@ -628,6 +659,13 @@ const deleteSkillFixHierarchy = (parent: string, type: SkillFixHierarchyType, on
         showNotFound();
         onNotFound();
     };
+    // desistir de novo do mesmo conhecimento e tipo dentro de uma hora: a sugestão continua pendente (evita que o vai e
+    // vem do candidato encha o operador de avisos no Telegram e gaste a cota de e-mails)
+    callbacks[429] = () =>
+        warn(
+            'Desistência não permitida',
+            `Você já desistiu de uma sugestão de ${type === 'add' ? 'associação' : 'desassociação'} com ${parent} há pouco. Não é possível desistir dela de novo dentro de uma hora: ela continua em análise.`,
+        );
     callbacks['onUnexpectedHttpStatus'] = () => {
         PubSub.publish('showMessage', {
             summary: 'Falha ao retirar sugestão',
@@ -647,7 +685,7 @@ const SkillFixHierarchyStatusView: React.FC<SkillFixHierarchyStatusViewProps> = 
         <label className="font-semibold">{`status: ${SKILL_FIX_HIERARCHY_STATUS_LABELS[suggestion.status]}`}</label>
         {suggestion.status !== 'pending' && (
             <Accordion className="mt-2">
-                <AccordionTab header="Motivo">
+                <AccordionTab header="Justificativa do suporte">
                     <p className="m-0" style={{ whiteSpace: 'pre-line' }}>{suggestion.explanation}</p>
                 </AccordionTab>
             </Accordion>
@@ -698,6 +736,22 @@ const SkillFixHierarchyModal: React.FC<SkillFixHierarchyModalProps> = ({
     const busy = loadingRequest !== null;
 
     const stopPropagation = (e: React.SyntheticEvent) => e.stopPropagation();
+
+    // O stopPropagation acima também barra o clique que o MultiSelect escuta no window para fechar a lista ao clicar
+    // fora dela (o Dialog vai para o body por portal, mas o evento sobe pela árvore do React até este span): sem isto a
+    // lista ficava aberta por cima dos outros campos. Por isso o fechamento é feito aqui, antes de barrar o clique.
+    const skillsMultiSelect = useRef<MultiSelect>(null);
+    const closeSkillListWhenClickedOutside = (e: React.MouseEvent) => {
+        const clicked = e.target as Node;
+        const multiSelectElement = skillsMultiSelect.current?.getElement();
+        const skillList = skillsMultiSelect.current?.getOverlay();
+        const clickedInsideTheMultiSelect = !!multiSelectElement && multiSelectElement.contains(clicked);
+        const clickedInsideTheList = !!skillList && skillList.contains(clicked);
+        if (!clickedInsideTheMultiSelect && !clickedInsideTheList) {
+            skillsMultiSelect.current?.hide();
+        }
+        e.stopPropagation();
+    };
 
     const loadSuggestion = () => {
         setSelectedSkills([]);
@@ -810,7 +864,7 @@ const SkillFixHierarchyModal: React.FC<SkillFixHierarchyModalProps> = ({
     const mainButton = getMainButton();
 
     return (
-        <span onClick={stopPropagation} onKeyDown={stopPropagation}>
+        <span onClick={closeSkillListWhenClickedOutside} onKeyDown={stopPropagation}>
             <LinkModal
                 onSave={mainButton.onSave}
                 saveButtonLabel={mainButton.label}
@@ -823,6 +877,7 @@ const SkillFixHierarchyModal: React.FC<SkillFixHierarchyModalProps> = ({
                 <div className="flex w-full flex-col items-stretch">
                     <LabelComponent explanation={skillsHelp} labelValue="Habilidades" property={`skillFixHierarchySkills-${type}`} errors={{}}>
                         <MultiSelect
+                            ref={skillsMultiSelect}
                             id={`skillFixHierarchySkills-${type}`}
                             className="w-full"
                             value={selectedSkills}
@@ -929,12 +984,35 @@ const SKILL_MAX_LENGTH = 50;
 // A habilidade é gravada como as do sistema: maiúsculas e com um só espaço entre as palavras
 const normalizeSkill = (text: string) => text.trim().replace(/\s+/g, ' ').toUpperCase();
 
+// Para comparar duas grafias da mesma habilidade: além de normalizar, ignora a acentuação (PROGRAMAÇÃO = PROGRAMACAO)
+const toComparable = (text: string) =>
+    normalizeSkill(text)
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '');
+
 const isValidSkillName = (name: string, summary: string) => {
     if (name.length < SKILL_MIN_LENGTH || name.length > SKILL_MAX_LENGTH) {
         warn(summary, `'${name}' deve ter entre ${SKILL_MIN_LENGTH} e ${SKILL_MAX_LENGTH} caracteres.`);
         return false;
     }
     return true;
+};
+
+/**
+ * Um sinônimo precisa ter de 2 a 50 caracteres (depois do trim e sem contar a acentuação) e não pode ser a própria
+ * habilidade escrita de outro jeito (com outra acentuação, outras maiúsculas ou espaços repetidos).
+ */
+const isValidSynonym = (synonym: string, skill: string) => {
+    const comparableLength = toComparable(synonym).length;
+    if (comparableLength < SKILL_MIN_LENGTH || comparableLength > SKILL_MAX_LENGTH) {
+        warn('Sinônimo inválido', `'${synonym}' deve ter entre ${SKILL_MIN_LENGTH} e ${SKILL_MAX_LENGTH} caracteres.`);
+        return false;
+    }
+    if (toComparable(synonym) !== toComparable(skill)) {
+        return true;
+    }
+    warn('Sinônimo inválido', `'${synonym}' é a própria habilidade '${skill}', e não um sinônimo dela.`);
+    return false;
 };
 
 type SkillSuggestionStatus = 'pending' | 'approved' | 'rejected';
@@ -945,6 +1023,8 @@ interface SkillSuggestion {
     description: string;
     status: SkillSuggestionStatus;
     explanation?: string;
+    // o que o candidato digitou, quando a sugestão foi achada por ser um dos sinônimos dela (PTL leva a PICK BY LIGHT)
+    typedSynonym?: string;
 }
 
 const SKILL_SUGGESTION_STATUS_LABELS: Record<SkillSuggestionStatus, string> = {
@@ -967,7 +1047,12 @@ const sendSkillSuggestion = (skill: string, synonyms: string[], description: str
         });
         onSuccess();
     };
-    callbacks[409] = () => warn('Sugestão já pendente', `Você já sugeriu a habilidade '${skill}' e ela ainda está em análise.`);
+    // já pendente, ou já sugerida por meio de um sinônimo (PTL depois de sugerir PICK BY LIGHT com o sinônimo PTL): o
+    // modal carrega a sugestão que já existe
+    callbacks[409] = () => {
+        warn('Sugestão já feita', `Você já sugeriu a habilidade '${skill}', diretamente ou por meio de um sinônimo. Veja abaixo a situação dela.`);
+        onAlreadyDecided();
+    };
     // nos dois casos o modal carrega a decisão do suporte sobre a habilidade, ainda que a sugestão tenha sido de outro candidato
     callbacks[412] = () => {
         warn('Habilidade já reconhecida', `A habilidade '${skill}' já é reconhecida pelo sistema.`);
@@ -991,14 +1076,17 @@ const sendSkillSuggestion = (skill: string, synonyms: string[], description: str
 };
 
 /**
- * Busca a sugestão que o candidato já fez desta habilidade. É POST, e não GET, porque o filtro de sessão do backend
- * só valida o login quando a requisição tem corpo. Sem sugestão, o backend devolve json vazio e onFound não é chamado.
+ * Busca a sugestão que o candidato já fez desta habilidade (ou de outra, da qual esta é sinônimo). É POST, e não GET,
+ * porque o filtro de sessão do backend só valida o login quando a requisição tem corpo. Sem sugestão, o backend devolve
+ * json vazio e quem é chamado é onNotFound.
  * Digitar a habilidade não exige login (só enviar ou desistir exige): o 401 aqui equivale a "nenhuma sugestão".
+ * O 400 é a validação do backend (a mesma da tela: ao menos 2 caracteres além dos espaços).
  */
-const getSkillSuggestion = (skill: string, onFound: (suggestion: SkillSuggestion) => void, setLoading: (loading: boolean) => void) => {
+const getSkillSuggestion = (skill: string, onFound: (suggestion: SkillSuggestion) => void, onNotFound: () => void, setLoading: (loading: boolean) => void) => {
     const callbacks: any = {};
-    callbacks[401] = () => {};
-    callbacks[200] = (response: any) => response && response.status && onFound(response);
+    callbacks[401] = onNotFound;
+    callbacks[200] = (response: any) => (response && response.status ? onFound(response) : onNotFound());
+    callbacks[400] = () => warn('Habilidade inválida', `'${skill}' deve ter entre ${SKILL_MIN_LENGTH} e ${SKILL_MAX_LENGTH} caracteres.`);
     callbacks['onUnexpectedHttpStatus'] = () => warn('Falha ao carregar sugestão', 'Não conseguimos carregar a sua sugestão anterior para esta habilidade.');
     withButtonLoading(callbacks, setLoading);
     JnAjax.doAnAjaxRequest('resume/{email}/skills/suggestion/search', callbacks, 'POST', { skill }, {}, 'http://localhost:8081');
@@ -1020,6 +1108,9 @@ const deleteSkillSuggestion = (skill: string, onSuccess: () => void, onNotFound:
         showNotFound();
         onNotFound();
     };
+    // desistir de novo da mesma habilidade dentro de uma hora: a sugestão continua pendente
+    callbacks[429] = () =>
+        warn('Desistência não permitida', `Você já desistiu de uma sugestão da habilidade '${skill}' há pouco. Não é possível desistir dela de novo dentro de uma hora: ela continua em análise.`);
     callbacks['onUnexpectedHttpStatus'] = () => {
         PubSub.publish('showMessage', {
             summary: 'Falha ao retirar sugestão',
@@ -1064,14 +1155,15 @@ const EXCLUDED_SKILLS_FROM_RESUME_HELP =
 const SKILL_SUGGESTION_SKILL_HELP =
     'É a habilidade técnica (ferramenta, linguagem, framework, metodologia) que CONSTA no texto do seu currículo e que deixamos de listar entre as suas habilidades. ' +
     'Como usar: digite-a exatamente como está escrita no currículo (ex.: REACT NATIVE); o texto vira maiúsculas e os espaços repetidos são removidos. ' +
-    'Ao sair do campo, se esta habilidade já foi sugerida antes, por você ou por outro candidato, mostramos a situação dela e, se já foi avaliada, o motivo da decisão. ' +
-    'Não é possível sugerir uma habilidade que já está na sua lista ou que só aparece dentro de outra palavra do currículo.';
+    'Ao sair do campo, a habilidade é validada: precisa ter ao menos 2 caracteres, não pode estar na sua lista (nem como sinônimo de uma habilidade dela) e precisa constar no currículo. ' +
+    'Se ela já foi sugerida antes, por você ou por outro candidato, ou se é sinônimo de uma habilidade que você já sugeriu, mostramos a situação dela e, se já foi avaliada, o motivo da decisão. ' +
+    'Os sinônimos e a justificativa só ficam disponíveis depois de uma habilidade válida.';
 
 const SKILL_SUGGESTION_SYNONYMS_HELP =
     'São outras formas de escrever a mesma habilidade: siglas, abreviações e grafias alternativas (ex.: para PICK BY LIGHT, os sinônimos PICK TO LIGHT e PTL). ' +
     'Se a sugestão for aprovada, os sinônimos também passam a ser reconhecidos nos currículos. ' +
-    'Como usar: digite um sinônimo e tecle Enter para transformá-lo em etiqueta, ou digite vários separados por vírgula; para remover um, clique no x da etiqueta. ' +
-    `Cada sinônimo deve ter entre ${SKILL_MIN_LENGTH} e ${SKILL_MAX_LENGTH} caracteres. O campo é opcional.`;
+    'Como usar: digite um sinônimo e tecle Enter (ou saia do campo) para transformá-lo em etiqueta, ou digite vários separados por vírgula; para remover um, clique no x da etiqueta. ' +
+    `Cada sinônimo deve ter entre ${SKILL_MIN_LENGTH} e ${SKILL_MAX_LENGTH} caracteres e não pode ser a própria habilidade (nem escrita com outra acentuação). O campo é opcional.`;
 
 const SKILL_SUGGESTION_REASON_HELP =
     'É a sua explicação para o nosso time de suporte, que vai avaliar a sugestão. ' +
@@ -1094,6 +1186,9 @@ const SkillSuggestionModal: React.FC = () => {
     const [suggestion, setSuggestion] = useState<SkillSuggestion | null>(null);
     // habilidade da última busca, para não repetir a busca quando o campo perde o foco sem ter mudado
     const [searchedSkill, setSearchedSkill] = useState('');
+    // a habilidade passou pelas validações (da tela e do servidor) e ainda não foi sugerida: só então os sinônimos e a
+    // justificativa ficam habilitados
+    const [skillValid, setSkillValid] = useState(false);
 
     const [loadingRequest, setLoadingRequest] = useState<'load' | 'save' | 'withdraw' | null>(null);
     const setLoadingOf = (request: 'load' | 'save' | 'withdraw') => (loading: boolean) => setLoadingRequest(loading ? request : null);
@@ -1105,21 +1200,36 @@ const SkillSuggestionModal: React.FC = () => {
         setReason('');
         setSuggestion(null);
         setSearchedSkill('');
+        setSkillValid(false);
     };
+
+    // Validações que não dependem do servidor: o tamanho (depois do trim) e as da lista do currículo (já está na lista,
+    // é sinônimo de uma da lista, é pedaço de outra palavra...), as mesmas que o botão Enviar faz
+    const isSkillAllowedByTheScreen = (normalizedSkill: string) =>
+        isValidSkillName(normalizedSkill, 'Habilidade inválida') && !isSkillSuggestionBlocked(normalizedSkill, context, groups, accordionList);
 
     const loadSuggestion = (skillToSearch: string) => {
         setSuggestion(null);
+        setSkillValid(false);
         setSearchedSkill(skillToSearch);
-        if (skillToSearch.length < SKILL_MIN_LENGTH || skillToSearch.length > SKILL_MAX_LENGTH) {
-            return;
-        }
         getSkillSuggestion(
             skillToSearch,
             (found) => {
+                if (found.typedSynonym) {
+                    warn(
+                        'Habilidade já sugerida por meio de sinônimo',
+                        `'${found.typedSynonym}' é sinônimo de '${found.skill}', que já foi sugerida. Veja abaixo a situação dela.`,
+                    );
+                    setSkill(found.skill);
+                    setSearchedSkill(found.skill);
+                }
                 setSynonyms(found.synonym || []);
                 setReason(found.description || '');
                 setSuggestion(found);
             },
+            // ainda não sugerida: falta conferir se ela consta no currículo (depois da busca, para que um sinônimo de
+            // uma sugestão anterior, que pode não constar no currículo, seja reconhecido como tal)
+            () => setSkillValid(!isSkillOutOfTheResume(skillToSearch)),
             setLoadingOf('load'),
         );
     };
@@ -1130,7 +1240,35 @@ const SkillSuggestionModal: React.FC = () => {
         if (normalizedSkill === searchedSkill) {
             return;
         }
+        setSuggestion(null);
+        setSkillValid(false);
+        setSearchedSkill(normalizedSkill);
+        // campo deixado em branco: não há o que validar
+        if (!skill.length) {
+            return;
+        }
+        if (!isSkillAllowedByTheScreen(normalizedSkill)) {
+            return;
+        }
         loadSuggestion(normalizedSkill);
+    };
+
+    // Cada sinônimo novo (Enter, vírgula ou saída do campo) passa pelas regras de isValidSynonym; o que não passa é
+    // descartado com o aviso. Repetidos, mesmo com outra acentuação, viram um só.
+    const onSynonymsChange = (values: string[]) => {
+        const acceptedSynonyms: string[] = [];
+        for (const value of values || []) {
+            const synonym = normalizeSkill(value);
+            const alreadyAccepted = acceptedSynonyms.some((accepted) => toComparable(accepted) === toComparable(synonym));
+            if (!synonym || alreadyAccepted) {
+                continue;
+            }
+            if (!isValidSynonym(synonym, skill)) {
+                continue;
+            }
+            acceptedSynonyms.push(synonym);
+        }
+        setSynonyms(acceptedSynonyms);
     };
 
     const pending = !!suggestion && suggestion.status === 'pending';
@@ -1138,27 +1276,23 @@ const SkillSuggestionModal: React.FC = () => {
     const save = (close: () => void) => {
         const normalizedSkill = normalizeSkill(skill);
         setSkill(normalizedSkill);
-        if (!isValidSkillName(normalizedSkill, 'Habilidade inválida')) {
+        if (!isSkillAllowedByTheScreen(normalizedSkill)) {
             return;
         }
-        const invalidSynonym = synonyms.filter((synonym) => synonym.length < SKILL_MIN_LENGTH || synonym.length > SKILL_MAX_LENGTH)[0];
-        if (invalidSynonym && !isValidSkillName(invalidSynonym, 'Sinônimo inválido')) {
+        const invalidSynonym = synonyms.filter((synonym) => !isValidSynonym(synonym, normalizedSkill))[0];
+        if (invalidSynonym) {
             return;
         }
         if (!isValidDescription(reason)) {
-            return;
-        }
-        if (isSkillSuggestionBlocked(normalizedSkill, context, groups, accordionList)) {
             return;
         }
         // depois das checagens acima: elas explicam melhor os casos que também ficariam fora (ASP dentro de ASPECTJ)
         if (isSkillOutOfTheResume(normalizedSkill)) {
             return;
         }
-        const otherSynonyms = synonyms.filter((synonym) => synonym !== normalizedSkill);
         sendSkillSuggestion(
             normalizedSkill,
-            otherSynonyms,
+            synonyms,
             reason,
             () => {
                 startNewSuggestion();
@@ -1211,13 +1345,15 @@ const SkillSuggestionModal: React.FC = () => {
     // Com sugestão carregada (pendente ou avaliada) o modal é só leitura: pendente se altera desistindo e enviando de novo,
     // e avaliada não se reenvia (a rejeição é definitiva; aprovada já é reconhecida). "Nova sugestão" limpa para outra habilidade.
     const hasSuggestion = !!suggestion;
+    // sinônimos e justificativa só depois de uma habilidade válida e ainda não sugerida
+    const otherFieldsDisabled = hasSuggestion || !skillValid;
 
     return (
         <LinkModal
             onSave={hasSuggestion ? startNewSuggestion : save}
             saveButtonLabel={hasSuggestion ? 'Nova sugestão' : 'Enviar'}
             saveLoading={loadingRequest === 'load' || loadingRequest === 'save'}
-            saveDisabled={busy}
+            saveDisabled={busy || (!hasSuggestion && !skillValid)}
             extraActions={withdrawButton}
             onOpen={startNewSuggestion}
             fieldsHaveOwnHelp
@@ -1234,7 +1370,10 @@ const SkillSuggestionModal: React.FC = () => {
                         value={skill}
                         disabled={hasSuggestion}
                         maxLength={SKILL_MAX_LENGTH}
-                        onChange={(e) => setSkill(e.target.value.toUpperCase())}
+                        onChange={(e) => {
+                            setSkill(e.target.value.toUpperCase());
+                            setSkillValid(false);
+                        }}
                         onBlur={onSkillBlur}
                     />
                 </LabelComponent>
@@ -1245,8 +1384,10 @@ const SkillSuggestionModal: React.FC = () => {
                         // a raiz do Chips é inline-flex e a lista de frases não ocupa a largura do modal sem isso
                         pt={{ container: { className: 'w-full' } }}
                         value={synonyms}
-                        disabled={hasSuggestion}
-                        onChange={(e) => setSynonyms(Array.from(new Set((e.value || []).map(normalizeSkill).filter((synonym: string) => !!synonym))))}
+                        disabled={otherFieldsDisabled}
+                        onChange={(e) => onSynonymsChange(e.value || [])}
+                        // sair do campo com um sinônimo digitado vale como teclar Enter
+                        addOnBlur
                         separator=","
                         placeholder="Sinônimos: digite cada um e tecle Enter (ou separe por vírgula)"
                     />
@@ -1257,7 +1398,7 @@ const SkillSuggestionModal: React.FC = () => {
                         className="w-full"
                         placeholder="Explique por que esta habilidade deveria ser reconhecida (ex.: em que parte do currículo ela aparece)"
                         value={reason}
-                        disabled={hasSuggestion}
+                        disabled={otherFieldsDisabled}
                         onChange={(e) => setReason(e.target.value)}
                         rows={6}
                     />
