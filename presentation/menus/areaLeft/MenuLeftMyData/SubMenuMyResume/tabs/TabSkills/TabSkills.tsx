@@ -32,6 +32,7 @@ export interface ITabSkillStore {
     getWordsFromGroup: (name: string) => string[];
     setContext: (context: any) => void;
     loadSkillsContext: () => any;
+    getPendingRequirements: () => string[];
     groups: SkillListModel[];
     accordionList: any[];
     context: any;
@@ -48,6 +49,13 @@ export const TabSkillStore = create<ITabSkillStore>((set, get) => ({
         const { context, groups, accordionList } = get();
         const skillsContext = getSkillsContext(context, groups, accordionList);
         return skillsContext;
+    },
+
+    // sem efeitos colaterais: é chamado a cada renderização para habilitar ou não o botão de avançar
+    getPendingRequirements: () => {
+        const skillsContext = get().loadSkillsContext();
+        const errors = getResumeSkillsErrors(skillsContext);
+        return errors;
     },
 
     setGroups: (groups: SkillListModel[], getAccordionList: (group: any) => any[]) => {
@@ -153,6 +161,42 @@ interface SkillListProps {
     list: any[];
 }
 
+// cada item segue o esquema de VisJsonFieldsSkills no backend: só os campos dele (o índice do currículo é estrito),
+// skill, word, type e category obrigatórios, associated opcional de 2 a 50 caracteres e parent opcional
+const toResumeSkill = (item: any, type: string, category: string) => {
+    const word = item.word || item.skill;
+    const resumeSkill: any = { skill: item.skill, word, type, category };
+    const parent = item.parent || [];
+    parent.length && (resumeSkill.parent = parent);
+    const associated = item.associated || '';
+    associated.length >= 2 && associated.length <= 50 && (resumeSkill.associated = associated);
+    return resumeSkill;
+};
+
+// mesmas regras de VisJsonFieldsSkills no backend; skill e word ainda exigem dois caracteres que não sejam espaço
+const twoNonBlankCharacters = /\S.*\S/s;
+const isInvalidText = (text: any, minLength: number, maxLength: number) => typeof text != 'string' || text.length < minLength || text.length > maxLength;
+const isInvalidSkillText = (text: any) => isInvalidText(text, 2, 50) || !twoNonBlankCharacters.test(text);
+
+const getResumeSkillErrors = (resumeSkill: any): string[] => {
+    const errors: string[] = [];
+    const name = resumeSkill.skill || resumeSkill.word || '(sem nome)';
+    isInvalidSkillText(resumeSkill.skill) && errors.push(`A habilidade ${name} deve ter um nome de 2 a 50 caracteres`);
+    isInvalidSkillText(resumeSkill.word) && errors.push(`A palavra da habilidade ${name} deve ter de 2 a 50 caracteres`);
+    isInvalidText(resumeSkill.type, 2, 20) && errors.push(`O tipo da habilidade ${name} deve ter de 2 a 20 caracteres`);
+    isInvalidText(resumeSkill.category, 2, 20) && errors.push(`A categoria da habilidade ${name} deve ter de 2 a 20 caracteres`);
+    resumeSkill.associated !== undefined && isInvalidText(resumeSkill.associated, 2, 50) && errors.push(`O termo associado à habilidade ${name} deve ter de 2 a 50 caracteres`);
+    const parents = resumeSkill.parent || [];
+    parents.some((parent: any) => isInvalidSkillText(parent)) && errors.push(`As habilidades pai de ${name} devem ter de 2 a 50 caracteres`);
+    return errors;
+};
+
+const getResumeSkillsErrors =(resumeSkills: any[]): string[] => {
+    const errors = resumeSkills.flatMap((resumeSkill: any) => getResumeSkillErrors(resumeSkill));
+    const uniqueErrors = [...new Set(errors)];
+    return uniqueErrors;
+};
+
 const getSkillsContext = (context: any, groups: any[], accordionList: any[]) => {
     const skillsContext: any[] = [];
 
@@ -163,7 +207,7 @@ const getSkillsContext = (context: any, groups: any[], accordionList: any[]) => 
         const category = 'discardedSkills';
         for (let index in array) {
             const sk = array[index];
-            const skill = { ...sk, type, category };
+            const skill = toResumeSkill(sk, type, category);
             skillsContext.push(skill);
         }
     }
@@ -172,21 +216,21 @@ const getSkillsContext = (context: any, groups: any[], accordionList: any[]) => 
         const group = groups[groupIndex] || {};
         const array = group.list || [];
         const type = group.name;
-        const category = type;
+        const category = group.category;
         for (let index in array) {
             const sk = array[index];
-            const skill = { ...sk, type, category };
+            const skill = toResumeSkill(sk, type, category);
             skillsContext.push(skill);
         }
     }
 
+    // habilidades implícitas (pais das habilidades do currículo): a própria habilidade faz as vezes de palavra
     for (let index in accordionList) {
-        const skill = accordionList[index];
-        if (!skill) {
+        const sk = accordionList[index];
+        if (!sk) {
             continue;
         }
-        skill.category = 'parent';
-        skill.type = 'parent';
+        const skill = toResumeSkill(sk, 'parent', 'parent');
         skillsContext.push(skill);
     }
 

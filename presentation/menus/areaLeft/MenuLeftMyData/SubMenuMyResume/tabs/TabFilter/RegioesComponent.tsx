@@ -18,12 +18,18 @@ export interface IRegioesStore {
 export const RegioesStore = create<IRegioesStore>((set, get) => ({
     regioesSelecionadas: [],
     onMoveOnFowardTabs: () => get().getPendingRequirements(),
+    // mesma regra de ddd em VisEntityResume.Fields no backend: de 1 a 67 regiões; "qualquer estado / cidade" (0) não conta,
+    // porque é só uma opção da tela que marca todas as outras
     getPendingRequirements: () => {
         const { regioesSelecionadas } = get();
-        if (regioesSelecionadas.length) {
-            return [];
+        const regioes = regioesSelecionadas.filter((regiao: any) => regiao != '0');
+        if (!regioes.length) {
+            return ['Deve-se selecionar ao menos uma das regiões metropolitanas'];
         }
-        return ['Deve-se selecionar ao menos uma das regiões metropolitanas'];
+        if (regioes.length > 67) {
+            return ['Deve-se selecionar no máximo 67 regiões metropolitanas'];
+        }
+        return [];
     },
     setRegioesSelecionadas: (regioesSelecionadas: any[]) => set({ regioesSelecionadas }),
 }));

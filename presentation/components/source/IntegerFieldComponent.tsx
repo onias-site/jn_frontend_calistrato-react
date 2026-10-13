@@ -12,13 +12,15 @@ export interface IntegerFieldProps {
     textFieldLabel: string;
     checkBoxLabel: string;
     defaultValue: number;
+    // menor valor aceito; sem ele, o próprio valor padrão é o mínimo
+    minValue?: number;
     maxValue: number;
     value: any;
     explanation: string;
 }
-export const IntegerFieldComponent: React.FC<IntegerFieldProps> = ({ explanation, setValue, defaultValue, textFieldLabel, checkBoxLabel, value, maxValue }) => {
+export const IntegerFieldComponent: React.FC<IntegerFieldProps> = ({ explanation, setValue, defaultValue, minValue, textFieldLabel, checkBoxLabel, value, maxValue }) => {
     const isInvalid = () => {
-        if (value < defaultValue) {
+        if (value < (minValue ?? defaultValue)) {
             return true;
         }
 

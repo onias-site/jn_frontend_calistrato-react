@@ -67,12 +67,21 @@ export const TabResumeStore = create<ITabResumeStore>((set, get) => ({
     },
 }));
 
+// mesmas regras de VisEntityResume.Fields no backend
+const linkedinAddressRegex = /^https:\/\/(www\.)?linkedin\.com\/in\/[a-zA-Z0-9-_%]+\/?$/;
+const isOutOfLength = (text: string, minLength: number, maxLength: number) => text.length < minLength || text.length > maxLength;
+
 // sem efeitos colaterais: serve tanto para destacar os campos ao avançar quanto para desabilitar o botão de avançar
-const validateResume = ({ resumeType, desiredJob, linkedinAddress, resumeText }: ITabResumeStore) => {
+const validateResume = ({ resumeType, desiredJob, lastJob, linkedinAddress, notAllowedCompany, resumeText }: ITabResumeStore) => {
     const errors: string[] = [];
-    const fieldErrors = {};
+    const fieldErrors: any = {};
     !desiredJob && (fieldErrors['desiredJob'] = true) && errors.push('Deve-se informar a função desejada');
+    desiredJob && isOutOfLength(desiredJob, 2, 50) && (fieldErrors['desiredJob'] = true) && errors.push('A função desejada deve ter de 2 a 50 caracteres');
+    lastJob && isOutOfLength(lastJob, 2, 50) && (fieldErrors['lastJob'] = true) && errors.push('A última função deve ter de 2 a 50 caracteres');
     !linkedinAddress && (fieldErrors['linkedinAddress'] = true) && errors.push('Deve-se informar a endereço (URL do linkedin)');
+    linkedinAddress && !linkedinAddressRegex.test(linkedinAddress) && (fieldErrors['linkedinAddress'] = true) && errors.push('O endereço do linkedin deve ter o formato https://www.linkedin.com/in/seu-perfil');
+    const companiesOutOfLength = notAllowedCompany.filter((company: string) => isOutOfLength(company, 2, 20));
+    companiesOutOfLength.length && (fieldErrors['notAllowedCompany'] = true) && errors.push('Cada empresa / consultoria deve ter de 2 a 20 caracteres');
     (!resumeType || !resumeType.id) && (fieldErrors['resumeType'] = true) && errors.push('Por favor escolha o tipo do currículo');
     resumeType && resumeType.id == 1 && !resumeText && (fieldErrors['resumeText'] = true) && errors.push('Deve-se informar a texto contido no currículo');
     return { errors, fieldErrors };
@@ -114,7 +123,7 @@ export const TabResume: React.FC<TabResumeProps> = ({}) => {
                 <InputText invalid={fieldErrors.lastJob} style={{ width: '75%' }} id="lastJob" value={lastJob} onChange={(e) => setLastJob(e.target.value)} />
             </LabelComponent>
             <LabelComponent
-                explanation="Para nos resguardar da LGPD (Lei Geral de Proteção de Dados), não guardamos o seu currículo e nem nada sobre ele (como texto, por exemplo) em nossa base de dados, sendo assim, você precisa, preferencialmente, informar seu endereço do linkedin ou de algum site que sirva como seu currículo, neste site, tem de haver um meio para te contactar (e-mail, telefone, etc). Na falta de linkedin ou de site que sirva para currículo, você deve informar neste campo, um modo para te contactar (telefone, e-mail, etc), mas, para a sua própria segurança, aconselhamos, que este campo seja usado para guardar seu endereço do linkedin."
+                explanation="Para nos resguardar da LGPD (Lei Geral de Proteção de Dados), não guardamos o seu currículo e nem nada sobre ele (como texto, por exemplo) em nossa base de dados, sendo assim, você precisa informar o endereço do seu perfil no linkedin (no formato https://www.linkedin.com/in/seu-perfil). É por ele que o recrutador vai te contactar, então mantenha no seu linkedin um meio de contato (e-mail, telefone, etc). Somente endereços do linkedin são aceitos neste campo."
                 labelValue="Endereço (URL) para encontrar o meu linkedin:"
                 property="linkedinAddress"
                 errors={fieldErrors}

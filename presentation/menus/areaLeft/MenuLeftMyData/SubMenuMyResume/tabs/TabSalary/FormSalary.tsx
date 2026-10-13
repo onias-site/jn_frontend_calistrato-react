@@ -32,19 +32,25 @@ export const TabSalaryStore = create<ITabSalaryStore>((set, get) => ({
     setNegotiableClaim: (negotiableClaim: boolean) => set({ negotiableClaim }),
     onMoveOnFowardTabs: () => get().getPendingRequirements(),
     getPendingRequirements: () => {
-        const { clt, pj } = get();
+        const { clt, pj, btc } = get();
+        const errors: string[] = [];
 
-        if (clt) {
-            return [];
-        }
+        !Number(clt) && !Number(pj) && errors.push('Deve se escolher ao menos uma das pretensões (PJ ou CLT)');
+        isOutOfSalaryRange(clt) && errors.push(`A pretensão CLT deve estar entre ${minSalary} e ${maxSalary} reais`);
+        isOutOfSalaryRange(pj) && errors.push(`A pretensão PJ deve estar entre ${minSalary} e ${maxSalary} reais`);
+        isOutOfSalaryRange(btc) && errors.push(`A pretensão em bitcoin deve estar entre ${minSalary} e ${maxSalary} reais`);
 
-        if (pj) {
-            return [];
-        }
-
-        return ['Deve se escolher ao menos uma das pretensões (PJ ou CLT)'];
+        return errors;
     },
 }));
+
+// mesmas regras de btc, clt e pj em JnJsonCommonsFields no backend; 0 quer dizer "não aceito" e não é enviado
+const minSalary = 1000;
+const maxSalary = 100000;
+const isOutOfSalaryRange = (value: any) => {
+    const salary = Number(value);
+    return salary != 0 && (salary < minSalary || salary > maxSalary);
+};
 
 export const TabSalary: React.FC<TabSalaryProps> = ({}) => {
     const { negotiableClaim, pj, clt, btc, setPj, setClt, setBtc, setNegotiableClaim } = TabSalaryStore((state: ITabSalaryStore) => ({ ...state }));
@@ -55,7 +61,8 @@ export const TabSalary: React.FC<TabSalaryProps> = ({}) => {
                 textFieldLabel="Minha pretensão salarial mensal CLT (número inteiro em reais)"
                 checkBoxLabel="Não aceito empregos CLT"
                 defaultValue={1500}
-                maxValue={100000}
+                minValue={minSalary}
+                maxValue={maxSalary}
                 setValue={setClt}
                 value={clt}
             />
@@ -64,7 +71,8 @@ export const TabSalary: React.FC<TabSalaryProps> = ({}) => {
                 textFieldLabel="Minha pretensão salarial mensal PJ (número inteiro em reais)"
                 checkBoxLabel="Não aceito empregos PJ"
                 defaultValue={2500}
-                maxValue={100000}
+                minValue={minSalary}
+                maxValue={maxSalary}
                 setValue={setPj}
                 value={pj}
             />
@@ -74,7 +82,8 @@ export const TabSalary: React.FC<TabSalaryProps> = ({}) => {
                 checkBoxLabel="Não aceito eventuais freelancers em bitcoin"
                 defaultValue={1000}
                 setValue={setBtc}
-                maxValue={100000}
+                minValue={minSalary}
+                maxValue={maxSalary}
                 value={btc}
             />
             <CheckBoxComponent

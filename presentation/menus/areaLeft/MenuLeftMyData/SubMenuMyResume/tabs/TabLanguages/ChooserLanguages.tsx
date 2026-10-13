@@ -38,17 +38,19 @@ export const TabLanguagesStore = create<ITabLanguagesStore>((set, get) => ({
     },
     onMoveOnFowardTabs: () => get().getPendingRequirements(),
     getPendingRequirements: () => {
-        const { speakOtherLanguages, selectedLanguages } = get();
+        const { speakOtherLanguages, selectedLanguages, getSelectedLanguages } = get();
 
 
         if (!speakOtherLanguages) {
             return [];
         }
 
-        if (selectedLanguages.length) {
-            return [];
+        if (!selectedLanguages.length) {
+            return ['Favor informar ao menos um idioma'];
         }
-        return ['Favor informar ao menos um idioma'];
+        // mesmas regras de spokenLanguage (Language) no backend: nome de 3 a 20 caracteres e nível 1 ou 2
+        const invalidLanguages = getSelectedLanguages().filter((language: any) => language.name.length < 3 || language.name.length > 20 || ![1, 2].includes(language.level));
+        return invalidLanguages.map((language: any) => `Favor escolher o nível do idioma ${language.name}`);
     },
 }));
 

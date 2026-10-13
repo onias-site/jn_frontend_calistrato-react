@@ -20,14 +20,35 @@ export interface ITabOptionsStore {
     setExperience: (experience: number) => void;
     setTravel: (travel: boolean) => void;
     setPcd: (pcd: boolean) => void;
+    onMoveOnFowardTabs: () => string[];
+    getPendingRequirements: () => string[];
 }
 
-export const TabOptionsStore = create<ITabOptionsStore>((set) => ({
+// mesmas regras de VisEntityResume.Fields no backend: inteiros sem sinal, com o 0 marcado pelo checkbox
+const maxExperience = 70;
+const maxDisponibility = 30;
+const maxTemporallyJobTime = 12;
+const isOutOfRange = (value: any, maxValue: number) => {
+    const number = Number(value);
+    return !Number.isInteger(number) || number < 0 || number > maxValue;
+};
+
+export const TabOptionsStore = create<ITabOptionsStore>((set, get) => ({
     temporallyJobTime: 0,
     disponibility: 0,
     experience: 0,
     travel: false,
     pcd: false,
+    onMoveOnFowardTabs: () => get().getPendingRequirements(),
+    // sem efeitos colaterais: é chamado a cada renderização para habilitar ou não o botão de avançar
+    getPendingRequirements: () => {
+        const { experience, disponibility, temporallyJobTime } = get();
+        const errors: string[] = [];
+        isOutOfRange(experience, maxExperience) && errors.push(`Os anos de experiência devem estar entre 1 e ${maxExperience}`);
+        isOutOfRange(disponibility, maxDisponibility) && errors.push(`Os dias para engajar em um novo emprego devem estar entre 1 e ${maxDisponibility}`);
+        isOutOfRange(temporallyJobTime, maxTemporallyJobTime) && errors.push(`A duração mínima do emprego temporário deve estar entre 1 e ${maxTemporallyJobTime} meses`);
+        return errors;
+    },
     setPcd: (pcd: any) => set({ pcd }),
     setTravel: (travel: any) => set({ travel }),
     setExperience: (experience: number) => set({ experience }),
@@ -67,7 +88,7 @@ export const TabOptions: React.FC<TabOptionsProps> = ({}) => {
                 setValue={setExperience}
                 value={experience}
                 defaultValue={1}
-                maxValue={70}
+                maxValue={maxExperience}
             />
             <IntegerFieldComponent
                 explanation="Caso esta opção estiver marcada, seu perfil estará à disposição de todas as vagas onde o recrutador tem urgência em contratar. Caso esta opção não estiver marcada, você deverá informar no campo de texto que será mostrado, de quantos dias você precisará para sair do seu emprego atual para a nova oportunidade, caso o seu perfil  for aprovado para alguma oportunidade."
@@ -76,7 +97,8 @@ export const TabOptions: React.FC<TabOptionsProps> = ({}) => {
                 setValue={setDisponibility}
                 value={disponibility}
                 defaultValue={7}
-                maxValue={30}
+                minValue={1}
+                maxValue={maxDisponibility}
             />
             <IntegerFieldComponent
                 explanation="Caso esta opção estiver marcada, seu perfil ficará limitado apenas às vagas de prazo indeterminado (Contratos ou intenções de empregabilidade superiores a 12 meses). Caso esta opção não estiver marcada, você deverá informar no campo de texto que será mostrado, de quantos meses no mínimo, uma oportunidade de emprego te é interessante."
@@ -85,7 +107,7 @@ export const TabOptions: React.FC<TabOptionsProps> = ({}) => {
                 setValue={setTemporallyJobTime}
                 value={temporallyJobTime}
                 defaultValue={1}
-                maxValue={12}
+                maxValue={maxTemporallyJobTime}
             />
         </div>
     );
