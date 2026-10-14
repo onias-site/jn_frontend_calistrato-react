@@ -19,6 +19,7 @@ export interface ITabSalaryStore {
     onMoveOnFowardTabs: () => string[];
     getPendingRequirements: () => string[];
     setNegotiableClaim: (negotiableClaim: boolean) => void;
+    loadFromSavedResume: (resume: any) => void;
 }
 
 export const TabSalaryStore = create<ITabSalaryStore>((set, get) => ({
@@ -30,6 +31,8 @@ export const TabSalaryStore = create<ITabSalaryStore>((set, get) => ({
     setClt: (clt: number) => set({ clt }),
     setBtc: (btc: number) => set({ btc }),
     setNegotiableClaim: (negotiableClaim: boolean) => set({ negotiableClaim }),
+    // a pretensão que não foi gravada é a que o candidato não aceita (0)
+    loadFromSavedResume: (resume: any) => set({ pj: resume.pj || 0, clt: resume.clt || 0, btc: resume.btc || 0, negotiableClaim: !!resume.negotiableClaim }),
     onMoveOnFowardTabs: () => get().getPendingRequirements(),
     getPendingRequirements: () => {
         const { clt, pj, btc } = get();

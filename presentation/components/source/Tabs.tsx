@@ -22,9 +22,11 @@ export interface TabsProps {
     firstButtonIcon?: string;
     children: React.ReactNode;
     firstButtonClick: () => void;
+    // botões mostrados ao lado do último botão (o de concluir), só na última aba
+    lastButtonSiblings?: React.ReactNode;
 }
 
-export const Tabs: React.FC<TabsProps> = ({ firstButtonClick, tabs, children, lastButtonLabel, lastButtonIcon = 'pi pi-check', firstButtonLabel, firstButtonIcon = 'pi pi-arrow-left' }) => {
+export const Tabs: React.FC<TabsProps> = ({ firstButtonClick, tabs, children, lastButtonLabel, lastButtonIcon = 'pi pi-check', firstButtonLabel, firstButtonIcon = 'pi pi-arrow-left', lastButtonSiblings }) => {
     const toast = useRef(null);
     const [activeIndex, setActiveIndex] = useState(0);
     const previousLabel = activeIndex > 0 ? tabs[activeIndex - 1].label : firstButtonLabel;
@@ -50,6 +52,7 @@ export const Tabs: React.FC<TabsProps> = ({ firstButtonClick, tabs, children, la
     };
 
     const tab = tabs[activeIndex];
+    const isLastTab = !tabs[activeIndex + 1];
     const pendingRequirements = (tab.getPendingRequirements && tab.getPendingRequirements()) || [];
     const canMoveForward = !pendingRequirements.length;
 
@@ -94,6 +97,7 @@ export const Tabs: React.FC<TabsProps> = ({ firstButtonClick, tabs, children, la
                                   </div>
                               ))}
                     </div>
+                    {isLastTab && lastButtonSiblings && <div className="flex shrink-0 gap-3">{lastButtonSiblings}</div>}
                     {nextLabel && (
                         <span style={canMoveForward ? {} : { cursor: 'not-allowed' }} className="shrink-0">
                             <button

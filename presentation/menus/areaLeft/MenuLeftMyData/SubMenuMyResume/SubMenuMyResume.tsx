@@ -1,5 +1,6 @@
 'use client';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { ConfirmDialog } from 'primereact/confirmdialog';
 import 'primereact/resources/themes/lara-light-cyan/theme.css';
 
 import 'primeicons/primeicons.css';
@@ -18,15 +19,201 @@ import { create } from 'zustand';
 import PubSub from 'pubsub-js';
 import { sha1 } from 'js-sha1';
 
+// situação do currículo no backend: ativo em vis_resume, inativo na gêmea vis_inactive_resume, ou nenhum dos dois.
+// 'unknown' enquanto não se sabe (ainda carregando, ou sem login: aí a tela não mostra nada)
+export type ResumeStatus = 'unknown' | 'none' | 'active' | 'inactive';
+
 export interface ISubMenuMyResumeStore {
     hasTabSkills: boolean;
     setHasTabSkills: (hasTabSkills: boolean) => void;
+    resumeStatus: ResumeStatus;
+    setResumeStatus: (resumeStatus: ResumeStatus) => void;
 }
 
 export const SubMenuMyResumeStore = create<ISubMenuMyResumeStore>((set) => ({
     setHasTabSkills: (hasTabSkills: boolean) => set({ hasTabSkills }),
     hasTabSkills: false,
+    setResumeStatus: (resumeStatus: ResumeStatus) => set({ resumeStatus }),
+    resumeStatus: 'unknown',
 }));
+
+const resumeStatusLabels: Record<Exclude<ResumeStatus, 'unknown'>, { text: string; className: string }> = {
+    none: { text: 'Você ainda não tem currículo salvo', className: 'resume-status resume-status-none' },
+    active: { text: 'Currículo ativo: visível para os recrutadores', className: 'resume-status resume-status-active' },
+    inactive: { text: 'Currículo inativo: oculto dos recrutadores', className: 'resume-status resume-status-inactive' },
+};
+
+const isFilled = (record: any) => !!record && Object.keys(record).length > 0;
+
+/**
+ * Busca a situação do currículo ao entrar na tela (GetData: o registro vem debaixo do nome da entidade onde está).
+ * Entrar na tela não exige login (só salvar exige): sem login, ou com a sessão expirada, o 401 não abre o modal de
+ * login, apenas deixa a situação desconhecida, como na busca da sugestão de habilidade.
+ */
+const loadResumeStatus = (setResumeStatus: (resumeStatus: ResumeStatus) => void, onResumeFound: (resume: any) => void = () => {}) => {
+    const callbacks: any = {};
+    callbacks[401] = () => {
+        // sem login o JnAjax chama o 401 antes de enviar, e não desliga o carregamento que já ligou
+        JnAjax.setNotLoading()();
+        setResumeStatus('unknown');
+    };
+    callbacks[200] = (response: any) => {
+        const data = response || {};
+        if (isFilled(data.vis_resume)) {
+            setResumeStatus('active');
+            onResumeFound(data.vis_resume);
+            return;
+        }
+        if (isFilled(data.vis_inactive_resume)) {
+            setResumeStatus('inactive');
+            onResumeFound(data.vis_inactive_resume);
+            return;
+        }
+        setResumeStatus('none');
+    };
+    callbacks[404] = () => setResumeStatus('none');
+    callbacks['onUnexpectedHttpStatus'] = () => setResumeStatus('unknown');
+    // GET sem corpo: com {} o jQuery poria "?{}" na URL
+    JnAjax.doAnAjaxRequest('resume/{email}', callbacks, 'GET', null as any, {}, 'http://localhost:8081');
+};
+
+// o rótulo que o backend dá a cada habilidade em skills/fromText (VisServiceSkills.putLabel): a própria habilidade, ou
+// "palavra (habilidade)" quando foi encontrada por outra palavra
+const toSkillListItem = (savedSkill: any) => {
+    const foundByAnotherWord = savedSkill.word && savedSkill.word != savedSkill.skill;
+    const label = foundByAnotherWord ? `${savedSkill.word} (${savedSkill.skill})` : savedSkill.skill;
+    return { ...savedSkill, label };
+};
+
+/**
+ * Remonta a aba Habilidades com as habilidades gravadas, no mesmo formato da resposta de skills/fromText: cada uma volta
+ * ao grupo do seu type; as descartadas voltam ao contexto, separadas pelo motivo (o type delas); as implícitas (type
+ * parent) não voltam, porque a aba as recalcula a partir da lista principal.
+ */
+const loadSavedSkills = (savedSkills: any[]) => {
+    const skill = savedSkills.filter((savedSkill: any) => savedSkill.type == 'skillsFromResume').map(toSkillListItem);
+    const excludedSkill = savedSkills.filter((savedSkill: any) => savedSkill.type == 'excludedSkills').map(toSkillListItem);
+    const discardedSkills: any = {};
+    savedSkills
+        .filter((savedSkill: any) => savedSkill.category == 'discardedSkills')
+        .forEach((savedSkill: any) => {
+            discardedSkills[savedSkill.type] = [...(discardedSkills[savedSkill.type] || []), savedSkill];
+        });
+    const savedSkillsResponse = { skill, excludedSkill, discardedSkills };
+    const requestSkillsToBackEnd = { excludedSkill: excludedSkill.map((item: any) => item.word), text: '' };
+    putSkillsInStore(savedSkillsResponse, TabSkillStore.getState(), requestSkillsToBackEnd, SubMenuMyResumeStore.getState());
+};
+
+/** Preenche as abas com o currículo gravado (o ativo ou o inativo), cada store convertendo os campos que o backend transforma. */
+const loadSavedResume = (resume: any) => {
+    TabResumeStore.getState().loadFromSavedResume(resume);
+    TabLanguagesStore.getState().loadFromSavedResume(resume);
+    TabOptionsStore.getState().loadFromSavedResume(resume);
+    RegioesStore.getState().loadFromSavedResume(resume);
+    TabSalaryStore.getState().loadFromSavedResume(resume);
+    const isTechResume = resume.resumeType == 1;
+    isTechResume && loadSavedSkills(resume.skill || []);
+};
+
+/**
+ * Reativa ou inativa o currículo (ChangeStatus: o ativo vai para a gêmea, o inativo volta para a principal).
+ * É ação do usuário: aqui o 401 abre o modal de login e, depois dele, a ação é refeita.
+ */
+const changeResumeStatus = (newStatus: ResumeStatus, setResumeStatus: (resumeStatus: ResumeStatus) => void) => {
+    const callbacks: any = {};
+    callbacks['retryAfterAuthentication'] = () => changeResumeStatus(newStatus, setResumeStatus);
+    callbacks[200] = () => {
+        setResumeStatus(newStatus);
+        const summary = newStatus === 'active' ? 'Currículo reativado' : 'Currículo inativado';
+        PubSub.publish('showMessage', { summary, detail: summary });
+    };
+    // o currículo mudou em outro lugar: a tela mostra a situação atual
+    callbacks[404] = () => loadResumeStatus(setResumeStatus);
+    JnAjax.doAnAjaxRequest('resume/{email}/language/portuguese/status', callbacks, 'DELETE', {}, {}, 'http://localhost:8081');
+};
+
+/**
+ * Apaga de vez o currículo, esteja onde estiver (Delete: deleteAnyWhere da entidade). Como no reativar, o 401 abre o
+ * modal de login e a ação é refeita depois dele.
+ */
+const deleteResume = (setResumeStatus: (resumeStatus: ResumeStatus) => void) => {
+    const callbacks: any = {};
+    callbacks['retryAfterAuthentication'] = () => deleteResume(setResumeStatus);
+    callbacks[200] = () => {
+        setResumeStatus('none');
+        PubSub.publish('showMessage', { summary: 'Currículo excluído', detail: 'Currículo excluído' });
+    };
+    JnAjax.doAnAjaxRequest('resume/{email}/language/portuguese', callbacks, 'DELETE', {}, {}, 'http://localhost:8081');
+};
+
+/**
+ * Os botões ao lado do salvar, conforme a entidade onde estão os dados: na principal (ativo) inativar e excluir; na
+ * gêmea (inativo) reativar e excluir; em nenhuma das duas, ou sem login, nenhum. Os três pedem confirmação.
+ */
+const ResumeStatusButtons = ({ resumeStatus, setResumeStatus }: { resumeStatus: ResumeStatus; setResumeStatus: (resumeStatus: ResumeStatus) => void }) => {
+    const [confirmingDelete, setConfirmingDelete] = useState(false);
+    const [confirmingInactivate, setConfirmingInactivate] = useState(false);
+    const [confirmingReactivate, setConfirmingReactivate] = useState(false);
+
+    const hasResume = resumeStatus === 'active' || resumeStatus === 'inactive';
+
+    if (!hasResume) {
+        return null;
+    }
+
+    const statusButton =
+        resumeStatus === 'active' ? (
+            <button onClick={() => setConfirmingInactivate(true)} type="button" className="btn btn-warning whitespace-nowrap">
+                <i className="pi pi-eye-slash" style={{ marginRight: '8px' }} />
+                Inativar
+            </button>
+        ) : (
+            <button onClick={() => setConfirmingReactivate(true)} type="button" className="btn btn-success whitespace-nowrap">
+                <i className="pi pi-replay" style={{ marginRight: '8px' }} />
+                Reativar
+            </button>
+        );
+
+    return (
+        <>
+            <ConfirmDialog
+                visible={confirmingInactivate}
+                onHide={() => setConfirmingInactivate(false)}
+                header="Inativar currículo"
+                message="Seu currículo deixará de aparecer para os recrutadores até que você o reative. Deseja continuar?"
+                icon="pi pi-exclamation-triangle"
+                acceptLabel="Sim, inativar"
+                rejectLabel="Não"
+                accept={() => changeResumeStatus('inactive', setResumeStatus)}
+            />
+            <ConfirmDialog
+                visible={confirmingReactivate}
+                onHide={() => setConfirmingReactivate(false)}
+                header="Reativar currículo"
+                message="Seu currículo voltará a aparecer para os recrutadores. Deseja continuar?"
+                icon="pi pi-question-circle"
+                acceptLabel="Sim, reativar"
+                rejectLabel="Não"
+                accept={() => changeResumeStatus('active', setResumeStatus)}
+            />
+            <ConfirmDialog
+                visible={confirmingDelete}
+                onHide={() => setConfirmingDelete(false)}
+                header="Excluir currículo"
+                message="Todos os dados do seu currículo serão apagados de vez, sem como recuperar. Deseja continuar?"
+                icon="pi pi-exclamation-triangle"
+                acceptLabel="Sim, excluir"
+                rejectLabel="Não"
+                accept={() => deleteResume(setResumeStatus)}
+            />
+            {statusButton}
+            <button onClick={() => setConfirmingDelete(true)} type="button" className="btn btn-danger whitespace-nowrap">
+                <i className="pi pi-trash" style={{ marginRight: '8px' }} />
+                Excluir
+            </button>
+        </>
+    );
+};
 
 // id da opção "aceito trabalhar em qualquer estado / cidade" do RegioesComponent
 const todasAsRegioes = '0';
@@ -107,6 +294,8 @@ const saveResume = (stateSkills: any, stateResume: any, stateLanguage: any, stat
     callbacks['retryAfterAuthentication'] = () => saveResume(stateSkills, stateResume, stateLanguage, stateSalary, stateRegioes, stateOptions );
     callbacks[200] = () => {
         // callbacks[200] = (responseFromBackEnd: any) => {
+        // salvar sempre deixa o currículo na entidade principal (reativa o inativo)
+        SubMenuMyResumeStore.getState().setResumeStatus('active');
         PubSub.publish('showMessage', {
             detail: `Currículo salvo com sucesso`,
             summary: `Currículo salvo com sucesso`,
@@ -128,6 +317,10 @@ const SubMenuMyResume = () => {
     const stateOptions = TabOptionsStore((state: ITabOptionsStore) => ({ ...state }));
     const stateSalary = TabSalaryStore((state: ITabSalaryStore) => ({ ...state }));
     const stateRegioes = RegioesStore((state: IRegioesStore) => ({ ...state }));
+
+    const { resumeStatus, setResumeStatus } = stateSubMenuMyResume;
+    useEffect(() => loadResumeStatus(setResumeStatus, loadSavedResume), []);
+    const resumeStatusLabel = resumeStatus === 'unknown' ? null : resumeStatusLabels[resumeStatus];
 
     const tabs = [
         {
@@ -163,10 +356,13 @@ const SubMenuMyResume = () => {
 
     hasTabSkills && tabs.splice(2, 0, tabSkills);
 
+    const statusButtons = <ResumeStatusButtons resumeStatus={resumeStatus} setResumeStatus={setResumeStatus} />;
+
     return (
         <div className="card">
+            {resumeStatusLabel && <div className={resumeStatusLabel.className}>{resumeStatusLabel.text}</div>}
             {hasTabSkills ? (
-                <Tabs tabs={tabs} lastButtonLabel="Salvar dados" lastButtonIcon="pi pi-save">
+                <Tabs tabs={tabs} lastButtonLabel="Salvar dados" lastButtonIcon="pi pi-save" lastButtonSiblings={statusButtons}>
                     <TabResume />
                     <TabLanguages />
                     <TabSkills2 getAccordionList={getImplicitSkills} />
@@ -174,7 +370,7 @@ const SubMenuMyResume = () => {
                     <TabSalary />
                 </Tabs>
             ) : (
-                <Tabs tabs={tabs} lastButtonLabel="Salvar dados" lastButtonIcon="pi pi-save">
+                <Tabs tabs={tabs} lastButtonLabel="Salvar dados" lastButtonIcon="pi pi-save" lastButtonSiblings={statusButtons}>
                     <TabResume />
                     <TabLanguages />
                     <TabOptions />
@@ -190,6 +386,10 @@ const loadSkillsFromBackEnd = (stateResume: any, stateSkills: any, stateSubMenuM
 
     if (formErrors && formErrors.length) {
         return formErrors;
+    }
+    // currículo de tecnologia já salvo e nenhum texto novo colado: ficam as habilidades gravadas
+    if (!stateResume.resumeText && stateResume.savedTechResume) {
+        return [];
     }
     const cacheHash = sha1(stateResume.resumeText);
 

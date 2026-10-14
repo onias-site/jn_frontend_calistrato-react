@@ -21,7 +21,10 @@ export interface ITabResumeStore {
     fieldErrors: any;
     lastJob: string;
     resumeType: any;
+    // o currículo de tecnologia já salvo traz as habilidades gravadas: sem texto novo, elas são mantidas
+    savedTechResume: boolean;
 
+    loadFromSavedResume: (resume: any) => void;
     onMoveOnFowardTabs: () => string[];
     getPendingRequirements: () => string[];
     setLastJob: (lastJob: string) => void;
@@ -47,6 +50,21 @@ export const TabResumeStore = create<ITabResumeStore>((set, get) => ({
     desiredJob: '',
     resumeText: '',
     lastJob: '',
+    savedTechResume: false,
+    // o texto do currículo não é gravado (LGPD): volta vazio
+    loadFromSavedResume: (resume: any) => {
+        const resumeType = resumeTypes.filter((type) => type.id == resume.resumeType)[0] || resumeTypes[0];
+        set({
+            resumeType,
+            desiredJob: resume.desiredJob || '',
+            lastJob: resume.lastJob || '',
+            linkedinAddress: resume.linkedinAddress || '',
+            notAllowedCompany: resume.notAllowedCompany || [],
+            resumeText: '',
+            savedTechResume: resumeType.id == 1,
+            fieldErrors: {},
+        });
+    },
     setLastJob: (lastJob: string) => set({ lastJob }),
     setFieldErrors: (fieldErrors: any) => set({ fieldErrors }),
     setDesiredJob: (desiredJob: string) => set({ desiredJob }),
@@ -72,7 +90,7 @@ const linkedinAddressRegex = /^https:\/\/(www\.)?linkedin\.com\/in\/[a-zA-Z0-9-_
 const isOutOfLength = (text: string, minLength: number, maxLength: number) => text.length < minLength || text.length > maxLength;
 
 // sem efeitos colaterais: serve tanto para destacar os campos ao avançar quanto para desabilitar o botão de avançar
-const validateResume = ({ resumeType, desiredJob, lastJob, linkedinAddress, notAllowedCompany, resumeText }: ITabResumeStore) => {
+const validateResume = ({ resumeType, desiredJob, lastJob, linkedinAddress, notAllowedCompany, resumeText, savedTechResume }: ITabResumeStore) => {
     const errors: string[] = [];
     const fieldErrors: any = {};
     !desiredJob && (fieldErrors['desiredJob'] = true) && errors.push('Deve-se informar a função desejada');
@@ -83,7 +101,8 @@ const validateResume = ({ resumeType, desiredJob, lastJob, linkedinAddress, notA
     const companiesOutOfLength = notAllowedCompany.filter((company: string) => isOutOfLength(company, 2, 20));
     companiesOutOfLength.length && (fieldErrors['notAllowedCompany'] = true) && errors.push('Cada empresa / consultoria deve ter de 2 a 20 caracteres');
     (!resumeType || !resumeType.id) && (fieldErrors['resumeType'] = true) && errors.push('Por favor escolha o tipo do currículo');
-    resumeType && resumeType.id == 1 && !resumeText && (fieldErrors['resumeText'] = true) && errors.push('Deve-se informar a texto contido no currículo');
+    // o currículo de tecnologia já salvo dispensa o texto: as habilidades gravadas continuam valendo até que se cole um texto novo
+    resumeType && resumeType.id == 1 && !resumeText && !savedTechResume && (fieldErrors['resumeText'] = true) && errors.push('Deve-se informar a texto contido no currículo');
     return { errors, fieldErrors };
 };
 

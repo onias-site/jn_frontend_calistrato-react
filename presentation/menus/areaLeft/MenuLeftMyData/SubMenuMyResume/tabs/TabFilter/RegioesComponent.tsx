@@ -13,10 +13,21 @@ export interface IRegioesStore {
     onMoveOnFowardTabs: () => string[];
     getPendingRequirements: () => string[];
     setRegioesSelecionadas: (regioesSelecionadas: any[]) => void;
+    loadFromSavedResume: (resume: any) => void;
 }
+
+// regiões metropolitanas da lista, sem "qualquer estado / cidade" (0) e sem home office (10)
+const totalDeRegioesMetropolitanas = 67;
 
 export const RegioesStore = create<IRegioesStore>((set, get) => ({
     regioesSelecionadas: [],
+    // o backend grava os ddds como números e sem o "qualquer estado / cidade", que a tela marca de novo quando todas as
+    // regiões metropolitanas estão escolhidas
+    loadFromSavedResume: (resume: any) => {
+        const regioes = (resume.ddd || []).map((ddd: any) => String(ddd));
+        const todasAsRegioesMetropolitanas = regioes.length == totalDeRegioesMetropolitanas && !regioes.includes('10');
+        set({ regioesSelecionadas: todasAsRegioesMetropolitanas ? [...regioes, '0'] : regioes });
+    },
     onMoveOnFowardTabs: () => get().getPendingRequirements(),
     // mesma regra de ddd em VisEntityResume.Fields no backend: de 1 a 67 regiões; "qualquer estado / cidade" (0) não conta,
     // porque é só uma opção da tela que marca todas as outras

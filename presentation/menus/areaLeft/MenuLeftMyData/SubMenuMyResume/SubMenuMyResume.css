@@ -40,3 +40,23 @@
 .p-invalid {
     border-color: #e24c4c;
 }
+/* situação do currículo, mostrada ao entrar na tela */
+.resume-status {
+    font-size: 11px;
+    text-align: center;
+    padding: 4px 8px;
+    margin-bottom: 6px;
+    border-radius: 4px;
+}
+.resume-status-active {
+    color: #1b5e20;
+    background-color: #e8f5e9;
+}
+.resume-status-inactive {
+    color: #8a5300;
+    background-color: #fff4e0;
+}
+.resume-status-none {
+    color: #555;
+    background-color: #f2f2f2;
+}

@@ -20,6 +20,7 @@ export interface ITabOptionsStore {
     setExperience: (experience: number) => void;
     setTravel: (travel: boolean) => void;
     setPcd: (pcd: boolean) => void;
+    loadFromSavedResume: (resume: any) => void;
     onMoveOnFowardTabs: () => string[];
     getPendingRequirements: () => string[];
 }
@@ -39,6 +40,18 @@ export const TabOptionsStore = create<ITabOptionsStore>((set, get) => ({
     experience: 0,
     travel: false,
     pcd: false,
+    // o backend grava o ano em que a experiência começou (VisJsonTransformerExperienceStartYear): a tela mostra os anos
+    loadFromSavedResume: (resume: any) => {
+        const currentYear = new Date().getFullYear();
+        const experienceStartYear = Number(resume.experience) || currentYear;
+        set({
+            experience: Math.max(0, currentYear - experienceStartYear),
+            disponibility: resume.disponibility || 0,
+            temporallyJobTime: resume.temporallyJobTime || 0,
+            travel: !!resume.travel,
+            pcd: !!resume.pcd,
+        });
+    },
     onMoveOnFowardTabs: () => get().getPendingRequirements(),
     // sem efeitos colaterais: é chamado a cada renderização para habilitar ou não o botão de avançar
     getPendingRequirements: () => {

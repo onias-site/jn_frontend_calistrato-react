@@ -18,6 +18,7 @@ export interface ITabLanguagesStore {
     setLanguage: (language: any[]) => void;
     setSelectedLanguages: (selectedLanguages: any[]) => void;
     setSpeakOtherLanguages: (speakOtherLanguages: boolean) => void;
+    loadFromSavedResume: (resume: any) => void;
 }
 
 export const TabLanguagesStore = create<ITabLanguagesStore>((set, get) => ({
@@ -35,6 +36,20 @@ export const TabLanguagesStore = create<ITabLanguagesStore>((set, get) => ({
     setSpeakOtherLanguages: (speakOtherLanguages: boolean) => {
         const { selectedLanguages } = get();
         set({ speakOtherLanguages, selectedLanguages: speakOtherLanguages ? selectedLanguages : [] });
+    },
+    // o backend grava cada idioma só com nome e nível (VisJsonTransformerSpokenLanguageWithoutId): o id vem da lista da tela
+    loadFromSavedResume: (resume: any) => {
+        const savedLanguages = resume.spokenLanguage || [];
+        const selectedLanguages: any[] = [];
+        savedLanguages.forEach((savedLanguage: any) => {
+            const language = languages.filter((x) => x.name == savedLanguage.name)[0];
+            if (!language) {
+                return;
+            }
+            language.level = savedLanguage.level;
+            selectedLanguages.push(language.id);
+        });
+        set({ selectedLanguages, speakOtherLanguages: selectedLanguages.length > 0 });
     },
     onMoveOnFowardTabs: () => get().getPendingRequirements(),
     getPendingRequirements: () => {
