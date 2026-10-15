@@ -105,16 +105,20 @@ export const serverRequests = (state: any) => {
                 tokenBlocked: 403,
                 emailMissing: 404,
                 currentLogin: 409,
-                passwordBlocked: 427,
-                passwordRecentlyBlocked: 427,
+                passwordBlocked: 423,
+                passwordRecentlyBlocked: 423,
             },
-            callbacks: {},
+            // o conflito de sessão muda a qualquer momento (a outra sessão pode ter saído): o 409 nunca é guardado, o
+            // servidor é perguntado toda vez. Até 2026-10-15 ele ficava em cached e o modal pedia o token por e-mail sem
+            // necessidade depois que a outra sessão já tinha saído (R05-3)
+            callbacks: {
+                '409': notifyAboutLoginConflict,
+            },
             cached: {
                 '200': openModal('RequestPassword'),
                 '201': openModal('RequestAnswers'),
                 '404': openModal('ConfirmEmail'),
-                '427': notifyAboutLockedPassword,
-                '409': notifyAboutLoginConflict,
+                '423': notifyAboutLockedPassword,
                 '400': notifyAboutInvalidEmail,
                 '202': requestFirstPassword,
                 '403': lockToken,
@@ -133,15 +137,17 @@ export const serverRequests = (state: any) => {
                 invalidEmail: 400,
                 tokenBlocked: 403,
                 currentLogin: 409,
-                passwordBlocked: 427,
-                passwordRecentlyBlocked: 427,
+                passwordBlocked: 423,
+                passwordRecentlyBlocked: 423,
             },
-            callbacks: {},
+            // o 409 não é guardado: ver checkEmail
+            callbacks: {
+                '409': notifyAboutLoginConflict,
+            },
             cached: {
                 '200': openModal('RequestPassword'),
                 '201': openModal('RequestAnswers'),
-                '427': notifyAboutLockedPassword,
-                '409': notifyAboutLoginConflict,
+                '423': notifyAboutLockedPassword,
                 '400': notifyAboutInvalidEmail,
                 '202': requestFirstPassword,
                 '403': lockToken,
@@ -160,21 +166,22 @@ export const serverRequests = (state: any) => {
                 tokenBlocked: 403,
                 emailMissing: 404,
                 currentLogin: 409,
-                passwordBlocked: 427,
+                passwordBlocked: 423,
                 passwordRecentlyBlocked: 429,
                 tokenRecentlyBlocked: 403,
             },
 
+            // o 409 não é guardado: ver checkEmail
             callbacks: {
                 '200': executeRetryAfterAuthentication,
                 '429': notifyAboutLockedPassword,
                 '427': notifyAboutWrongPassword,
+                '409': notifyAboutLoginConflict,
             },
             cached: {
                 '201': openModal('RequestAnswers'),
                 '423': notifyAboutLockedPassword,
                 '404': notifyAboutLoginNotFound,
-                '409': notifyAboutLoginConflict,
                 '400': notifyAboutInvalidEmail,
                 '202': requestFirstPassword,
                 '403': lockToken,
@@ -198,17 +205,18 @@ export const serverRequests = (state: any) => {
                 tokenBlocked: 403,
                 emailMissing: 404,
                 currentLogin: 409,
-                passwordBlocked: 427,
+                passwordBlocked: 423,
                 nothingIsMissing: 999,
                 answersMissing: 999,
             },
+            // o 409 não é guardado: ver checkEmail
             callbacks: {
                 '200': openModal('RequestPassword'),
+                '409': notifyAboutLoginConflict,
             },
             cached: {
-                '427': notifyAboutLockedPassword,
+                '423': notifyAboutLockedPassword,
                 '404': notifyAboutLoginNotFound,
-                '409': notifyAboutLoginConflict,
                 '400': notifyAboutInvalidEmail,
                 '202': requestFirstPassword,
                 '403': lockToken,

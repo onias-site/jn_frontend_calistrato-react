@@ -29,8 +29,28 @@ export const NotAllowedCompany: React.FC<NotAllowedCompanyProps> = ({ invalid, n
     }
 
 
+    // Enter adiciona o texto digitado como empresa, esteja ou não na lista de sugestões (até 2026-10-14 só o clique na
+    // sugestão adicionava). Ao escolher uma sugestão com Enter, o componente já limpou o campo e aqui não sobra texto.
+    const adicionarEmpresaDigitada = (e: any) => {
+        if (e.key !== 'Enter') {
+            return;
+        }
+        const empresaDigitada = (e.target.value || '').trim();
+        if (empresaDigitada.length < 3) {
+            return;
+        }
+        const empresas: string[] = notAllowedCompany || [];
+        const jaAdicionada = empresas.some((empresa: string) => empresa.toUpperCase() == empresaDigitada.toUpperCase());
+        e.target.value = '';
+        if (jaAdicionada) {
+            return;
+        }
+        setNotAllowedCompany([...empresas, empresaDigitada]);
+    };
+
     return (
         <AutoComplete
+            onKeyUp={adicionarEmpresaDigitada}
         id = "notAllowedCompany"
         minLength={3}
         multiple={true}

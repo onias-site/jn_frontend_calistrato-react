@@ -318,7 +318,8 @@ const languages = [
     },
 ];
 
-languages.sort((a, b) => a.id - b.id);
+// em ordem alfabética, para quem procura o próprio idioma (até 2026-10-14 a lista era reordenada pelo id)
+languages.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
 
 export interface TabResumeProps{
 
@@ -391,6 +392,10 @@ export const TabLanguages: React.FC<TabResumeProps> = ({}) => {
                     onChange={selectLanguages}
                     options={languages}
                     selectedItemsLabel="{label} Idiomas selecionados"
+                    filter
+                    filterLocale="pt-BR"
+                    filterPlaceholder="Digite o idioma que você procura"
+                    emptyFilterMessage="Nenhum idioma encontrado"
                     optionLabel="name"
                     optionValue="id"
                     placeholder="Selecione os idiomas em que você possui algum nível de conhecimento"

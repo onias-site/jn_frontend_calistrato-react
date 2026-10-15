@@ -86,7 +86,8 @@ export const TabResumeStore = create<ITabResumeStore>((set, get) => ({
 }));
 
 // mesmas regras de VisEntityResume.Fields no backend
-const linkedinAddressRegex = /^https:\/\/(www\.)?linkedin\.com\/in\/[a-zA-Z0-9-_%]+\/?$/;
+// o perfil não termina em hífen: é o endereço cortado na quebra de linha do PDF (desde 2026-10-14)
+const linkedinAddressRegex = /^https:\/\/(www\.)?linkedin\.com\/in\/[a-zA-Z0-9-_%]*[a-zA-Z0-9_%]\/?$/;
 const isOutOfLength = (text: string, minLength: number, maxLength: number) => text.length < minLength || text.length > maxLength;
 
 // sem efeitos colaterais: serve tanto para destacar os campos ao avançar quanto para desabilitar o botão de avançar
@@ -98,8 +99,8 @@ const validateResume = ({ resumeType, desiredJob, lastJob, linkedinAddress, notA
     lastJob && isOutOfLength(lastJob, 2, 50) && (fieldErrors['lastJob'] = true) && errors.push('A última função deve ter de 2 a 50 caracteres');
     !linkedinAddress && (fieldErrors['linkedinAddress'] = true) && errors.push('Deve-se informar a endereço (URL do linkedin)');
     linkedinAddress && !linkedinAddressRegex.test(linkedinAddress) && (fieldErrors['linkedinAddress'] = true) && errors.push('O endereço do linkedin deve ter o formato https://www.linkedin.com/in/seu-perfil');
-    const companiesOutOfLength = notAllowedCompany.filter((company: string) => isOutOfLength(company, 2, 20));
-    companiesOutOfLength.length && (fieldErrors['notAllowedCompany'] = true) && errors.push('Cada empresa / consultoria deve ter de 2 a 20 caracteres');
+    const companiesOutOfLength = notAllowedCompany.filter((company: string) => isOutOfLength(company, 2, 50));
+    companiesOutOfLength.length && (fieldErrors['notAllowedCompany'] = true) && errors.push('Cada empresa / consultoria deve ter de 2 a 50 caracteres');
     (!resumeType || !resumeType.id) && (fieldErrors['resumeType'] = true) && errors.push('Por favor escolha o tipo do currículo');
     // o currículo de tecnologia já salvo dispensa o texto: as habilidades gravadas continuam valendo até que se cole um texto novo
     resumeType && resumeType.id == 1 && !resumeText && !savedTechResume && (fieldErrors['resumeText'] = true) && errors.push('Deve-se informar a texto contido no currículo');

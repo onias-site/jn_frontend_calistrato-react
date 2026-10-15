@@ -60,3 +60,15 @@
     color: #555;
     background-color: #f2f2f2;
 }
+/* a faixa leva Inativar / Reativar / Excluir, visíveis em todas as abas */
+.resume-status-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+.resume-status-actions .btn {
+    font-size: 11px;
+    padding: 2px 10px;
+}

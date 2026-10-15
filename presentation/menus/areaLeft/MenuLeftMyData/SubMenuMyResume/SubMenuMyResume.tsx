@@ -12,6 +12,8 @@ import { TabLanguages, TabLanguagesStore, ITabLanguagesStore } from '@/presentat
 import { TabResume, TabResumeStore, ITabResumeStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabResume/FormResume';
 import { TabSalary, TabSalaryStore, ITabSalaryStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabSalary/FormSalary';
 import { TabSkills2, TabSkillStore, ITabSkillStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabSkills/TabSkills';
+import { NotAllowedCompanyStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabResume/NotAllowedCompany';
+import { SkillsInternalListStore, TabSkillsStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabSkills/ChooserSkills';
 
 import { Tabs } from '@/presentation/components/source/Tabs';
 import JnAjax from '@/app/JnAjax';
@@ -28,6 +30,8 @@ export interface ISubMenuMyResumeStore {
     setHasTabSkills: (hasTabSkills: boolean) => void;
     resumeStatus: ResumeStatus;
     setResumeStatus: (resumeStatus: ResumeStatus) => void;
+    // muda a cada exclusão: é a key das abas, que assim são montadas de novo e perdem o estado local dos componentes
+    formVersion: number;
 }
 
 export const SubMenuMyResumeStore = create<ISubMenuMyResumeStore>((set) => ({
@@ -35,7 +39,23 @@ export const SubMenuMyResumeStore = create<ISubMenuMyResumeStore>((set) => ({
     hasTabSkills: false,
     setResumeStatus: (resumeStatus: ResumeStatus) => set({ resumeStatus }),
     resumeStatus: 'unknown',
+    formVersion: 0,
 }));
+
+// as stores das abas como estavam ao abrir a tela, antes de qualquer preenchimento
+const storesOfTheTabs: any[] = [TabResumeStore, NotAllowedCompanyStore, TabLanguagesStore, TabOptionsStore, RegioesStore, TabSalaryStore, TabSkillStore, TabSkillsStore, SkillsInternalListStore];
+const initialStatesOfTheTabs = storesOfTheTabs.map((store) => store.getState());
+
+/**
+ * Limpa o formulário inteiro: cada store das abas volta ao estado inicial (substituído, não mesclado, para não sobrar
+ * nenhum campo) e as abas são montadas de novo, o que zera o estado local dos componentes. Até 2026-10-14 o formulário
+ * continuava preenchido depois de excluir, e um "Salvar dados" recriava o currículo apagado.
+ */
+const clearTheForm = () => {
+    storesOfTheTabs.forEach((store, index) => store.setState(initialStatesOfTheTabs[index], true));
+    const { formVersion } = SubMenuMyResumeStore.getState();
+    SubMenuMyResumeStore.setState({ hasTabSkills: false, resumeStatus: 'none', formVersion: formVersion + 1 });
+};
 
 const resumeStatusLabels: Record<Exclude<ResumeStatus, 'unknown'>, { text: string; className: string }> = {
     none: { text: 'Você ainda não tem currículo salvo', className: 'resume-status resume-status-none' },
@@ -78,11 +98,14 @@ const loadResumeStatus = (setResumeStatus: (resumeStatus: ResumeStatus) => void,
 };
 
 // o rótulo que o backend dá a cada habilidade em skills/fromText (VisServiceSkills.putLabel): a própria habilidade, ou
-// "palavra (habilidade)" quando foi encontrada por outra palavra
+// "palavra (habilidade)" quando foi encontrada por outra palavra. A habilidade sem conhecimento implícito é gravada sem
+// o campo parent (a aba Habilidades não o envia vazio), e as listas da aba esperam sempre um array: até 2026-10-15 a
+// recarga de um currículo de TI parava em "item.parent is not iterable" e a aba Habilidades sumia.
 const toSkillListItem = (savedSkill: any) => {
     const foundByAnotherWord = savedSkill.word && savedSkill.word != savedSkill.skill;
     const label = foundByAnotherWord ? `${savedSkill.word} (${savedSkill.skill})` : savedSkill.skill;
-    return { ...savedSkill, label };
+    const parent = savedSkill.parent || [];
+    return { ...savedSkill, label, parent };
 };
 
 /**
@@ -124,11 +147,20 @@ const changeResumeStatus = (newStatus: ResumeStatus, setResumeStatus: (resumeSta
     callbacks['retryAfterAuthentication'] = () => changeResumeStatus(newStatus, setResumeStatus);
     callbacks[200] = () => {
         setResumeStatus(newStatus);
-        const summary = newStatus === 'active' ? 'Currículo reativado' : 'Currículo inativado';
-        PubSub.publish('showMessage', { summary, detail: summary });
+        // título e detalhe diferentes: até 2026-10-15 o toast repetia o título no corpo (achado 29)
+        const reactivated = newStatus === 'active';
+        const summary = reactivated ? 'Currículo reativado' : 'Currículo inativado';
+        const detail = reactivated
+            ? 'Seu currículo voltou a aparecer para os recrutadores.'
+            : 'Seu currículo não aparece mais para os recrutadores até que você o reative.';
+        PubSub.publish('showMessage', { summary, detail });
     };
-    // o currículo mudou em outro lugar: a tela mostra a situação atual
-    callbacks[404] = () => loadResumeStatus(setResumeStatus);
+    // o currículo não existe mais (excluído em outra janela): as abas são limpas como no Excluir, para um "Salvar dados"
+    // não recriar o currículo apagado. Até 2026-10-15 só a faixa mudava, sem aviso, e as abas ficavam preenchidas (R05-1)
+    callbacks[404] = () => {
+        clearTheForm();
+        PubSub.publish('showMessage', { summary: 'Currículo não encontrado', detail: 'Seu currículo não existe mais: ele foi excluído em outra janela.' });
+    };
     JnAjax.doAnAjaxRequest('resume/{email}/language/portuguese/status', callbacks, 'DELETE', {}, {}, 'http://localhost:8081');
 };
 
@@ -140,15 +172,17 @@ const deleteResume = (setResumeStatus: (resumeStatus: ResumeStatus) => void) => 
     const callbacks: any = {};
     callbacks['retryAfterAuthentication'] = () => deleteResume(setResumeStatus);
     callbacks[200] = () => {
-        setResumeStatus('none');
-        PubSub.publish('showMessage', { summary: 'Currículo excluído', detail: 'Currículo excluído' });
+        clearTheForm();
+        PubSub.publish('showMessage', { summary: 'Currículo excluído', detail: 'Todos os dados do seu currículo foram apagados.' });
     };
     JnAjax.doAnAjaxRequest('resume/{email}/language/portuguese', callbacks, 'DELETE', {}, {}, 'http://localhost:8081');
 };
 
 /**
- * Os botões ao lado do salvar, conforme a entidade onde estão os dados: na principal (ativo) inativar e excluir; na
- * gêmea (inativo) reativar e excluir; em nenhuma das duas, ou sem login, nenhum. Os três pedem confirmação.
+ * Os botões da faixa de situação, conforme a entidade onde estão os dados: na principal (ativo) inativar e excluir; na
+ * gêmea (inativo) reativar e excluir; em nenhuma das duas, ou sem login, nenhum. Os três pedem confirmação. Até
+ * 2026-10-15 ficavam ao lado do "Salvar dados", só na última aba, e para inativar o candidato passava por todas as abas
+ * com as validações de cada uma (achado 27).
  */
 const ResumeStatusButtons = ({ resumeStatus, setResumeStatus }: { resumeStatus: ResumeStatus; setResumeStatus: (resumeStatus: ResumeStatus) => void }) => {
     const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -297,8 +331,8 @@ const saveResume = (stateSkills: any, stateResume: any, stateLanguage: any, stat
         // salvar sempre deixa o currículo na entidade principal (reativa o inativo)
         SubMenuMyResumeStore.getState().setResumeStatus('active');
         PubSub.publish('showMessage', {
-            detail: `Currículo salvo com sucesso`,
-            summary: `Currículo salvo com sucesso`,
+            summary: 'Currículo salvo com sucesso',
+            detail: 'Seu currículo está ativo e visível para os recrutadores.',
         });
     };
     JnAjax.doAnAjaxRequest('resume/{email}/language/portuguese', callbacks, 'POST', resume, {}, 'http://localhost:8081');
@@ -360,9 +394,14 @@ const SubMenuMyResume = () => {
 
     return (
         <div className="card">
-            {resumeStatusLabel && <div className={resumeStatusLabel.className}>{resumeStatusLabel.text}</div>}
+            {resumeStatusLabel && (
+                <div className={`${resumeStatusLabel.className} resume-status-actions`}>
+                    <span>{resumeStatusLabel.text}</span>
+                    {statusButtons}
+                </div>
+            )}
             {hasTabSkills ? (
-                <Tabs tabs={tabs} lastButtonLabel="Salvar dados" lastButtonIcon="pi pi-save" lastButtonSiblings={statusButtons}>
+                <Tabs key={stateSubMenuMyResume.formVersion} tabs={tabs} lastButtonLabel="Salvar dados" lastButtonIcon="pi pi-save">
                     <TabResume />
                     <TabLanguages />
                     <TabSkills2 getAccordionList={getImplicitSkills} />
@@ -370,7 +409,7 @@ const SubMenuMyResume = () => {
                     <TabSalary />
                 </Tabs>
             ) : (
-                <Tabs tabs={tabs} lastButtonLabel="Salvar dados" lastButtonIcon="pi pi-save" lastButtonSiblings={statusButtons}>
+                <Tabs key={stateSubMenuMyResume.formVersion} tabs={tabs} lastButtonLabel="Salvar dados" lastButtonIcon="pi pi-save">
                     <TabResume />
                     <TabLanguages />
                     <TabOptions />
@@ -386,6 +425,11 @@ const loadSkillsFromBackEnd = (stateResume: any, stateSkills: any, stateSubMenuM
 
     if (formErrors && formErrors.length) {
         return formErrors;
+    }
+    // só o currículo de tecnologia (tipo 1) tem a aba Habilidades: os outros tipos não pedem habilidades ao backend
+    // (até 2026-10-14 a chamada saía para todos os tipos, com o texto vazio)
+    if (stateResume.resumeType.id != 1) {
+        return [];
     }
     // currículo de tecnologia já salvo e nenhum texto novo colado: ficam as habilidades gravadas
     if (!stateResume.resumeText && stateResume.savedTechResume) {

@@ -408,9 +408,10 @@ const errorHasFound = (context: any, error: any, word: string) => {
     if (!filtered) {
         return false;
     }
+    // título curto e o motivo no corpo: até 2026-10-15 os dois traziam o mesmo texto (achado 29)
     PubSub.publish('showMessage', {
+        summary: 'Habilidade não adicionada',
         detail: summary.replace('{associated}', filtered.associated),
-        summary: summary.replace('{associated}', filtered.associated),
         severity: 'warn',
     });
 
@@ -638,6 +639,8 @@ const sendSkillFixHierarchy = (parent: string, skills: string[], type: SkillFixH
     };
     // o modal não deixa enviar com sugestão pendente; o 409 só chega se ela ficou pendente por outra aba ou janela
     callbacks[409] = () => warn('Sugestão já pendente', `Você já tem uma sugestão pendente para ${parent}. Para alterá-la, desista dela e envie uma nova.`);
+    // o modal avisa do limite antes do envio (DailyLimitHint); o 429 chega quando o candidato envia mesmo assim
+    callbacks[429] = () => showDailyLimitReached('ajuste de hierarquia de habilidades');
     callbacks['onUnexpectedHttpStatus'] = () => {
         PubSub.publish('showMessage', {
             summary: 'Falha ao enviar sugestão',
@@ -656,6 +659,35 @@ const PendingSuggestionHint: React.FC = () => (
         Esta sugestão está em análise. Para alterá-la, desista dela e envie uma nova.
     </p>
 );
+
+// O texto do currículo não é gravado (LGPD): depois de recarregar a página ele vem vazio, e sem ele não há como conferir
+// que a habilidade consta no currículo. Até 2026-10-15 o modal deixava digitar e recusava toda habilidade como "fora do
+// currículo", culpando a palavra quando faltava o texto (achado 26).
+const ResumeTextMissingHint: React.FC = () => (
+    <p className="m-0 mb-3 text-left" style={{ fontSize: '12px', color: '#b45309' }}>
+        Para sugerir uma habilidade, cole o texto do seu currículo na aba Currículo: só por ele dá para conferir que a
+        habilidade consta no currículo. O texto não fica gravado, então é preciso colá-lo de novo depois de recarregar a página.
+    </p>
+);
+
+// Cada sugestão manda um e-mail ao candidato e abre um chamado ao suporte, por isso o backend aceita uma de cada tipo
+// por dia (429 a partir da segunda). Os dois modais avisam antes do envio.
+interface DailyLimitHintProps {
+    kind: string;
+}
+const DailyLimitHint: React.FC<DailyLimitHintProps> = ({ kind }) => (
+    <p className="m-0 text-left" style={{ fontSize: '12px' }}>
+        {`Atenção: você pode enviar apenas uma sugestão de ${kind} a cada 24 horas. Confira os dados antes de enviar.`}
+    </p>
+);
+
+const showDailyLimitReached = (kind: string) => {
+    PubSub.publish('showMessage', {
+        summary: 'Limite de 24 horas atingido',
+        detail: `Você já enviou uma sugestão de ${kind} nas últimas 24 horas. É permitida apenas uma a cada 24 horas: tente novamente em 24 horas.`,
+        severity: 'error',
+    });
+};
 
 type SkillFixHierarchyStatus = 'pending' | 'fulfiled';
 
@@ -703,13 +735,6 @@ const deleteSkillFixHierarchy = (parent: string, type: SkillFixHierarchyType, on
         showNotFound();
         onNotFound();
     };
-    // desistir de novo do mesmo conhecimento e tipo dentro de uma hora: a sugestão continua pendente (evita que o vai e
-    // vem do candidato encha o operador de avisos no Telegram e gaste a cota de e-mails)
-    callbacks[429] = () =>
-        warn(
-            'Desistência não permitida',
-            `Você já desistiu de uma sugestão de ${type === 'add' ? 'associação' : 'desassociação'} com ${parent} há pouco. Não é possível desistir dela de novo dentro de uma hora: ela continua em análise.`,
-        );
     callbacks['onUnexpectedHttpStatus'] = () => {
         PubSub.publish('showMessage', {
             summary: 'Falha ao retirar sugestão',
@@ -951,6 +976,7 @@ const SkillFixHierarchyModal: React.FC<SkillFixHierarchyModalProps> = ({
                     </LabelComponent>
                     {suggestion && <SkillFixHierarchyStatusView suggestion={suggestion} />}
                     {pending && <PendingSuggestionHint />}
+                    {!suggestion && <DailyLimitHint kind="ajuste de hierarquia de habilidades" />}
                 </div>
             </LinkModal>
         </span>
@@ -1107,6 +1133,8 @@ const sendSkillSuggestion = (skill: string, synonyms: string[], description: str
         warn('Sugestão já avaliada', `A habilidade '${skill}' já foi avaliada pelo suporte. Veja abaixo o resultado e o motivo.`);
         onAlreadyDecided();
     };
+    // o modal avisa do limite antes do envio (DailyLimitHint); o 429 chega quando o candidato envia mesmo assim
+    callbacks[429] = () => showDailyLimitReached('habilidade');
     callbacks['onUnexpectedHttpStatus'] = () => {
         PubSub.publish('showMessage', {
             summary: 'Falha ao enviar sugestão',
@@ -1152,9 +1180,6 @@ const deleteSkillSuggestion = (skill: string, onSuccess: () => void, onNotFound:
         showNotFound();
         onNotFound();
     };
-    // desistir de novo da mesma habilidade dentro de uma hora: a sugestão continua pendente
-    callbacks[429] = () =>
-        warn('Desistência não permitida', `Você já desistiu de uma sugestão da habilidade '${skill}' há pouco. Não é possível desistir dela de novo dentro de uma hora: ela continua em análise.`);
     callbacks['onUnexpectedHttpStatus'] = () => {
         PubSub.publish('showMessage', {
             summary: 'Falha ao retirar sugestão',
@@ -1224,6 +1249,9 @@ const SkillSuggestionModal: React.FC = () => {
     const { context, groups, accordionList } = TabSkillStore((state: ITabSkillStore) => ({
         ...state,
     }));
+    // sem o texto do currículo não dá para sugerir: o campo da habilidade fica bloqueado e o modal diz o que fazer
+    const resumeText = TabResumeStore((state) => state.resumeText) || '';
+    const resumeTextMissing = !resumeText.trim();
     const [skill, setSkill] = useState('');
     const [synonyms, setSynonyms] = useState<string[]>([]);
     const [reason, setReason] = useState('');
@@ -1397,7 +1425,7 @@ const SkillSuggestionModal: React.FC = () => {
             onSave={hasSuggestion ? startNewSuggestion : save}
             saveButtonLabel={hasSuggestion ? 'Nova sugestão' : 'Enviar'}
             saveLoading={loadingRequest === 'load' || loadingRequest === 'save'}
-            saveDisabled={busy || (!hasSuggestion && !skillValid)}
+            saveDisabled={busy || (!hasSuggestion && (!skillValid || resumeTextMissing))}
             extraActions={withdrawButton}
             onOpen={startNewSuggestion}
             fieldsHaveOwnHelp
@@ -1406,13 +1434,14 @@ const SkillSuggestionModal: React.FC = () => {
             linkText="Deixamos de listar alguma habilidade?"
         >
             <div className="flex w-full flex-col items-stretch">
+                {resumeTextMissing && <ResumeTextMissingHint />}
                 <LabelComponent explanation={SKILL_SUGGESTION_SKILL_HELP} labelValue="Habilidade" property="skillSuggestionSkill" errors={{}}>
                     <InputText
                         id="skillSuggestionSkill"
                         className="w-full"
                         placeholder="Habilidade que consta no seu currículo (ex.: REACT NATIVE)"
                         value={skill}
-                        disabled={hasSuggestion}
+                        disabled={hasSuggestion || resumeTextMissing}
                         maxLength={SKILL_MAX_LENGTH}
                         onChange={(e) => {
                             setSkill(e.target.value.toUpperCase());
@@ -1449,6 +1478,7 @@ const SkillSuggestionModal: React.FC = () => {
                 </LabelComponent>
                 {suggestion && <SkillSuggestionStatusView suggestion={suggestion} />}
                 {pending && <PendingSuggestionHint />}
+                {!suggestion && <DailyLimitHint kind="habilidade" />}
             </div>
         </LinkModal>
     );
