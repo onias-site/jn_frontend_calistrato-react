@@ -25,7 +25,7 @@ export const ModalExistsEmail: React.FC<ModalExistsEmailProps> = ({title}) => {
         callbacks['setLoading'] = () => setLoading(true);
         callbacks['setNotLoading'] = () => setLoading(false);
 
-        JnAjax.doAnAjaxRequest(`login/${email}/token`, callbacks, 'HEAD', {}, {}, 'http://localhost:8080');
+        JnAjax.doAnAjaxRequest(`login/${email}/token`, callbacks, 'HEAD', {}, {}, 'http://localhost:8082');
     }
 
 

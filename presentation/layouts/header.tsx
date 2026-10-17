@@ -58,7 +58,7 @@ const Header = () => {
         sessionStorage.removeItem('login');
         callbacks['200'] = () => PubSub.publish('showMessage', { summary: 'Sucesso!!!', detail: `O usuário '${login.email}' encerrou o login com sucesso!` });
         callbacks['404'] = () => PubSub.publish('showMessage', { summary: 'Aviso!!!', detail: `O usuário '${login.email}' não está logado neste sistema!`, severity: 'warn' });
-        JnAjax.doAnAjaxRequest(`login/${login.email}/${login.sessionToken}`, callbacks, 'DELETE', null, {}, 'http://localhost:8080');
+        JnAjax.doAnAjaxRequest(`login/${login.email}/${login.sessionToken}`, callbacks, 'DELETE', null, {}, 'http://localhost:8082');
     };
 
     const { showModal} = ModalLoginStore((state: IModalLoginStore) => ({

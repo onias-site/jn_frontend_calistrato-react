@@ -377,7 +377,7 @@ export default class JnAjax {
 
         callbacks.onUnexpectedHttpStatus = JnAjax.getOnUnexpectedHttpStatusCallback(mappedRequest, allMappedRequests, email);
 
-        JnAjax.doAnAjaxRequest(mappedRequest.url, callbacks, mappedRequest.method, mappedRequest.getBody(), {}, 'http://localhost:8080');
+        JnAjax.doAnAjaxRequest(mappedRequest.url, callbacks, mappedRequest.method, mappedRequest.getBody(), {}, 'http://localhost:8082');
     }
 
     static getStatusName(othermappedRequest, status) {
