@@ -10,6 +10,7 @@ import IconCaretsDown from '@/presentation/icons/icon-carets-down';
 import IconCaretDown from '@/presentation/icons/icon-caret-down';
 import IconMenuUsers from '@/presentation/icons/menu/icon-menu-users';
 import IconMenuAuthentication from '@/presentation/icons/menu/icon-menu-authentication';
+import IconMenuCharts from '@/presentation/icons/menu/icon-menu-charts';
 import { usePathname } from 'next/navigation';
 import { getTranslation } from '@/i18n';
 import { LoginView } from '../Login/login.view';
@@ -110,14 +111,14 @@ const Sidebar = () => {
                                             <Link href="/meus-dados/sobre-mim">{t('about_me')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/portuguese-version/como-estou-indo/ver-meu-curriculo">{t('Me x Market')}</Link>
+                                            <Link href="/meus-dados/quem-me-viu">{t('Who viewed me')}</Link>
                                         </li>
-                                        <li>
+                                        {/* <li>
                                             <Link href="/maintenence">{t('My Reputation')}</Link>
                                         </li>
                                         <li>
                                             <Link href="/maintenence">{t('My Applications')}</Link>
-                                        </li>
+                                        </li> */}
                                     </ul>
                                 </AnimateHeight>
                             </li>
@@ -163,23 +164,44 @@ const Sidebar = () => {
 
                                 <AnimateHeight duration={300} height={currentMenu === 'auth' ? 'auto' : 0}>
                                     <ul className="sub-menu text-gray-500">
-                                        <li>
+                                        {/* <li>
                                             <Link href="/maintenence">{t('Buscar currículos')}</Link>
-                                        </li>
+                                        </li> */}
                                         <li>
                                             <Link href="/meu-recrutamento/curriculos-visualizados">{t('Cvs visualizados')}</Link>
                                         </li>
-                                        <li>
+                                        {/* <li>
                                             <Link href="/maintenence">{t('Comentários')}</Link>
                                         </li>
                                         <li>
                                             <Link href="/meu-recrutamento/minhas-vagas">{t('Minhas vagas')}</Link>
+                                        </li> */}
+                                    </ul>
+                                </AnimateHeight>
+                            </li>
+
+                            <li className="menu nav-item">
+                                <button type="button" className={`${currentMenu === 'statistics' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('statistics')}>
+                                    <div className="flex items-center">
+                                        <IconMenuCharts className="shrink-0 group-hover:!text-primary" />
+                                        <span className="text-black dark:text-[#506690] dark:group-hover:text-white-dark ltr:pl-3 rtl:pr-3">{t('Statistics')}</span>
+                                    </div>
+
+                                    <div className={currentMenu !== 'statistics' ? '-rotate-90 rtl:rotate-90' : ''}>
+                                        <IconCaretDown />
+                                    </div>
+                                </button>
+
+                                <AnimateHeight duration={300} height={currentMenu === 'statistics' ? 'auto' : 0}>
+                                    <ul className="sub-menu text-gray-500">
+                                        <li>
+                                            <Link href="/maintenence">{t('Skills')}</Link>
                                         </li>
                                     </ul>
                                 </AnimateHeight>
                             </li>
                         </ul>
-                        <div className="flex flex-col items-center justify-center">
+                        {/* <div className="flex flex-col items-center justify-center">
                             <div className="m-3 w-full max-w-md rounded p-4">
                                 <div className="w-full">
                                     <button
@@ -201,7 +223,7 @@ const Sidebar = () => {
                                     <button className="btn btn-warning w-full">Skills que mais pagam</button>
                                 </div>
                             </div>
-                        </div>
+                        </div> */}
                     </PerfectScrollbar>
                 </div>
             </nav>

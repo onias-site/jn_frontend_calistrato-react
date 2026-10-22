@@ -1,9 +1,11 @@
 'use client';
 import React, { useEffect, useState } from 'react';
+// o modal de login (aberto pelo 401) é um Dialog do PrimeReact: sem o tema ele fica transparente sobre a tela
+import 'primereact/resources/themes/lara-light-cyan/theme.css';
+import 'primereact/resources/primereact.min.css';
+import 'primeicons/primeicons.css';
 import JnAjax from '@/app/JnAjax';
-
-// quantas regiões aparecem antes do "+N regiões", como no e-mail (VisBusinessBuildResumeRow.VISIBLE_REGIONS)
-const VISIBLE_REGIONS = 3;
+import { ResumeRowCells, ResumeRowHeaders } from '../ResumeRowCells';
 
 type Situation = 'loading' | 'loaded' | 'noEmail' | 'notLogged' | 'error';
 
@@ -12,31 +14,6 @@ const messages: Record<Exclude<Situation, 'loaded'>, string> = {
     noEmail: 'Não há e-mail de currículos seu do último dia. A lista completa fica disponível por um dia após cada e-mail.',
     notLogged: 'Entre com o e-mail em que você recebe os currículos para ver a lista completa.',
     error: 'Não foi possível carregar os currículos agora. Tente de novo em alguns instantes.',
-};
-
-const Lines = ({ lines }: { lines: string[] }) => (
-    <>
-        {(lines || []).map((line, index) => (
-            <div key={index}>{line}</div>
-        ))}
-    </>
-);
-
-/** As regiões: as três primeiras à vista, as demais atrás de "+N regiões". */
-const Regions = ({ regions }: { regions: string[] }) => {
-    const visible = (regions || []).slice(0, VISIBLE_REGIONS);
-    const folded = (regions || []).slice(VISIBLE_REGIONS);
-    return (
-        <>
-            <Lines lines={visible} />
-            {folded.length > 0 && (
-                <details>
-                    <summary className="cursor-pointer text-primary">+{folded.length} regiões</summary>
-                    <Lines lines={folded} />
-                </details>
-            )}
-        </>
-    );
 };
 
 /**
@@ -80,34 +57,19 @@ export const ResumesOfTheWeek = () => {
 
     return (
         <div className="panel mt-6">
-            <h5 className="mb-4 text-lg font-semibold">{resumes.length} currículos inseridos ou alterados nos últimos 7 dias</h5>
+            <h5 className="mb-4 text-lg font-semibold">{resumes.length} {resumes.length == 1 ? 'currículo inserido ou alterado' : 'currículos inseridos ou alterados'} nos últimos 7 dias</h5>
             <div className="table-responsive">
                 <table className="table-hover">
                     <thead>
                         <tr>
-                            <th>O que importa</th>
-                            <th>Idiomas e habilidades</th>
-                            <th>Função / papel / emprego / ocupação</th>
-                            <th>Outras Informações</th>
+                            <ResumeRowHeaders />
                             <th>Datas e visualização</th>
                         </tr>
                     </thead>
                     <tbody>
                         {resumes.map((resume) => (
                             <tr key={resume.resumeId}>
-                                <td className="align-top">
-                                    <Lines lines={resume.whatMatters} />
-                                    <Regions regions={resume.regions} />
-                                </td>
-                                <td className="align-top">
-                                    <Lines lines={resume.languagesAndSkills} />
-                                </td>
-                                <td className="align-top">
-                                    <Lines lines={resume.job} />
-                                </td>
-                                <td className="align-top">
-                                    <Lines lines={resume.otherInformation} />
-                                </td>
+                                <ResumeRowCells resume={resume} />
                                 <td className="align-top">
                                     <div className={resume.viewed ? '' : 'font-semibold text-danger'}>{resume.lastView}</div>
                                     <a href={viewLink(resume)} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">

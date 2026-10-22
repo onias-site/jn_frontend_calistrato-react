@@ -717,3 +717,26 @@ img.dark-img {
 .dark img.dark-img {
     @apply !block;
 }
+
+/*
+ * Rodapé dos Dialog/ConfirmDialog do PrimeReact: o tema fica em @layer primereact, que perde para o reset de botões do
+ * tailwind (sem camada); padding, fundo e margem dos botões chegavam zerados e "Não" e "Sim" ficavam colados, com cara
+ * de texto. Os botões passam a usar os do template.
+ */
+.p-dialog .p-dialog-footer {
+    @apply flex justify-end gap-2;
+}
+.p-confirm-dialog .p-confirm-dialog-reject {
+    @apply btn btn-outline-primary;
+}
+.p-confirm-dialog .p-confirm-dialog-accept {
+    @apply btn btn-primary;
+}
+
+/*
+ * Painel de força do Password do PrimeReact: abre logo abaixo do campo e cobre o campo seguinte (no login, "Confirme a
+ * senha"), e o primeiro clique nele só fechava o painel. O painel só informa; o clique passa por ele até o campo.
+ */
+.p-password-panel {
+    @apply pointer-events-none;
+}

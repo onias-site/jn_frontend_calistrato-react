@@ -14,7 +14,16 @@ export default class JnAjax {
 
     static setNotLoading = () => () => JnAjax.ajaxLoading(false);
 
-    static doAnAjaxRequest(uri, callbacks = {}, type = 'HEAD', requestBody = {}, headers = {}, enviroment = JnAjax.deafultEnviroment, contentType = 'application/json', dataType = 'json') {
+    // a API grava a sessão depois de responder ao login: logo em seguida, uma requisição com a sessão nova pode levar 401
+    static RETRY_401_AFTER_LOGIN_WINDOW = 15000;
+    static RETRY_401_AFTER_LOGIN_DELAY = 1000;
+    static RETRY_401_AFTER_LOGIN_ATTEMPTS = 5;
+    static lastLoginTime = 0;
+
+    static isRecentLogin = () => new Date().getTime() - JnAjax.lastLoginTime < JnAjax.RETRY_401_AFTER_LOGIN_WINDOW;
+
+    static doAnAjaxRequest(uri, callbacks = {}, type = 'HEAD', requestBody = {}, headers = {}, enviroment = JnAjax.deafultEnviroment, contentType = 'application/json', dataType = 'json', attempt = 1) {
+        const originalHeaders = headers;
         const path = JnAjax.getUrlBackEnd(enviroment);
         callbacks['setLoading'] = callbacks['setLoading'] || JnAjax.setLoading();
         callbacks['setLoading']();
@@ -40,6 +49,13 @@ export default class JnAjax {
         const data = requestBody ? JSON.stringify(requestBody) : null;
 
         const complete = (a) => {
+            // 401 da sessão que acabou de ser criada: espera a gravação e refaz, em vez de pedir o login de novo
+            const sessionNotWrittenYet = a.status == 401 && sessionToken && JnAjax.isRecentLogin() && attempt < JnAjax.RETRY_401_AFTER_LOGIN_ATTEMPTS;
+            if (sessionNotWrittenYet) {
+                const retry = () => JnAjax.doAnAjaxRequest(uri, callbacks, type, requestBody, originalHeaders, enviroment, contentType, dataType, attempt + 1);
+                setTimeout(retry, JnAjax.RETRY_401_AFTER_LOGIN_DELAY);
+                return;
+            }
             try {
                 callbacks['setNotLoading'] = callbacks['setNotLoading'] || JnAjax.setNotLoading();
 
@@ -269,6 +285,8 @@ export default class JnAjax {
             };
 
         sessionStorage.setItem('login', JSON.stringify(loginToSessionStorage));
+
+        JnAjax.lastLoginTime = new Date().getTime();
 
         const { timestamp, expirationDate, dateItWasSaved } = loginToSessionStorage;
 

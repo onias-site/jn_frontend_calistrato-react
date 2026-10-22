@@ -1,26 +1,25 @@
-
-import { MeusCurriculosVisualizadosTabs } from '@/presentation/pages/meu-recrutamento/curriculo-vis/components/meus-curriculos-visualizados-tabs';
+import { ViewedResumesOfTheMonth } from '@/presentation/pages/meu-recrutamento/curriculos-visualizados/ViewedResumesOfTheMonth';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import React from 'react';
 
 export const metadata: Metadata = {
-    title: 'Cvc Visualizados',
+    title: 'Currículos visualizados',
 };
 
-const MinhasVagas = () => {
+const CurriculosVisualizados = () => {
     return (
         <div>
             <ul className="flex space-x-2 rtl:space-x-reverse">
                 <li>
                     <Link href="#" className="text-primary hover:underline">
-                       Currículos Visualizados
+                        Currículos visualizados
                     </Link>
                 </li>
             </ul>
-            <MeusCurriculosVisualizadosTabs />
+            <ViewedResumesOfTheMonth />
         </div>
     );
 };
 
-export default MinhasVagas;
+export default CurriculosVisualizados;

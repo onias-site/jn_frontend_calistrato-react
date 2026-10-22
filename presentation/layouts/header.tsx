@@ -56,14 +56,23 @@ const Header = () => {
 
         const  callbacks = {};
         sessionStorage.removeItem('login');
+        setLogged(false);
         callbacks['200'] = () => PubSub.publish('showMessage', { summary: 'Sucesso!!!', detail: `O usuário '${login.email}' encerrou o login com sucesso!` });
         callbacks['404'] = () => PubSub.publish('showMessage', { summary: 'Aviso!!!', detail: `O usuário '${login.email}' não está logado neste sistema!`, severity: 'warn' });
         JnAjax.doAnAjaxRequest(`login/${login.email}/${login.sessionToken}`, callbacks, 'DELETE', null, {}, 'http://localhost:8082');
     };
 
-    const { showModal} = ModalLoginStore((state: IModalLoginStore) => ({
+    const { showModal, visible } = ModalLoginStore((state: IModalLoginStore) => ({
         ...state,
     }));
+
+    // o sessionStorage não avisa quando muda: relê o login ao montar e sempre que o modal de login abre ou fecha
+    const [logged, setLogged] = useState(false);
+    useEffect(() => {
+        setLogged(!!JnAjax.hasLogin());
+    }, [visible]);
+
+    const showModalLogin = () => showModal('RequestEmail', 'Entrar no sistema', null);
 
     const showModalChangePassword = () => {
         const login = getLogin();
@@ -135,7 +144,9 @@ const Header = () => {
 
                     {/* //TODO Componentizar Saldo */}
                     <div className="flex items-center space-x-1.5 ltr:ml-auto rtl:mr-auto rtl:space-x-reverse dark:text-[#d0d2d6] sm:flex-1 ltr:sm:ml-0 sm:rtl:mr-0 lg:space-x-2">
-                        <div className="sm:ltr:mr-auto sm:rtl:ml-auto">
+                        {/* sem o saldo, este espaçador empurra os botões para a direita, como o saldo fazia */}
+                        <div className="sm:ltr:mr-auto sm:rtl:ml-auto"></div>
+                        {/* <div className="sm:ltr:mr-auto sm:rtl:ml-auto">
                             <div className="flex flex-row gap-2 rounded-full bg-white-light/40 p-2 hover:bg-white-light/90 hover:text-primary dark:bg-dark/40 dark:hover:bg-dark/60">
                                 <div className="dropdown flex shrink-0">
                                     <Dropdown
@@ -173,7 +184,7 @@ const Header = () => {
                                     </Dropdown>
                                 </div>
                             </div>
-                        </div>
+                        </div> */}
                         {/* //TODO Componentizar Toogle */}
                         <div>
                             {themeConfig.theme === 'light' ? (
@@ -213,7 +224,7 @@ const Header = () => {
                             )}
                         </div>
                         {/* //TODO Componentizar Idioma */}
-                        <div className="dropdown shrink-0">
+                        {/* <div className="dropdown shrink-0">
                             <Dropdown
                                 offset={[0, 8]}
                                 placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`}
@@ -240,7 +251,7 @@ const Header = () => {
                                     })}
                                 </ul>
                             </Dropdown>
-                        </div>
+                        </div> */}
 
                         <div className="dropdown flex shrink-0">
                             <Dropdown
@@ -264,12 +275,14 @@ const Header = () => {
                                             </div>
                                         </div>
                                     </li>
-                                    <li>
-                                        <Link href="#" className="dark:hover:text-white" onClick = {showModalChangePassword}>
-                                            <IconUser className="h-4.5 w-4.5 shrink-0 ltr:mr-2 rtl:ml-2" />
-                                            Trocar Senha
-                                        </Link>
-                                    </li>
+                                    {logged && (
+                                        <li>
+                                            <Link href="#" className="dark:hover:text-white" onClick = {showModalChangePassword}>
+                                                <IconUser className="h-4.5 w-4.5 shrink-0 ltr:mr-2 rtl:ml-2" />
+                                                Trocar Senha
+                                            </Link>
+                                        </li>
+                                    )}
                                     <li>
                                         <Link href="/apps/mailbox" className="dark:hover:text-white">
                                             <IconMail className="h-4.5 w-4.5 shrink-0 ltr:mr-2 rtl:ml-2" />
@@ -284,11 +297,19 @@ const Header = () => {
                                     </li>
                                     <li className="border-t border-white-light dark:border-white-light/10">
                                         {/* <Link href="/auth/boxed-signin" className="!py-3 text-danger"> */}
-                                        <button
-                                         className="!py-3 text-danger" onClick={executeLogout}>
-                                            <IconLogout className="h-4.5 w-4.5 shrink-0 rotate-90 ltr:mr-2 rtl:ml-2" />
-                                            Sair do Sistema
-                                        </button>
+                                        {logged ? (
+                                            <button
+                                             className="!py-3 text-danger" onClick={executeLogout}>
+                                                <IconLogout className="h-4.5 w-4.5 shrink-0 rotate-90 ltr:mr-2 rtl:ml-2" />
+                                                Sair do Sistema
+                                            </button>
+                                        ) : (
+                                            <button
+                                             className="!py-3 text-primary" onClick={showModalLogin}>
+                                                <IconLogout className="h-4.5 w-4.5 shrink-0 -rotate-90 ltr:mr-2 rtl:ml-2" />
+                                                Entrar no sistema
+                                            </button>
+                                        )}
                                     </li>
                                 </ul>
                             </Dropdown>
