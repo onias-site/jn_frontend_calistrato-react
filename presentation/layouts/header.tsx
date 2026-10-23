@@ -68,9 +68,14 @@ const Header = () => {
 
     // o sessionStorage não avisa quando muda: relê o login ao montar e sempre que o modal de login abre ou fecha
     const [logged, setLogged] = useState(false);
+    // o userState se perde ao recarregar a página: sem ele, o nome mostrado é o e-mail da sessão
+    const [loggedEmail, setLoggedEmail] = useState('');
     useEffect(() => {
         setLogged(!!JnAjax.hasLogin());
+        const login: any = JnAjax.getLogin();
+        setLoggedEmail((login && login.email) || '');
     }, [visible]);
+    const userName = user || loggedEmail;
 
     const showModalLogin = () => showModal('RequestEmail', 'Entrar no sistema', null);
 
@@ -262,40 +267,44 @@ const Header = () => {
                                     <>
                                         {/* <img className="h-9 w-9 rounded-full object-cover saturate-50 group-hover:saturate-100 lg:hidden" src="/assets/images/auth/login.svg" /> */}
                                         <div className="flex flex-row gap-2 rounded-full bg-white-light/40 p-2 hover:bg-white-light/90 hover:text-primary dark:bg-dark/40 dark:hover:bg-dark/60">
-                                            <h4 className="hidden lg:block">{user}</h4>
+                                            <h4 className="hidden lg:block">{userName}</h4>
                                         </div>
                                     </>
                                 }
                             >
                                 <ul className="w-[230px] !py-0 font-semibold text-dark dark:text-white-dark dark:text-white-light/90">
-                                    <li>
-                                        <div className="flex items-center px-4 py-4">
-                                            <div className="truncate ltr:pl-4 rtl:pr-4">
-                                                <h4 className="text-base">{user}</h4>
-                                            </div>
-                                        </div>
-                                    </li>
+                                    {/* o nome do usuário, trocar senha, acessos e chamados só existem para quem está logado: sem eles,
+                                        sobra só o "Entrar no sistema", sem a linha divisória nem o espaço vazio do nome */}
                                     {logged && (
-                                        <li>
-                                            <Link href="#" className="dark:hover:text-white" onClick = {showModalChangePassword}>
-                                                <IconUser className="h-4.5 w-4.5 shrink-0 ltr:mr-2 rtl:ml-2" />
-                                                Trocar Senha
-                                            </Link>
-                                        </li>
+                                        <>
+                                            <li>
+                                                <div className="flex items-center px-4 py-4">
+                                                    <div className="truncate ltr:pl-4 rtl:pr-4">
+                                                        <h4 className="text-base">{userName}</h4>
+                                                    </div>
+                                                </div>
+                                            </li>
+                                            <li>
+                                                <Link href="#" className="dark:hover:text-white" onClick = {showModalChangePassword}>
+                                                    <IconUser className="h-4.5 w-4.5 shrink-0 ltr:mr-2 rtl:ml-2" />
+                                                    Trocar Senha
+                                                </Link>
+                                            </li>
+                                            <li>
+                                                <Link href="/meus-dados/acessos" className="dark:hover:text-white">
+                                                    <IconMail className="h-4.5 w-4.5 shrink-0 ltr:mr-2 rtl:ml-2" />
+                                                    Acessos
+                                                </Link>
+                                            </li>
+                                            <li>
+                                                <Link href="/auth/boxed-lockscreen" className="dark:hover:text-white">
+                                                    <IconLockDots className="h-4.5 w-4.5 shrink-0 ltr:mr-2 rtl:ml-2" />
+                                                    Chamados
+                                                </Link>
+                                            </li>
+                                        </>
                                     )}
-                                    <li>
-                                        <Link href="/apps/mailbox" className="dark:hover:text-white">
-                                            <IconMail className="h-4.5 w-4.5 shrink-0 ltr:mr-2 rtl:ml-2" />
-                                            Acessos
-                                        </Link>
-                                    </li>
-                                    <li>
-                                        <Link href="/auth/boxed-lockscreen" className="dark:hover:text-white">
-                                            <IconLockDots className="h-4.5 w-4.5 shrink-0 ltr:mr-2 rtl:ml-2" />
-                                            Chamados
-                                        </Link>
-                                    </li>
-                                    <li className="border-t border-white-light dark:border-white-light/10">
+                                    <li className={logged ? 'border-t border-white-light dark:border-white-light/10' : ''}>
                                         {/* <Link href="/auth/boxed-signin" className="!py-3 text-danger"> */}
                                         {logged ? (
                                             <button

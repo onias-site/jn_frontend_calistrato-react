@@ -8,7 +8,7 @@ const rotateX = plugin(function ({ addUtilities }) {
     });
 });
 module.exports = {
-    content: ['./App.tsx', './app/**/*.{js,ts,jsx,tsx}', './pages/**/*.{js,ts,jsx,tsx}', './components/**/*.{js,ts,jsx,tsx}', './src/**/*.{js,ts,jsx,tsx}', './presentation/**/*.{js,ts,jsx,tsx}'],
+    content: ['./App.tsx', './theme.config.tsx', './app/**/*.{js,ts,jsx,tsx}', './pages/**/*.{js,ts,jsx,tsx}', './components/**/*.{js,ts,jsx,tsx}', './src/**/*.{js,ts,jsx,tsx}', './presentation/**/*.{js,ts,jsx,tsx}'],
     darkMode: 'class',
     theme: {
         container: {

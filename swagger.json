@@ -19,10 +19,6 @@
     {
       "name": "Login",
       "description": "Login controls for token and password registration, pre-registration, and various lock management flows such as: token lock, password lock, and token unlock requests."
-    },
-    {
-      "name": "AsyncTask",
-      "description": "Asynchronous tasks — operations executed in the background whose result can be polled by ID."
     }
   ],
   "paths": {
@@ -273,9 +269,7 @@
               "*/*": {
                 "schema": {
                   "type": "string",
-                  "example": {
-                    "asyncTaskId": "-484333a30ec794b6c5490290cfda0486e7c31c89"
-                  }
+                  "example": ""
                 }
               }
             }
@@ -655,9 +649,7 @@
               "*/*": {
                 "schema": {
                   "type": "string",
-                  "example": {
-                    "asyncTaskId": "-484333a30ec794b6c5490290cfda0486e7c31c89"
-                  }
+                  "example": ""
                 }
               }
             }
@@ -1062,75 +1054,6 @@
       "servers": [
         {
           "url": "http://localhost:8082",
-          "description": "Generated server url"
-        }
-      ]
-    },
-    "/async/task/{asyncTaskId}": {
-      "get": {
-        "tags": [
-          "AsyncTask"
-        ],
-        "summary": "Get async task status by ID",
-        "description": "When does it occur? When the frontend needs to check the result of a previously triggered background operation. What does it do? Retrieves the current status and result of the async task identified by the given ID.<br/><br/><b>Path variables:</b><ul><li><b>asyncTaskId</b> – Required. The unique identifier of the async task.</li></ul>",
-        "operationId": "getAsyncTaskStatusById",
-        "parameters": [
-          {
-            "name": "asyncTaskId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "422": {
-            "description": "Unprocessable Entity",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "object"
-                  }
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "Method Not Allowed"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "200": {
-            "description": "Async task found. The response body contains the task result.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "example": {}
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Async task not found — the ID does not match any known background operation.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "example": {}
-                }
-              }
-            }
-          }
-        }
-      },
-      "servers": [
-        {
-          "url": "http://localhost:8080",
           "description": "Generated server url"
         }
       ]
