@@ -1,6 +1,11 @@
 'use client';
 import ProviderComponent from '@/presentation/layouts/provider-component';
 import 'react-perfect-scrollbar/dist/css/styles.css';
+// o tema do PrimeReact vem antes do tailwind e vale para todas as telas: o modal de login (Dialog) e o Toast deste layout
+// aparecem em qualquer página, e sem o tema o modal fica transparente sobre a tela (a tela inicial não o importava)
+import 'primereact/resources/themes/lara-light-cyan/theme.css';
+import 'primereact/resources/primereact.min.css';
+import 'primeicons/primeicons.css';
 import '../styles/tailwind.css';
 import { Nunito } from 'next/font/google';
 

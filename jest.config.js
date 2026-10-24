@@ -8,7 +8,8 @@ module.exports = {
     coverageDirectory: 'coverage',
     testEnvironment: 'node',
     transform: {
-       '^.+\\.tsx?$': 'ts-jest',
+       // .js também: o JnAjax (app/JnAjax.js) é testado
+       '^.+\\.[tj]sx?$': 'ts-jest',
     },
     testMatch: [
       '**/__tests__/**/*.ts?(x)',

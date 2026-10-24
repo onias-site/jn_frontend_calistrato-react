@@ -43,7 +43,7 @@ export const ResumeViewersOfTheMonth = () => {
         };
         callbacks['onUnexpectedHttpStatus'] = () => setSituation('error');
         // GET sem corpo: com {} o jQuery poria "?{}" na URL
-        JnAjax.doAnAjaxRequest(`resume/{email}/viewers/${monthParameter(chosenMonth)}`, callbacks, 'GET', null as any, {}, 'http://localhost:8081');
+        JnAjax.doACachedRequest(`resume/{email}/viewers/${monthParameter(chosenMonth)}`, callbacks, 'GET', null as any, {}, 'http://localhost:8081');
     };
 
     useEffect(load(month), [month]);

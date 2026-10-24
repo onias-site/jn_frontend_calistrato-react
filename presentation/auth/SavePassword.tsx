@@ -116,16 +116,17 @@ export const SavePassword: React.FC<SavePasswordProps> = ({}) => {
 
     return (
         <div className="relative">
-            <LabelComponent explanation={loginFieldsHelp.newPassword} labelValue="Senha:" property="loginPassword" errors={fieldErrors}>
-                <Password inputId="loginPassword" {...passwordOptions} promptLabel="Digite uma senha" value={context.password} onChange={(e) => setField(() => setContextField('password', e.target.value), '')} toggleMask />
+            <LabelComponent explanation={loginFieldsHelp.newPassword} labelValue="Senha:" property="loginPassword" errors={fieldErrors} stacked>
+                <Password inputId="loginPassword" className="w-full" inputClassName="form-input w-full text-sm font-normal" {...passwordOptions} promptLabel="Digite uma senha" value={context.password} onChange={(e) => setField(() => setContextField('password', e.target.value), '')} toggleMask />
             </LabelComponent>
             <LabelComponent
                 explanation={loginFieldsHelp.confirmPassword}
                 labelValue="Confirme a senha:"
                 property="loginConfirmPassword"
                 errors={fieldErrors}
+                stacked
             >
-                <Password inputId="loginConfirmPassword"
+                <Password inputId="loginConfirmPassword" className="w-full" inputClassName="form-input w-full text-sm font-normal"
                     {...passwordOptions}
                     promptLabel="Confirme a senha"
                     value={context.confirmPassword}
@@ -133,8 +134,8 @@ export const SavePassword: React.FC<SavePasswordProps> = ({}) => {
                     toggleMask
                 />
             </LabelComponent>
-            <LabelComponent explanation={loginFieldsHelp.token(email)} labelValue={`Token recebido no e-mail '${email}':`} property="loginToken" errors={fieldErrors}>
-                <Password inputId="loginToken" {...emptyPasswordOptions} value={context.token} onChange={(e) => setField(() => setContextField('token', e.target.value), '')} toggleMask />
+            <LabelComponent explanation={loginFieldsHelp.token(email)} labelValue={`Token recebido no e-mail '${email}':`} property="loginToken" errors={fieldErrors} stacked>
+                <Password inputId="loginToken" className="w-full" inputClassName="form-input w-full text-sm font-normal" {...emptyPasswordOptions} value={context.token} onChange={(e) => setField(() => setContextField('token', e.target.value), '')} toggleMask />
             </LabelComponent>
         </div>
     );

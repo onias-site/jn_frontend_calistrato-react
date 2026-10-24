@@ -43,7 +43,7 @@ export const ResumesOfTheWeek = () => {
         };
         callbacks['onUnexpectedHttpStatus'] = () => setSituation('error');
         // GET sem corpo: com {} o jQuery poria "?{}" na URL
-        JnAjax.doAnAjaxRequest('recruiter/{email}/resumes-of-the-week', callbacks, 'GET', null as any, {}, 'http://localhost:8081');
+        JnAjax.doACachedRequest('recruiter/{email}/resumes-of-the-week', callbacks, 'GET', null as any, {}, 'http://localhost:8081');
     };
 
     useEffect(load, []);

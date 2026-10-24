@@ -47,7 +47,7 @@ export const LoginHistory = () => {
         const login: any = JnAjax.getLogin() || {};
         const parentId = login.email ? groupParentId(login.email) : '';
         // GET sem corpo: com {} o jQuery poria "?{}" na URL
-        JnAjax.doAnAjaxRequest(`grouper/{email}/${PARENT_NAME}/${CHILD_NAME}/${parentId}/bothSides`, callbacks, 'GET', null as any, {}, 'http://localhost:8082');
+        JnAjax.doACachedRequest(`grouper/{email}/${PARENT_NAME}/${CHILD_NAME}/${parentId}/bothSides`, callbacks, 'GET', null as any, {}, 'http://localhost:8082');
     };
 
     useEffect(load, []);

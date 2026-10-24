@@ -197,7 +197,7 @@ export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
             <form>
                 <div className="relative mb-4" style={lockedToken ? disabledDiv : {}}>
                     {screen.component}
-                    {detailMessage && <p className="text-red-600">{detailMessage}</p>}
+                    {detailMessage && <p className="text-sm text-red-600">{detailMessage}</p>}
                 </div>
                 <LoadingButton
                     invalid={lockedToken || invalid}

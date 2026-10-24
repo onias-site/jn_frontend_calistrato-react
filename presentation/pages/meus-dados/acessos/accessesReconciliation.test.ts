@@ -12,7 +12,7 @@ describe('sha1AsTheBackEnd', () => {
         expect(sha1AsTheBackEnd('376e139c1a4b8ae34a3efe9bf12623a2fbdd3622')).toBe('-59b2d0bbc256a21ddec4620fa6dfd624a3096935');
     });
 
-    it('o parentId do grupo é o id em js_login_email do e-mail transformado', () => {
+    it('o parentId do grupo é o id em jn_login_email do e-mail transformado', () => {
         expect(groupParentId('onias85@gmail.com')).toBe('-59b2d0bbc256a21ddec4620fa6dfd624a3096935');
     });
 });

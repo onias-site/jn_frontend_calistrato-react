@@ -38,7 +38,7 @@ export const ViewedResumeDetails = ({ month, linkedin }: { month: string; linked
             JnAjax.getHandler401(load)();
         };
         callbacks['onUnexpectedHttpStatus'] = () => setSituation('error');
-        JnAjax.doAnAjaxRequest(`recruiter/{email}/viewed-resumes/${monthParameter(month)}/details`, callbacks, 'POST', { linkedin }, {}, 'http://localhost:8081');
+        JnAjax.doACachedRequest(`recruiter/{email}/viewed-resumes/${monthParameter(month)}/details`, callbacks, 'POST', { linkedin }, {}, 'http://localhost:8081');
     };
 
     useEffect(load, [month, linkedin]);

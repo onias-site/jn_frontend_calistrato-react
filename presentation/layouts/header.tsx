@@ -56,6 +56,8 @@ const Header = () => {
 
         const  callbacks = {};
         sessionStorage.removeItem('login');
+        // os dados guardados pelas telas são do usuário que saiu
+        JnAjax.clearScreenCache();
         setLogged(false);
         callbacks['200'] = () => PubSub.publish('showMessage', { summary: 'Sucesso!!!', detail: `O usuário '${login.email}' encerrou o login com sucesso!` });
         callbacks['404'] = () => PubSub.publish('showMessage', { summary: 'Aviso!!!', detail: `O usuário '${login.email}' não está logado neste sistema!`, severity: 'warn' });
@@ -266,8 +268,14 @@ const Header = () => {
                                 button={
                                     <>
                                         {/* <img className="h-9 w-9 rounded-full object-cover saturate-50 group-hover:saturate-100 lg:hidden" src="/assets/images/auth/login.svg" /> */}
-                                        <div className="flex flex-row gap-2 rounded-full bg-white-light/40 p-2 hover:bg-white-light/90 hover:text-primary dark:bg-dark/40 dark:hover:bg-dark/60">
-                                            <h4 className="hidden lg:block">{userName}</h4>
+                                        {/* o ícone de pessoa diz que ali está o acesso ao sistema; sem ele, o botão de quem não está
+                                            logado era um círculo vazio */}
+                                        <div
+                                            className="flex flex-row items-center gap-2 rounded-full bg-white-light/40 p-2 hover:bg-white-light/90 hover:text-primary dark:bg-dark/40 dark:hover:bg-dark/60"
+                                            title={logged ? userName : 'Entrar no sistema'}
+                                        >
+                                            <IconUser className="h-5 w-5 shrink-0" />
+                                            {userName && <h4 className="hidden lg:block">{userName}</h4>}
                                         </div>
                                     </>
                                 }
@@ -297,7 +305,7 @@ const Header = () => {
                                                 </Link>
                                             </li>
                                             <li>
-                                                <Link href="/auth/boxed-lockscreen" className="dark:hover:text-white">
+                                                <Link href="/meus-dados/chamados" className="dark:hover:text-white">
                                                     <IconLockDots className="h-4.5 w-4.5 shrink-0 ltr:mr-2 rtl:ml-2" />
                                                     Chamados
                                                 </Link>

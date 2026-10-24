@@ -65,6 +65,8 @@ export default class JnAjax {
 
                 const responseBody = JnAjax.parseToObject(a.responseText);
 
+                JnAjax.forgetWhatThisWriteChanged(uri, type, a.status);
+
                 callbacks[422] = callbacks[422] || JnAjax.getHandler422(responseBody);
 
                 const callback =
@@ -89,6 +91,60 @@ export default class JnAjax {
             dataType,
             complete,
         });
+    }
+
+    // respostas das telas que carregam ao nascer, guardadas em memória: valem até o navegador recarregar a página (ou o
+    // logout), então voltar a uma tela ou a um item de combobox já carregado não vai de novo ao backend
+    static screenCache = new Map();
+
+    static CACHED_STATUSES = [200, 404];
+
+    static clearScreenCache(uriPart = '') {
+        for (const key of [...JnAjax.screenCache.keys()]) {
+            if (key.includes(uriPart)) JnAjax.screenCache.delete(key);
+        }
+    }
+
+    // escritas que criam ou desfazem chamados: depois delas, a lista guardada daquele tipo de chamado (o childName no
+    // caminho do grouper) fica velha e é descartada. Chave terminada em '/' casa pelo começo do caminho; as outras, inteiras
+    static TICKET_WRITES = {
+        'contact-us/': 'js_contact_us',
+        'resume/{email}/skills/hierarchy': 'vis_skill_fix_hierarchy_pending',
+        'resume/{email}/skills/suggestion': 'vis_skill_pending',
+    };
+
+    static forgetWhatThisWriteChanged(uri, type, status) {
+        const succeeded = status >= 200 && status < 300;
+        if (type == 'GET' || !succeeded) return;
+        for (const [write, childName] of Object.entries(JnAjax.TICKET_WRITES)) {
+            const matches = write.endsWith('/') ? uri.startsWith(write) : uri == write;
+            if (matches) JnAjax.clearScreenCache(`/${childName}/`);
+        }
+    }
+
+    // como o doAnAjaxRequest, mas responde da memória quando a mesma requisição (do mesmo usuário) já foi respondida
+    // com um dos CACHED_STATUSES
+    static doACachedRequest(uri, callbacks = {}, type = 'GET', requestBody = {}, headers = {}, enviroment = JnAjax.deafultEnviroment) {
+        const getLogin = callbacks['getLogin'] || this.getLogin;
+        const login = getLogin() || {};
+        const key = [enviroment, type, uri.replace('{email}', login.email), JSON.stringify(requestBody)].join(' ');
+        const cached = JnAjax.screenCache.get(key);
+        if (cached) {
+            const callback = callbacks[cached.status] || (() => {});
+            callback(cached.responseBody, cached.status);
+            const afterHttpRequest = callbacks['afterHttpRequest'] || (() => {});
+            afterHttpRequest(cached.responseBody, cached.status);
+            return;
+        }
+        for (const status of JnAjax.CACHED_STATUSES) {
+            const original = callbacks[status];
+            if (!original) continue;
+            callbacks[status] = (responseBody, httpStatus) => {
+                JnAjax.screenCache.set(key, { responseBody, status: httpStatus });
+                original(responseBody, httpStatus);
+            };
+        }
+        JnAjax.doAnAjaxRequest(uri, callbacks, type, requestBody, headers, enviroment);
     }
 
     static getHandler422 = (response, status) => {

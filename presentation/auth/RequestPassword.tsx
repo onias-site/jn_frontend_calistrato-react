@@ -70,7 +70,7 @@ export const RequestPassword: React.FC<RequestPasswordProps> = ({}) => {
     return (
         <div className="relative">
             <LabelComponent explanation={loginFieldsHelp.loginPassword} labelValue="Senha:" property="loginPassword" errors={fieldErrors}>
-                <Password inputId="loginPassword"
+                <Password inputId="loginPassword" className="w-full" inputClassName="form-input w-full"
                  {...passwordOptions}
                  promptLabel= "Digite uma senha"
                  value={context.password}

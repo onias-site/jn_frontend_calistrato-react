@@ -6,7 +6,7 @@
  */
 
 /** O tipo do grupo: o nome da entidade que calcula o parentId. */
-export const PARENT_NAME = 'js_login_email';
+export const PARENT_NAME = 'jn_login_email';
 
 /** O nome da entidade dos filhos. */
 export const CHILD_NAME = 'js_login_session_validation';
@@ -91,7 +91,7 @@ export const sha1AsTheBackEnd = (text: string): string => {
 };
 
 /**
- * O parentId do grupo do e-mail: o id em js_login_email (o SHA-1 da sua chave primária) do e-mail já transformado (o
+ * O parentId do grupo do e-mail: o id em jn_login_email (o SHA-1 da sua chave primária) do e-mail já transformado (o
  * SHA-1 do e-mail), que é o valor que o grupo guarda.
  */
 export const groupParentId = (email: string): string => sha1AsTheBackEnd(sha1AsTheBackEnd(email));

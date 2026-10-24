@@ -1,4 +1,5 @@
 'use client';
+import ContactUs from '@/presentation/layouts/contact-us';
 import ContentAnimation from '@/presentation/layouts/content-animation';
 import Footer from '@/presentation/layouts/footer';
 import Header from '@/presentation/layouts/header';
@@ -15,6 +16,7 @@ export default function DefaultLayout({ children }: { children: React.ReactNode 
             <div className="relative">
                 <Overlay />
                 <ScrollToTop />
+                <ContactUs />
                 <Setting />
                 <MainContainer>
                     <Sidebar />
