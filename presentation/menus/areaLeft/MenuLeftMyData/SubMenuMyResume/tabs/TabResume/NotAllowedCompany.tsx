@@ -3,6 +3,9 @@ import { create } from 'zustand';
 import { AutoComplete } from 'primereact/autocomplete';
 import JnAjax from '@/app/JnAjax'
 
+// o tamanho máximo que o servidor aceita no texto buscado pelo autocomplete (o mesmo de cada empresa gravada)
+const COMPANY_SEARCH_MAX_LENGTH = 50;
+
 export interface NotAllowedCompanyProps {
     setNotAllowedCompany: (value: any) => void;
     notAllowedCompany: [];
@@ -22,7 +25,13 @@ export const NotAllowedCompany: React.FC<NotAllowedCompanyProps> = ({ invalid, n
     const { filteredCompanies, setFilteredCompanies } = NotAllowedCompanyStore((state: INotAllowedCompanyStore) => ({ ...state }));
 
 
+    // acima do limite do servidor (o campo search aceita até 50 caracteres) não há empresa a sugerir: sem isto, a recusa
+    // dele (422) aparecia ao usuário como aviso cru, em inglês; o formulário já diz que a empresa passou do tamanho
     const filtrarEmpresas = (event: any) => {
+        if (event.query.trim().length > COMPANY_SEARCH_MAX_LENGTH) {
+            setFilteredCompanies([]);
+            return;
+        }
         const httpResponses = {};
         httpResponses[200] = (response:any) => setFilteredCompanies(response.companies);
         JnAjax.doAnAjaxRequest('companies/search/autocomplete/'+ event.query, httpResponses,'GET', {},  {}, 'http://localhost:8081');

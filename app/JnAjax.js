@@ -46,7 +46,9 @@ export default class JnAjax {
 
         const url = url2.replace('{email}', login.email);
 
-        const data = requestBody ? JSON.stringify(requestBody) : null;
+        // GET e HEAD não têm corpo: o jQuery poria o JSON na URL ("...?{}"); até 2026-10-26 cada chamada passava null
+        const requestWithoutBody = type == 'GET' || type == 'HEAD';
+        const data = requestBody && !requestWithoutBody ? JSON.stringify(requestBody) : null;
 
         const complete = (a) => {
             // 401 da sessão que acabou de ser criada: espera a gravação e refaz, em vez de pedir o login de novo

@@ -21,13 +21,13 @@ export const serverRequests = (state: any) => {
     const notifyAboutAlreadySentToken = (response: any) => {
         state.setLockedToken(false);
         state.setInvalid(false);
+        // a mensagem do token enviado prevalece sobre a que estava no modal (a da senha bloqueada, por exemplo): até
+        // 2026-10-26 as duas saíam emendadas, com ponto duplo ("...desbloqueá-la.. Seu token foi enviado...")
         state.showModal(
             'SavePassword',
-           state.title,
+            state.title,
             null,
-           state.detailMessage ?
-           `${state.detailMessage}. Seu token foi enviado ao e-mail '${state.email}' no dia ${response.dateItWasSaved} e expirará no dia ${response.expirationDate}.`
-           :  `Seu token foi enviado ao e-mail '${state.email}' no dia ${response.dateItWasSaved} e expirará no dia ${response.expirationDate}.`
+            `Seu token foi enviado ao e-mail '${state.email}' no dia ${response.dateItWasSaved} e expirará no dia ${response.expirationDate}.`,
         );
     };
 

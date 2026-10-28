@@ -670,21 +670,22 @@ const ResumeTextMissingHint: React.FC = () => (
     </p>
 );
 
-// Cada sugestão manda um e-mail ao candidato e abre um chamado ao suporte, por isso o backend aceita uma de cada tipo
-// por dia (429 a partir da segunda). Os dois modais avisam antes do envio.
+// Cada sugestão manda um e-mail ao candidato e abre um chamado ao suporte, por isso o backend aceita um chamado a cada 24
+// horas, contadas do envio anterior, somando sugestão de habilidade, ajuste de hierarquia e fale conosco (429 a partir do
+// segundo). Os dois modais avisam antes do envio.
 interface DailyLimitHintProps {
     kind: string;
 }
 const DailyLimitHint: React.FC<DailyLimitHintProps> = ({ kind }) => (
     <p className="m-0 text-left" style={{ fontSize: '12px' }}>
-        {`Atenção: você pode enviar apenas uma sugestão de ${kind} a cada 24 horas. Confira os dados antes de enviar.`}
+        {`Atenção: depois deste envio, um novo chamado (sugestão de habilidade, ajuste de hierarquia ou fale conosco) só poderá ser aberto quando completar 24 horas. Confira os dados antes de enviar.`}
     </p>
 );
 
 const showDailyLimitReached = (kind: string) => {
     PubSub.publish('showMessage', {
         summary: 'Limite de 24 horas atingido',
-        detail: `Você já enviou uma sugestão de ${kind} nas últimas 24 horas. É permitida apenas uma a cada 24 horas: tente novamente em 24 horas.`,
+        detail: `Você já abriu um chamado (sugestão de habilidade, ajuste de hierarquia ou fale conosco) nas últimas 24 horas. A sugestão de ${kind} poderá ser enviada quando completar 24 horas do envio anterior.`,
         severity: 'error',
     });
 };
@@ -1158,7 +1159,6 @@ const getSkillSuggestion = (skill: string, onFound: (suggestion: SkillSuggestion
     const callbacks: any = {};
     callbacks[401] = onNotFound;
     callbacks[200] = (response: any) => (response && response.status ? onFound(response) : onNotFound());
-    callbacks[400] = () => warn('Habilidade inválida', `'${skill}' deve ter entre ${SKILL_MIN_LENGTH} e ${SKILL_MAX_LENGTH} caracteres.`);
     callbacks['onUnexpectedHttpStatus'] = () => warn('Falha ao carregar sugestão', 'Não conseguimos carregar a sua sugestão anterior para esta habilidade.');
     withButtonLoading(callbacks, setLoading);
     JnAjax.doAnAjaxRequest('resume/{email}/skills/suggestion/search', callbacks, 'POST', { skill }, {}, 'http://localhost:8081');

@@ -18,7 +18,6 @@ import IconCaretDown from '@/presentation/icons/icon-caret-down';
 import IconMenuPages from '@/presentation/icons/menu/icon-menu-pages';
 import { usePathname, useRouter } from 'next/navigation';
 import { getTranslation } from '@/i18n';
-import { useStore } from '@/presentation/Login/store/useStore';
 import JnAjax from '@/app/JnAjax';
 import PubSub from 'pubsub-js';
 import { ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogin';
@@ -29,9 +28,6 @@ const Header = () => {
     const dispatch = useDispatch();
     const router = useRouter();
     const { t, i18n } = getTranslation();
-
-    const user = useStore((state) => state.userState);
-
 
     const getLogin = () => {
         const login = JnAjax.getLogin();
@@ -70,14 +66,14 @@ const Header = () => {
 
     // o sessionStorage não avisa quando muda: relê o login ao montar e sempre que o modal de login abre ou fecha
     const [logged, setLogged] = useState(false);
-    // o userState se perde ao recarregar a página: sem ele, o nome mostrado é o e-mail da sessão
+    // o nome mostrado é o e-mail da sessão (até 2026-10-26 vinha antes o usuário guardado pelo modal de login antigo)
     const [loggedEmail, setLoggedEmail] = useState('');
     useEffect(() => {
         setLogged(!!JnAjax.hasLogin());
         const login: any = JnAjax.getLogin();
         setLoggedEmail((login && login.email) || '');
     }, [visible]);
-    const userName = user || loggedEmail;
+    const userName = loggedEmail;
 
     const showModalLogin = () => showModal('RequestEmail', 'Entrar no sistema', null);
 

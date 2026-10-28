@@ -75,8 +75,8 @@ const ContactUs = () => {
         callbacks[429] = () =>
             setProblem(
                 contactType == 'clarifyDoubts'
-                    ? 'Você já enviou uma dúvida nas últimas 24 horas. Aguarde a resposta ou tente de novo amanhã.'
-                    : 'Você já abriu um ticket hoje (fale conosco, sugestão de habilidade ou ajuste de hierarquia). Tente de novo amanhã; bugs podem ser reportados a qualquer momento.',
+                    ? 'Você já enviou uma dúvida nas últimas 24 horas. Aguarde a resposta ou envie outra quando completar 24 horas do envio anterior.'
+                    : 'Você já abriu um ticket nas últimas 24 horas (fale conosco, sugestão de habilidade ou ajuste de hierarquia). Um novo poderá ser aberto quando completar 24 horas do envio anterior; bugs podem ser reportados a qualquer momento.',
             );
         callbacks[400] = () => setProblem('Informe um e-mail válido.');
         callbacks[422] =() => setProblem('Confira os campos: algum deles não foi aceito.');

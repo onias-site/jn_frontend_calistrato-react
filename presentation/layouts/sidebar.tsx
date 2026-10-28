@@ -13,8 +13,6 @@ import IconMenuAuthentication from '@/presentation/icons/menu/icon-menu-authenti
 import IconMenuCharts from '@/presentation/icons/menu/icon-menu-charts';
 import { usePathname } from 'next/navigation';
 import { getTranslation } from '@/i18n';
-import { LoginView } from '../Login/login.view';
-import { useStore } from '@/presentation/Login/store/useStore';
 
 const Sidebar = () => {
     const dispatch = useDispatch();
@@ -28,14 +26,6 @@ const Sidebar = () => {
             return oldValue === value ? '' : value;
         });
     };
-
-    const setModal = useStore(state => state.setModalState);
-    const accessToken = useStore(state => state.accessTokenState);
-    const handleOpenModal = () => {
-        if (!accessToken) {
-            setModal('login');
-        }
-      };
 
     useEffect(() => {
         const selector = document.querySelector('.sidebar ul a[href="' + window.location.pathname + '"]');
@@ -227,7 +217,6 @@ const Sidebar = () => {
                     </PerfectScrollbar>
                 </div>
             </nav>
-            <LoginView />
             {/* <AuthenticationManager /> */}
         </div>
     );
