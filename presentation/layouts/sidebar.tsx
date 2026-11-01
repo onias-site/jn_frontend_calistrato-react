@@ -185,7 +185,7 @@ const Sidebar = () => {
                                 <AnimateHeight duration={300} height={currentMenu === 'statistics' ? 'auto' : 0}>
                                     <ul className="sub-menu text-gray-500">
                                         <li>
-                                            <Link href="/maintenence">{t('Skills')}</Link>
+                                            <Link href="/estatisticas/skills">{t('Telegram job groups')}</Link>
                                         </li>
                                     </ul>
                                 </AnimateHeight>
@@ -210,7 +210,7 @@ const Sidebar = () => {
                                     <button className="btn btn-info mb-3 w-full">Seja nosso sócio</button>
                                 </div>
                                 <div className="w-full">
-                                    <button className="btn btn-warning w-full">Skills que mais pagam</button>
+                                    <button className="btn btn-warning w-full">Habilidades que mais pagam</button>
                                 </div>
                             </div>
                         </div> */}

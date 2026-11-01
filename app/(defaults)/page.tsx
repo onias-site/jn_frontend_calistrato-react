@@ -1,14 +1,10 @@
-
-import HomePage from '@/presentation/modules/home/home-page-componente';
+import { SkillStatistics } from '@/presentation/pages/estatisticas/skills/SkillStatistics';
 import { Metadata } from 'next';
-import React from 'react';
 
 export const metadata: Metadata = {
 title: 'Home',
 };
 
-const Home = () => {
-return <HomePage />;
-};
+const Home = () => <SkillStatistics initialSeniority="senior" searchOnOpening />;
 
 export default Home;

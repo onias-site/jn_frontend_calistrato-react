@@ -1,0 +1,20 @@
+/** Os grupos do Telegram de onde vêm os anúncios pesquisados nesta tela. */
+export const telegramGroups = [
+    'https://t.me/empregossp',
+    'https://t.me/vagas_saopaulo',
+    'https://t.me/VAGASELENIZEDEPOLI',
+    'https://t.me/vagadeempregogoiania',
+    'https://t.me/empregajampa',
+    'https://t.me/itnetworkingbrazil',
+    'https://t.me/ITJOBS_EMPREGOSTI',
+    'https://t.me/vagasRH',
+    'https://t.me/multiplataformaTI',
+    'https://t.me/joinchat/q_PRgF_18n00NjEx',
+    'https://t.me/vagastibr',
+    'https://t.me/vagasparacursosuperioroutecnico',
+    'https://t.me/vagastisapbrasil',
+    'https://t.me/+f9d1rNi7-15iZTRh',
+    'https://t.me/Jobs4IT',
+    'https://t.me/joinchat/VCso3zuEeF-GkDnr',
+    'https://t.me/phpbrasilvagas',
+];

@@ -149,6 +149,60 @@ export default class JnAjax {
         JnAjax.doAnAjaxRequest(uri, callbacks, type, requestBody, headers, enviroment);
     }
 
+    // respostas públicas e caras de refazer (as estatísticas), guardadas no localStorage: sobrevivem a recarregar a página
+    // e a fechar o navegador, e vencem em 24 horas para que os dados de uma carga nova apareçam
+    static PERSISTED_REQUEST_PREFIX = 'persistedRequest ';
+    static PERSISTED_REQUEST_LIFETIME = 24 * 60 * 60 * 1000;
+
+    static clearPersistedRequests() {
+        try {
+            const keys = Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index));
+            for (const key of keys) {
+                if (key.startsWith(JnAjax.PERSISTED_REQUEST_PREFIX)) localStorage.removeItem(key);
+            }
+        } catch (error) {}
+    }
+
+    static readPersistedRequest(key) {
+        try {
+            const persisted = JSON.parse(localStorage.getItem(key));
+            if (persisted && persisted.expiresAt > new Date().getTime()) return persisted;
+            localStorage.removeItem(key);
+        } catch (error) {}
+        return null;
+    }
+
+    // sem espaço no localStorage, descarta o que está guardado e tenta uma vez; se ainda falhar, só deixa de guardar
+    static savePersistedRequest(key, responseBody) {
+        const expiresAt = new Date().getTime() + JnAjax.PERSISTED_REQUEST_LIFETIME;
+        const persisted = JSON.stringify({ responseBody, expiresAt });
+        try {
+            localStorage.setItem(key, persisted);
+        } catch (error) {
+            JnAjax.clearPersistedRequests();
+            try {
+                localStorage.setItem(key, persisted);
+            } catch (secondError) {}
+        }
+    }
+
+    // GET cuja resposta 200 fica no localStorage: a mesma pesquisa não volta ao backend enquanto a resposta valer. Os dados
+    // não são de um usuário, por isso a chave não leva o e-mail
+    static doAPersistedRequest(uri, callbacks = {}, enviroment = JnAjax.deafultEnviroment) {
+        const key = `${JnAjax.PERSISTED_REQUEST_PREFIX}${enviroment} ${uri}`;
+        const original = callbacks[200];
+        const persisted = JnAjax.readPersistedRequest(key);
+        if (persisted) {
+            original(persisted.responseBody, 200);
+            return;
+        }
+        callbacks[200] = (responseBody, httpStatus) => {
+            JnAjax.savePersistedRequest(key, responseBody);
+            original(responseBody, httpStatus);
+        };
+        JnAjax.doAnAjaxRequest(uri, callbacks, 'GET', null, {}, enviroment);
+    }
+
     static getHandler422 = (response, status) => {
         return () => PubSub.publish('httpStatus422', response);
     };

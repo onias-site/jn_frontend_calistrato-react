@@ -16,7 +16,9 @@ import { NotAllowedCompanyStore } from '@/presentation/menus/areaLeft/MenuLeftMy
 import { SkillsInternalListStore, TabSkillsStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabSkills/ChooserSkills';
 
 import { Tabs } from '@/presentation/components/source/Tabs';
+import { removeResumeCopy, resumeCopyFromSavedResume, resumeSavedForTheSearch, saveResumeCopy } from '@/presentation/components/resume-copy/resumeCopy';
 import JnAjax from '@/app/JnAjax';
+import { useRouter } from 'next/navigation';
 import { create } from 'zustand';
 import PubSub from 'pubsub-js';
 import { sha1 } from 'js-sha1';
@@ -52,6 +54,7 @@ const initialStatesOfTheTabs = storesOfTheTabs.map((store) => store.getState());
  * continuava preenchido depois de excluir, e um "Salvar dados" recriava o currículo apagado.
  */
 const clearTheForm = () => {
+    removeResumeCopy();
     storesOfTheTabs.forEach((store, index) => store.setState(initialStatesOfTheTabs[index], true));
     const { formVersion } = SubMenuMyResumeStore.getState();
     SubMenuMyResumeStore.setState({ hasTabSkills: false, resumeStatus: 'none', formVersion: formVersion + 1 });
@@ -89,9 +92,13 @@ const loadResumeStatus = (setResumeStatus: (resumeStatus: ResumeStatus) => void,
             onResumeFound(data.vis_inactive_resume);
             return;
         }
+        removeResumeCopy();
         setResumeStatus('none');
     };
-    callbacks[404] = () => setResumeStatus('none');
+    callbacks[404] = () => {
+        removeResumeCopy();
+        setResumeStatus('none');
+    };
     callbacks['onUnexpectedHttpStatus'] = () => setResumeStatus('unknown');
     // GET sem corpo: com {} o jQuery poria "?{}" na URL
     JnAjax.doAnAjaxRequest('resume/{email}', callbacks, 'GET', null as any, {}, 'http://localhost:8081');
@@ -129,6 +136,7 @@ const loadSavedSkills = (savedSkills: any[]) => {
 
 /** Preenche as abas com o currículo gravado (o ativo ou o inativo), cada store convertendo os campos que o backend transforma. */
 const loadSavedResume = (resume: any) => {
+    saveResumeCopy(resumeCopyFromSavedResume(resume));
     TabResumeStore.getState().loadFromSavedResume(resume);
     TabLanguagesStore.getState().loadFromSavedResume(resume);
     TabOptionsStore.getState().loadFromSavedResume(resume);
@@ -269,7 +277,7 @@ const getAllPendingRequirements = (stateSkills: any, stateResume: any, stateLang
     return [...otherTabsPending, ...stateSalary.getPendingRequirements()];
 };
 
-const saveResume = (stateSkills: any, stateResume: any, stateLanguage: any, stateSalary: any, stateRegioes: any, stateOptions: any) => {
+const saveResume = (stateSkills: any, stateResume: any, stateLanguage: any, stateSalary: any, stateRegioes: any, stateOptions: any, onSaved: () => void) => {
     const formErrors = getAllPendingRequirements(stateSkills, stateResume, stateLanguage, stateSalary, stateRegioes, stateOptions);
     if (formErrors.length) {
         return formErrors;
@@ -325,20 +333,25 @@ const saveResume = (stateSkills: any, stateResume: any, stateLanguage: any, stat
 
     const callbacks: any = {};
 
-    callbacks['retryAfterAuthentication'] = () => saveResume(stateSkills, stateResume, stateLanguage, stateSalary, stateRegioes, stateOptions );
+    callbacks['retryAfterAuthentication'] = () => saveResume(stateSkills, stateResume, stateLanguage, stateSalary, stateRegioes, stateOptions, onSaved);
     callbacks[200] = () => {
         // callbacks[200] = (responseFromBackEnd: any) => {
         // salvar sempre deixa o currículo na entidade principal (reativa o inativo)
         SubMenuMyResumeStore.getState().setResumeStatus('active');
+        saveResumeCopy({ resumeType, ddd, experienceStartYear: new Date().getFullYear() - experience });
         PubSub.publish('showMessage', {
             summary: 'Currículo salvo com sucesso',
             detail: 'Seu currículo está ativo e visível para os recrutadores.',
         });
+        onSaved();
     };
     JnAjax.doAnAjaxRequest('resume/{email}/language/portuguese', callbacks, 'POST', resume, {}, 'http://localhost:8081');
 };
 
 const SubMenuMyResume = () => {
+    const router = useRouter();
+    // quem veio de "Vagas compatíveis comigo" sem currículo volta para a pesquisa que pediu
+    const returnToThePendingSearch = () => resumeSavedForTheSearch() && router.push('/estatisticas/skills');
     const stateSkills = TabSkillStore((state: ITabSkillStore) => ({
         ...state,
     }));
@@ -373,7 +386,7 @@ const SubMenuMyResume = () => {
         {
             label: 'Salários',
             icon: 'pi pi-dollar',
-            onMoveOnFowardTabs: () => saveResume(stateSkills, stateResume, stateLanguage, stateSalary, stateRegioes, stateOptions),
+            onMoveOnFowardTabs: () => saveResume(stateSkills, stateResume, stateLanguage, stateSalary, stateRegioes, stateOptions, returnToThePendingSearch),
             getPendingRequirements: () => getAllPendingRequirements(stateSkills, stateResume, stateLanguage, stateSalary, stateRegioes, stateOptions),
         },
     ];
