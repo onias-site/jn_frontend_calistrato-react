@@ -17,8 +17,7 @@ import {
     takeThePendingSearch,
     waitForTheResume,
 } from '@/presentation/components/resume-copy/resumeCopy';
-import { MonthPicker, currentMonth, isFutureMonth, monthParameter } from '@/presentation/components/month-picker/MonthPicker';
-import { telegramGroups } from './telegramGroups';
+import { MonthPicker, isFutureMonth, monthParameter, previousMonth } from '@/presentation/components/month-picker/MonthPicker';
 import { dddRegions } from '@/presentation/components/regions/dddRegions';
 import Dropdown from '@/presentation/utils/dropdown';
 import { MonthTotal, SkillTotal, monthLabel, parseMonths, parseSkills, percentLabel, pieSlices, pieTotal, requirementsLabel, skillLabel } from './skillStatisticsData';
@@ -102,18 +101,30 @@ const SkillsPie = ({ skills, vacancies }: { skills: SkillTotal[]; vacancies: num
     );
 };
 
-/** O link que abre o modal com os grupos do Telegram pesquisados. */
+/** O link que abre o modal com os grupos do Telegram pesquisados, lidos do backend ao abrir. */
 const TelegramGroupsLink = () => {
     const [visible, setVisible] = useState(false);
+    const [telegramGroups, setTelegramGroups] = useState<string[]>([]);
+
+    const open = () => {
+        setVisible(true);
+        const callbacks: any = {};
+        callbacks[200] = (response: any) => setTelegramGroups(response.groups);
+        callbacks['onUnexpectedHttpStatus'] = () =>
+            PubSub.publish('showMessage', { summary: 'Atenção', detail: 'Não foi possível carregar os grupos agora. Tente de novo em alguns instantes.', severity: 'warn' });
+        JnAjax.doAPersistedRequest('statistics/skills/telegramGroups', callbacks, API);
+    };
+
     return (
         <>
-            <button type="button" className="text-primary hover:underline" onClick={() => setVisible(true)}>
+            <button type="button" className="text-primary hover:underline" onClick={open}>
                 Grupos pesquisados
             </button>
             <Dialog visible={visible} header="Grupos pesquisados" style={{ width: '90vw', maxWidth: '520px' }} onHide={() => setVisible(false)}>
                 <ul className="space-y-2">
-                    {telegramGroups.map((group) => (
+                    {telegramGroups.map((group, index) => (
                         <li key={group}>
+                            {index + 1}:{' '}
                             <a href={group} target="_blank" rel="noopener noreferrer" className="break-all text-primary hover:underline">
                                 {group}
                             </a>
@@ -151,14 +162,14 @@ const DddChooser = ({ ddds, onChoose, onCancel }: { ddds: number[]; onChoose: (d
 
 /**
  * Grupos de vagas do Telegram, calculados dos anúncios e lidos por id. O botão "Pesquisar" abre duas opções: "Todas as
- * Vagas" lê as skills do mês, da senioridade e da região, e "Vagas compatíveis comigo" faz a mesma pesquisa no mês corrente,
+ * Vagas" lê as skills do mês, da senioridade e da região, e "Vagas compatíveis comigo" faz a mesma pesquisa no mês anterior ao corrente,
  * com a senioridade e o DDD do currículo do usuário. Mudar um filtro esconde o resultado até a próxima pesquisa. A pizza
  * das skills fica acima da lista, e cada skill expande um gráfico de linhas com os seus meses. A home abre a tela já
  * pesquisada, com searchOnOpening.
  */
 export const SkillStatistics = ({ initialSeniority = 'pleno', searchOnOpening = false }: { initialSeniority?: string; searchOnOpening?: boolean }) => {
     const router = useRouter();
-    const [month, setMonth] = useState(currentMonth());
+    const [month, setMonth] = useState(previousMonth());
     const [seniority, setSeniority] = useState(initialSeniority);
     const [ddd, setDdd] = useState('10');
     const [situation, setSituation] = useState<Situation>('idle');
@@ -194,7 +205,7 @@ export const SkillStatistics = ({ initialSeniority = 'pleno', searchOnOpening = 
 
     // o resultado segue os filtros da tela: eles passam a mostrar o que foi pesquisado, e os gráficos de linhas os usam
     const searchCompatiblePositions = (resume: ResumeCopy, chosenDdd: string) => {
-        const chosenMonth = currentMonth();
+        const chosenMonth = previousMonth();
         const chosenSeniority = seniorityOf(resume, new Date().getFullYear());
         setResumeToChooseDdd(null);
         setMonth(chosenMonth);
@@ -360,14 +371,14 @@ export const SkillStatistics = ({ initialSeniority = 'pleno', searchOnOpening = 
                         </h5>
                         <SkillsPie skills={skills} vacancies={total} />
                         <div className="space-y-2 font-semibold">
-                            {skills.map((item) => {
+                            {skills.map((item, index) => {
                                 const expanded = open.includes(item.skill);
                                 return (
                                     <div key={item.skill} className="rounded border border-[#d3d3d3] dark:border-[#1b2e4b]">
                                         <button type="button" className="flex w-full items-center justify-between p-3" aria-expanded={expanded} onClick={() => toggle(item.skill)}>
                                             <span className="flex items-center gap-2">
                                                 <i className={expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'} />
-                                                {skillLabel(item.skill)}
+                                                {index + 1}: {skillLabel(item.skill)}
                                             </span>
                                             <span>{item.total}</span>
                                         </button>

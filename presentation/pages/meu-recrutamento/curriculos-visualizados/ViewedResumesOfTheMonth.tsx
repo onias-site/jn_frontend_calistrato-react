@@ -5,7 +5,7 @@ import 'primereact/resources/themes/lara-light-cyan/theme.css';
 import 'primereact/resources/primereact.min.css';
 import 'primeicons/primeicons.css';
 import JnAjax from '@/app/JnAjax';
-import { MonthPicker, currentMonth, monthParameter } from '@/presentation/components/month-picker/MonthPicker';
+import { MonthPicker, monthParameter, previousMonth } from '@/presentation/components/month-picker/MonthPicker';
 import { ViewedResumeDetails } from './ViewedResumeDetails';
 
 type Situation = 'loading' | 'loaded' | 'notLogged' | 'error';
@@ -40,13 +40,13 @@ const parseViews = (texts: string[]): ViewedResume[] =>
 
 /**
  * Os currículos que o recrutador logado visualizou num mês: um por currículo, com o apelido, o LinkedIn e a data da
- * última visualização no mês. O mês é escolhido na tela e começa no mês corrente. A lista é gravada a cada abertura de
+ * última visualização no mês. O mês é escolhido na tela e começa no mês anterior ao corrente. A lista é gravada a cada abertura de
  * currículo (e a cada apelido dado) e lida pelo id do grupo do recrutador no mês; por isso exige login, e quem não está
  * logado vê o modal de login, que repete a busca ao entrar. "ver detalhes" expande a linha com o currículo como o
  * e-mail de currículos o mostra; várias linhas podem ficar expandidas ao mesmo tempo.
  */
 export const ViewedResumesOfTheMonth = () => {
-    const [month, setMonth] = useState(currentMonth());
+    const [month, setMonth] = useState(previousMonth());
     const [situation, setSituation] = useState<Situation>('loading');
     const [views, setViews] = useState<ViewedResume[]>([]);
     const [expanded, setExpanded] = useState<string[]>([]);

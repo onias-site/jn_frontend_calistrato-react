@@ -5,7 +5,7 @@ import 'primereact/resources/themes/lara-light-cyan/theme.css';
 import 'primereact/resources/primereact.min.css';
 import 'primeicons/primeicons.css';
 import JnAjax from '@/app/JnAjax';
-import { MonthPicker, currentMonth, monthParameter } from '@/presentation/components/month-picker/MonthPicker';
+import { MonthPicker, monthParameter, previousMonth } from '@/presentation/components/month-picker/MonthPicker';
 
 type Situation = 'loading' | 'loaded' | 'notLogged' | 'error';
 
@@ -20,11 +20,11 @@ const messages: Record<Exclude<Situation, 'loaded'>, string> = {
 /**
  * Quem viu o currículo do candidato logado num mês: o domínio do e-mail de cada recrutador que abriu o currículo pela
  * primeira vez naquele mês ("Nome da consultoria") e quantos recrutadores do domínio o fizeram ("Visualizações"), do
- * mais visto ao menos. O mês é escolhido na tela e começa no mês corrente. A contagem é lida pelo id do currículo no mês;
+ * mais visto ao menos. O mês é escolhido na tela e começa no mês anterior ao corrente. A contagem é lida pelo id do currículo no mês;
  * por isso exige login, e quem não está logado vê o modal de login, que repete a busca ao entrar.
  */
 export const ResumeViewersOfTheMonth = () => {
-    const [month, setMonth] = useState(currentMonth());
+    const [month, setMonth] = useState(previousMonth());
     const [situation, setSituation] = useState<Situation>('loading');
     const [viewers, setViewers] = useState<Viewer[]>([]);
 

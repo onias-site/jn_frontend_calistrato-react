@@ -1,5 +1,6 @@
 // Os conceitos do backend, transcritos da seção "Architectural Rules" do CLAUDE.md da raiz do workspace (a fonte é ele:
-// regra nova ou sigla mudada lá deve ser repetida aqui), em ordem alfabética de sigla dentro de cada seção.
+// regra nova ou sigla mudada lá deve ser repetida aqui), em ordem alfabética de sigla dentro de cada seção. A skill
+// /ccp-atualizar-tela-nosso-backend refaz esta lista.
 
 export interface BackendConcept {
     acronym: string;

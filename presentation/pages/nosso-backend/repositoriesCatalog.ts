@@ -1,6 +1,6 @@
 // Os repositórios do GitHub, com as descrições transcritas da seção "Module Structure" do CLAUDE.md da raiz do workspace
 // (a fonte é ele: módulo novo ou retirado lá deve ser repetido aqui), em ordem alfabética dentro de cada seção. O nome é o
-// do repositório no GitHub, que nem sempre é igual ao da pasta local. A skill /ccp-atualizar-tela-repositorios refaz esta lista.
+// do repositório no GitHub, que nem sempre é igual ao da pasta local. A skill /ccp-atualizar-tela-nosso-backend refaz esta lista.
 
 export const GITHUB_ACCOUNT_URL = 'https://github.com/onias-site';
 
@@ -18,7 +18,7 @@ export const repositorySections: BackendRepositorySection[] = [
     {
         title: 'Repositórios GIT do CCP',
         repositories: [
-            { name: 'ccp_cache_gcp-memcache', description: 'Cache via GCP Memcache.' },
+            { name: 'ccp_cache_gcp-memory-store', description: 'Cache via GCP Memorystore for Valkey.' },
             { name: 'ccp_commons_jobsnow', description: 'Núcleo do framework: decorators, injeção de dependência, sistema de entidades e construtores de query.' },
             { name: 'ccp_cron-tasks_jobsnow', description: 'Tarefas agendadas.' },
             { name: 'ccp_db-bulk_elasticsearch', description: 'Operações em lote no Elasticsearch.' },

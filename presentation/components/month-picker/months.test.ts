@@ -1,4 +1,22 @@
-import { isFutureMonth } from './months';
+import { isFutureMonth, previousMonth } from './months';
+
+describe('previousMonth', () => {
+    afterEach(() => jest.useRealTimers());
+
+    it('volta um mês, mesmo no último dia de um mês mais longo que o anterior', () => {
+        jest.useFakeTimers();
+        jest.setSystemTime(new Date(2026, 2, 31));
+
+        expect(previousMonth()).toBe('2026-02');
+    });
+
+    it('em janeiro volta para dezembro do ano anterior', () => {
+        jest.useFakeTimers();
+        jest.setSystemTime(new Date(2027, 0, 15));
+
+        expect(previousMonth()).toBe('2026-12');
+    });
+});
 
 describe('isFutureMonth', () => {
     beforeEach(() => {
