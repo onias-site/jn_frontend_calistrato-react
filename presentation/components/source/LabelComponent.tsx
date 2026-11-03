@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Tooltip } from 'primereact/tooltip';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
+import { dialogBreakpoints } from '@/presentation/components/source/Modal';
 // o ícone do botão de ajuda (pi-question-circle) vem desta fonte; sem o import aqui, ele some nas páginas que não a
 // importam por conta própria (o modal de login, por exemplo, abre em qualquer página)
 import 'primeicons/primeicons.css';
@@ -25,7 +26,7 @@ export const LabelComponent: React.FC<LabelComponentProps> = ({ children, labelV
     if (stacked) {
         return (
             <div className="mb-4 flex items-center gap-3 text-left">
-                <Dialog header={labelValue} visible={visible} style={{ width: '50vw' }} onHide={() => setVisible(false)}>
+                <Dialog header={labelValue} visible={visible} style={{ width: '50vw' }} breakpoints={dialogBreakpoints} onHide={() => setVisible(false)}>
                     <p className="m-0">{explanation}</p>
                 </Dialog>
                 <div className="flex w-44 shrink-0 items-center gap-1">
@@ -54,7 +55,7 @@ export const LabelComponent: React.FC<LabelComponentProps> = ({ children, labelV
             <Dialog
                 header={labelValue}
                 visible={visible}
-                style={{ width: '50vw' }}
+                style={{ width: '50vw' }} breakpoints={dialogBreakpoints}
                 onHide={() => {
                     if (!visible) return;
                     setVisible(false);

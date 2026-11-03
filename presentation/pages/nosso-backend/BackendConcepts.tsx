@@ -3,8 +3,6 @@ import { useEffect, useRef, useState } from 'react';
 import { Accordion, AccordionTab } from 'primereact/accordion';
 import { conceptSections } from './conceptsCatalog';
 import { GITHUB_ACCOUNT_URL, repositorySections } from './repositoriesCatalog';
-import { swaggerSections } from './swaggerCatalog';
-import { SwaggerPanel } from './SwaggerPanel';
 
 // altura do header fixo (56px) mais um respiro: é onde o painel gruda e onde a seção clicada para ao rolar
 const STICKY_TOP = 80;
@@ -13,11 +11,10 @@ const STICKY_TOP = 80;
 const navigationSections = [
     ...conceptSections.map((section) => `${section.title} (${section.concepts.length})`),
     ...repositorySections.map((section) => `${section.title} (${section.repositories.length})`),
-    ...swaggerSections.map((section) => `${section.title} (${section.endpoints})`),
 ];
 
 /**
- * As regras de arquitetura, os repositórios e o Swagger do backend, uma seção por aba do acordeão, com o painel "Nesta página" à direita (Sticky
+ * As regras de arquitetura e os repositórios do backend, uma seção por aba do acordeão, com o painel "Nesta página" à direita (Sticky
  * Sidebar): ele acompanha a rolagem logo abaixo do header, marca a seção que está sendo lida e, ao clicar numa seção,
  * abre a aba e rola até ela. Em telas estreitas o painel some e fica só o acordeão.
  */
@@ -59,7 +56,7 @@ export const BackendConcepts = () => {
     return (
         <div className="mt-6 flex items-start gap-6">
             <div className="panel min-w-0 flex-1" ref={accordionArea}>
-                <p className="mb-4">As regras de arquitetura que guiam o código do JobsNow, os centros de custo em que ele se divide, os repositórios onde ele está e o Swagger das suas APIs. Clique numa seção para ver o seu conteúdo.</p>
+                <p className="mb-4">As regras de arquitetura que guiam o código do JobsNow, os centros de custo em que ele se divide e os repositórios onde ele está. Clique numa seção para ver o seu conteúdo.</p>
                 <Accordion multiple activeIndex={openSections} onTabChange={(e) => setOpenSections(e.index as number[])}>
                     {conceptSections.map((section) => (
                         <AccordionTab key={section.title} header={`${section.title} (${section.concepts.length})`} headerClassName="py-2 text-lg font-semibold">
@@ -113,11 +110,6 @@ export const BackendConcepts = () => {
                                     </tbody>
                                 </table>
                             </div>
-                        </AccordionTab>
-                    ))}
-                    {swaggerSections.map((section) => (
-                        <AccordionTab key={section.title} header={`${section.title} (${section.endpoints})`} headerClassName="py-2 text-lg font-semibold">
-                            <SwaggerPanel section={section} />
                         </AccordionTab>
                     ))}
                 </Accordion>

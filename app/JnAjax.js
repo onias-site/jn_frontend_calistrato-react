@@ -249,7 +249,10 @@ export default class JnAjax {
         const urls = {
             same: '',
             desenvolvimento: 'http://localhost:8080',
-            producao: 'https://ccpjobsnow.com',
+            producao: process.env.NEXT_PUBLIC_VIS_API_URL ?? 'https://ccpjobsnow.com',
+            // the screens name the local APIs; a production build translates them here, in one place
+            'http://localhost:8081': process.env.NEXT_PUBLIC_VIS_API_URL ?? 'http://localhost:8081',
+            'http://localhost:8082': process.env.NEXT_PUBLIC_LOGIN_API_URL ?? 'http://localhost:8082',
         };
         return urls[enviroment] || enviroment;
     }

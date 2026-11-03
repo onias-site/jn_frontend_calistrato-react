@@ -14,6 +14,7 @@ import { Accordion, AccordionTab } from 'primereact/accordion';
 import { Tooltip } from 'primereact/tooltip';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
+import { dialogBreakpoints } from '@/presentation/components/source/Modal';
 import { InputTextarea } from 'primereact/inputtextarea';
 import { MultiSelect } from 'primereact/multiselect';
 import { Chips } from 'primereact/chips';
@@ -434,7 +435,7 @@ const SkillList: React.FC<SkillListProps> = ({ title, width, list, filter, setFi
             <Dialog
                 header={title}
                 visible={helpVisible}
-                style={{ width: '50vw' }}
+                style={{ width: '50vw' }} breakpoints={dialogBreakpoints}
                 onHide={() => {
                     if (!helpVisible) return;
                     setHelpVisible(false);
@@ -524,7 +525,7 @@ const AccordionList: React.FC<AccordionListProps> = ({ width }) => {
                         <Dialog
                             header={'O que são conhecimentos implicitos?'}
                             visible={visible}
-                            style={{ width: '50vw' }}
+                            style={{ width: '50vw' }} breakpoints={dialogBreakpoints}
                             onHide={() => {
                                 if (!visible) return;
                                 setVisible(false);
@@ -1537,7 +1538,7 @@ const LinkModal: React.FC<LinkModalProps> = ({ onSave, onOpen, saveButtonLabel =
                 </a>
             )}
             <Dialog
-                style={{ width: '50vw' }}
+                style={{ width: '50vw' }} breakpoints={dialogBreakpoints}
                 header={headerModal}
                 blockScroll
                 visible={visible}
