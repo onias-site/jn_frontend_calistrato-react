@@ -1,4 +1,3 @@
-jest.mock('jquery', () => ({ ajax: jest.fn() }));
 jest.mock('pubsub-js', () => ({ publish: jest.fn() }));
 
 import JnAjax from '@/app/JnAjax';

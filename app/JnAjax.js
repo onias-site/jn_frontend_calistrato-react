@@ -1,4 +1,3 @@
-import $ from 'jquery';
 import PubSub from 'pubsub-js';
 
 export default class JnAjax {
@@ -50,7 +49,7 @@ export default class JnAjax {
 
         const url = url2.replace('{email}', login.email);
 
-        // GET e HEAD não têm corpo: o jQuery poria o JSON na URL ("...?{}"); até 2026-10-26 cada chamada passava null
+        // GET e HEAD não têm corpo
         const requestWithoutBody = type == 'GET' || type == 'HEAD';
         const data = requestBody && !requestWithoutBody ? JSON.stringify(requestBody) : null;
 
@@ -88,15 +87,27 @@ export default class JnAjax {
             }
         };
 
-        $.ajax({
-            data,
-            headers,
-            url,
-            contentType,
-            type,
-            dataType,
-            complete,
-        });
+        JnAjax.sendHttpRequest({ url, type, headers, contentType, data, complete });
+    }
+
+    /**
+     * A requisição em si, com o fetch do navegador. O complete recebe { status, responseText }, como o xhr do jQuery
+     * recebia até 2026-11-04: todo o tratamento acima (callbacks por status HTTP, retry do 401, cache) depende só disso.
+     * Falha de rede (API fora, CORS, DNS) chega como status 0, que cai no onUnexpectedHttpStatus da tela.
+     */
+    static sendHttpRequest({ url, type, headers, contentType, data, complete }) {
+        const requestHeaders = { ...headers };
+        if (data != null) {
+            requestHeaders['Content-Type'] = contentType;
+        }
+        // os cabeçalhos undefined (sem login não há sessionToken nem email) não podem ir: o fetch recusa valores inválidos
+        Object.keys(requestHeaders).forEach((name) => requestHeaders[name] == null && delete requestHeaders[name]);
+        fetch(url, { method: type, headers: requestHeaders, body: data })
+            .then((response) => response.text().then((responseText) => complete({ status: response.status, responseText })))
+            .catch((error) => {
+                console.warn(`Sem resposta de ${url}: ${error.message}`);
+                complete({ status: 0, responseText: '' });
+            });
     }
 
     // respostas das telas que carregam ao nascer, guardadas em memória: valem até o navegador recarregar a página (ou o

@@ -44,7 +44,6 @@
         "formik": "^2.2.9",
         "highlight.js": "^11.7.0",
         "i18next": "^22.4.10",
-        "jquery": "^3.7.1",
         "js-sha1": "^0.7.0",
         "mantine-datatable": "^7.17.1",
         "moment": "^2.30.1",
