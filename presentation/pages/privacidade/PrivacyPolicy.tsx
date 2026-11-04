@@ -68,7 +68,8 @@ export const PrivacyPolicy = () => {
     const [failed, setFailed] = useState(false);
 
     useEffect(() => {
-        const callbacks: any = {};
+        // pública e atrás do CDN: sem os cabeçalhos da sessão, o GET não faz o OPTIONS de preflight
+        const callbacks: any = { withoutSession: true };
         callbacks['setLoading'] = () => {};
         callbacks['setNotLoading'] = () => {};
         // página pública: não há sessão nem 401 a tratar

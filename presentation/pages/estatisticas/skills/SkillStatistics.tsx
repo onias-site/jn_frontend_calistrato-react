@@ -26,6 +26,9 @@ const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false })
 
 const API = 'http://localhost:8081';
 
+/** O primeiro mês que a API aceita (yearMonth de 2015 até o ano corrente): antes dele ela responde 422. */
+const FIRST_MONTH = '2015-01';
+
 const seniorities = [
     { id: 'estag', nome: 'Estágio' },
     { id: 'junior', nome: 'Júnior' },
@@ -51,7 +54,7 @@ const SkillMonths = ({ skill, seniority, ddd }: { skill: string; seniority: stri
 
     React.useEffect(() => {
         setSituation('loading');
-        const callbacks: any = {};
+        const callbacks: any = { withoutSession: true };
         callbacks[200] = (response: any) => {
             setMonths(parseMonths(response.months));
             setSituation('loaded');
@@ -108,7 +111,7 @@ const TelegramGroupsLink = () => {
 
     const open = () => {
         setVisible(true);
-        const callbacks: any = {};
+        const callbacks: any = { withoutSession: true };
         callbacks[200] = (response: any) => setTelegramGroups(response.groups);
         callbacks['onUnexpectedHttpStatus'] = () =>
             PubSub.publish('showMessage', { summary: 'Atenção', detail: 'Não foi possível carregar os grupos agora. Tente de novo em alguns instantes.', severity: 'warn' });
@@ -186,7 +189,7 @@ export const SkillStatistics = ({ initialSeniority = 'pleno', searchOnOpening = 
     const searchBy = (month: string, seniority: string, ddd: string) => {
         hideResult();
         setSituation('loading');
-        const callbacks: any = {};
+        const callbacks: any = { withoutSession: true };
         callbacks[200] = (response: any) => {
             setTotal(response.total);
             setSkills(parseSkills(response.skills));
@@ -287,6 +290,7 @@ export const SkillStatistics = ({ initialSeniority = 'pleno', searchOnOpening = 
                 <MonthPicker
                     id="skillStatisticsMonth"
                     month={month}
+                    min={FIRST_MONTH}
                     onChange={(chosenMonth) => {
                         setMonth(chosenMonth);
                         hideResult();

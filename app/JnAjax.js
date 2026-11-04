@@ -31,7 +31,11 @@ export default class JnAjax {
         const login = callbacks['getLogin']();
         const { sessionToken, email } = login;
         headers = headers || {};
-        headers = { ...headers, sessionToken, email };
+        // rotas públicas atrás do CDN (estatísticas, política de privacidade): sem cabeçalho próprio nem Content-Type, o GET é
+        // uma requisição simples do CORS, sem o OPTIONS de preflight que sempre chegaria ao backend
+        const withoutSession = callbacks['withoutSession'] == true;
+        headers = withoutSession ? headers : { ...headers, sessionToken, email };
+        contentType = withoutSession ? false : contentType;
 
         const retryAfterAuthentication = callbacks['retryAfterAuthentication'] || (() => {});
 
