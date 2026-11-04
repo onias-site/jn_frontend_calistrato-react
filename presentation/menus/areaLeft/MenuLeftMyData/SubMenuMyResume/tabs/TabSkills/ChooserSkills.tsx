@@ -3,7 +3,7 @@ import { create } from 'zustand';
 
 import { ReactSortable } from 'react-sortablejs';
 
-import { InputText } from 'primereact/inputtext';
+import { TextInput } from '@mantine/core';
 
 import React from 'react';
 
@@ -31,14 +31,13 @@ const SkillsList: React.FC<SkillsListProps> = ({ name, moveBetweenLists }) => {
     const width = skillsGroups.length ? 100 / skillsGroups.length + '%' : '';
     return (
         <div style={{ width, padding: '10px' }}>
-            <div className="mb-5" style={{ fontSize: '10px' }}>
-                <label>{skillsGroup.title}</label>
+            <div className="mb-5">
+                <label className="mb-1.5 block font-semibold">{skillsGroup.title}</label>
                 {stores[name] && stores[name].list.length >= 7 && (
-                    <InputText
-                        style={{ padding: '10px', width: '100%' }}
+                    <TextInput
                         placeholder="Digite a habilidade para filtrar da listagem abaixo"
-                        value={stores[name] && stores[name].filter}
-                        onChange={(e) => stores[name] && stores[name].setFilter(e.target.value, reloadStores)}
+                        value={(stores[name] && stores[name].filter) || ''}
+                        onChange={(e) => stores[name] && stores[name].setFilter(e.currentTarget.value, reloadStores)}
                     />
                 )}
             </div>

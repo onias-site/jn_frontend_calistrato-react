@@ -1,9 +1,9 @@
 'use client';
 import React, { useEffect } from 'react';
 import { ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogin';
-import { Password } from 'primereact/password';
 import { LabelComponent } from '@/presentation/components/source/LabelComponent';
 import { loginFieldsHelp } from '@/presentation/auth/LoginFieldsHelp';
+import { PasswordField } from '@/presentation/auth/PasswordField';
 
 export const RequestPasswordClick = 'requestPassword';
 
@@ -37,11 +37,6 @@ export const RequestPassword: React.FC<RequestPasswordProps> = ({}) => {
     }, []);
 
     const fieldErrors = {};
-    const passwordOptions = {
-        mediumLabel: 'Senha de força média',
-        strongLabel: 'Senha difícil de descobrir',
-        weakLabel: 'Senha fácil de descobrir',
-    };
 
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
@@ -70,11 +65,7 @@ export const RequestPassword: React.FC<RequestPasswordProps> = ({}) => {
     return (
         <div className="relative">
             <LabelComponent explanation={loginFieldsHelp.loginPassword} labelValue="Senha:" property="loginPassword" errors={fieldErrors}>
-                <Password inputId="loginPassword" className="w-full" inputClassName="form-input w-full"
-                 {...passwordOptions}
-                 promptLabel= "Digite uma senha"
-                 value={context.password}
-                 onChange={ (e) =>  setField(() => setContextField('password', e.target.value), '')} toggleMask />
+                <PasswordField id="loginPassword" placeholder="Digite uma senha" value={context.password} onChange={(value) => setField(() => setContextField('password', value), '')} />
             </LabelComponent>
         </div>
     );

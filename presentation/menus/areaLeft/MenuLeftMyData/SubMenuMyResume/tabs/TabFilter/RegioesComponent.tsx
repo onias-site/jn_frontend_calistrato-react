@@ -1,9 +1,9 @@
 'use client';
 import { dddRegions } from '@/presentation/components/regions/dddRegions';
 import React from 'react';
-import { MultiSelect } from 'primereact/multiselect';
 import PubSub from 'pubsub-js';
 import { create } from 'zustand';
+import { SummaryMultiSelect } from '@/presentation/components/source/SummaryMultiSelect';
 
 export interface RegioesProps {
     labelHomeOffice: string;
@@ -52,24 +52,10 @@ const RegioesComponent: React.FC<RegioesProps> = ({ labelTodasAsRegioes, labelOu
         ...state,
     }));
     const estados = [
-        {
-            id: '0',
-            nome: labelTodasAsRegioes,
-            selected: false,
-        },
-        {
-            id: '10',
-            nome: labelHomeOffice,
-            selected: false,
-        },
-        ...dddRegions.map((region) => ({ ...region, selected: false })),
+        { id: '0', nome: labelTodasAsRegioes },
+        { id: '10', nome: labelHomeOffice },
+        ...dddRegions.map((region) => ({ id: region.id, nome: labelOutrasRegioes + ' ' + region.nome })),
     ];
-    estados.forEach((x) => {
-        if (x.id < 11) {
-            return;
-        }
-        x.nome = labelOutrasRegioes + ' ' + x.nome;
-    });
 
     const todasAsRegioes = '0';
     const homeOffice = '10';
@@ -100,92 +86,73 @@ const RegioesComponent: React.FC<RegioesProps> = ({ labelTodasAsRegioes, labelOu
         });
     };
 
-    const estaIncluindoTodasAsRegioes = (e: any) => {
+    const estaIncluindoTodasAsRegioes = () => {
         const values = estados.map((est) => est.id).filter((val) => val != homeOffice);
         avisarQueOHomeOfficeFoiDesmarcado();
         setRegioesSelecionadas(values);
     };
 
-    const estaExcluindoTodasAsRegioes = (e: any) => {
-        const values = [];
-        setRegioesSelecionadas(values);
-    };
+    const estaExcluindoTodasAsRegioes = () => setRegioesSelecionadas([]);
 
-    const estaExcluindoHomeOffice = (e: any) => {
-        const values = [];
-        setRegioesSelecionadas(values);
-    };
+    const estaExcluindoHomeOffice = () => setRegioesSelecionadas([]);
 
-    const estaIncluindoHomeOffice = (e: any) => {
-        const values = [homeOffice];
+    const estaIncluindoHomeOffice = () => {
         avisarQueAsRegioesForamDesmarcadas();
-        setRegioesSelecionadas(values);
+        setRegioesSelecionadas([homeOffice]);
     };
 
-    const estaIncluindoQualquerOutraRegiao = (e: any) => {
+    const estaExcluindoQualquerOutraRegiao = (novosValores: string[], regiaoClicada: string) => {
+        // também é o caminho de quem marca uma região sem completar todas (estaIncluindoQualquerOutraRegiao)
+        const estaIncluindoRegiao = novosValores.includes(regiaoClicada);
+        estaIncluindoRegiao && avisarQueOHomeOfficeFoiDesmarcado();
+        setRegioesSelecionadas(novosValores.filter((val) => val != homeOffice).filter((val) => val != todasAsRegioes));
+    };
+
+    const estaIncluindoQualquerOutraRegiao = (novosValores: string[], regiaoClicada: string) => {
         const values = estados
             .map((est) => est.id)
             .filter((val) => val != homeOffice)
             .filter((val) => val != todasAsRegioes);
-        if (values.length > e.value.length) {
-            estaExcluindoQualquerOutraRegiao(e);
+        if (values.length > novosValores.length) {
+            estaExcluindoQualquerOutraRegiao(novosValores, regiaoClicada);
             return;
         }
-
+        // todas as regiões marcadas uma a uma: o "qualquer estado / cidade" acende junto
         values.push(todasAsRegioes);
         avisarQueOHomeOfficeFoiDesmarcado();
         setRegioesSelecionadas(values);
     };
 
-    const estaExcluindoQualquerOutraRegiao = (e: any) => {
-        // também é o caminho de quem marca uma região sem completar todas (estaIncluindoQualquerOutraRegiao)
-        const estaIncluindoRegiao = e.value.includes(e.selectedOption.id);
-        estaIncluindoRegiao && avisarQueOHomeOfficeFoiDesmarcado();
-        setRegioesSelecionadas(e.value.filter((val) => val != homeOffice).filter((val) => val != todasAsRegioes));
+    const selecionarRegioes = (novosValores: string[], regiaoClicada: string) => {
+        const estaIncluindoRegiao = novosValores.includes(regiaoClicada);
+        if (regiaoClicada == todasAsRegioes) {
+            estaIncluindoRegiao ? estaIncluindoTodasAsRegioes() : estaExcluindoTodasAsRegioes();
+            return;
+        }
+        if (regiaoClicada == homeOffice) {
+            estaIncluindoRegiao ? estaIncluindoHomeOffice() : estaExcluindoHomeOffice();
+            return;
+        }
+        estaIncluindoRegiao ? estaIncluindoQualquerOutraRegiao(novosValores, regiaoClicada) : estaExcluindoQualquerOutraRegiao(novosValores, regiaoClicada);
     };
 
-    const eventosNoCliqueDeEscolherTodasAsRegioes = {};
-    eventosNoCliqueDeEscolherTodasAsRegioes['true'] = estaIncluindoTodasAsRegioes;
-    eventosNoCliqueDeEscolherTodasAsRegioes['false'] = estaExcluindoTodasAsRegioes;
-
-    const eventosNoCliqueDeEscolherHomeOffice = {};
-    eventosNoCliqueDeEscolherHomeOffice['true'] = estaIncluindoHomeOffice;
-    eventosNoCliqueDeEscolherHomeOffice['false'] = estaExcluindoHomeOffice;
-
-    const eventosAoEscolherHomeOfficeOuTodasAsRegioes = {};
-    eventosAoEscolherHomeOfficeOuTodasAsRegioes[todasAsRegioes] = eventosNoCliqueDeEscolherTodasAsRegioes;
-    eventosAoEscolherHomeOfficeOuTodasAsRegioes[homeOffice] = eventosNoCliqueDeEscolherHomeOffice;
-
-    const eventosAoEscolherQualquerOutraRegiao = {};
-    eventosAoEscolherQualquerOutraRegiao['false'] = estaExcluindoQualquerOutraRegiao;
-    eventosAoEscolherQualquerOutraRegiao['true'] = estaIncluindoQualquerOutraRegiao;
-
-    const selecionarRegioes = (e) => {
-        const eventoEscolhido = eventosAoEscolherHomeOfficeOuTodasAsRegioes[e.selectedOption.id] || eventosAoEscolherQualquerOutraRegiao;
-        const estaIncluindoRegiao = e.value.includes(e.selectedOption.id);
-        const funcaoParaSerExecutada = eventoEscolhido[estaIncluindoRegiao];
-        funcaoParaSerExecutada(e);
-    };
-    // o "qualquer estado / cidade" ('0') fica no valor só para marcar a opção: não é uma região. O PrimeReact troca o
-    // "{...}" do rótulo pelo tamanho do valor, então a contagem vai pronta (até 2026-10-14 mostrava 68 regiões)
-    const totalDeRegioesSelecionadas = regioesSelecionadas.filter((regiao: any) => regiao != todasAsRegioes).length;
-    const borderColor = regioesSelecionadas.length ? 'black' : '#e24c4c';
-    const borderStyle = 'solid';
-    const borderProperties = { borderStyle, borderColor };
+    // o "qualquer estado / cidade" ('0') fica no valor só para marcar a opção: não é uma região e não entra na contagem
+    const invalid = !regioesSelecionadas.length;
     return (
         <div className="mb-5">
-            <MultiSelect
-                placeholder="Selecione as regiões desejadas para seu novo emprego"
-                selectedItemsLabel={`${totalDeRegioesSelecionadas} Regiões selecionadas`}
-                style={{...borderProperties}}
-                onChange={selecionarRegioes}
+            <label className="mb-1.5 block font-semibold text-dark dark:text-white-light">Onde aceito trabalhar</label>
+            <SummaryMultiSelect
+                id="regioes"
+                data={estados.map((estado) => ({ value: estado.id, label: estado.nome }))}
                 value={regioesSelecionadas}
-                maxSelectedLabels={10}
-                className="form-input"
-                optionLabel="nome"
-                selectAll={false}
-                options={estados}
-                optionValue="id"
+                onChange={selecionarRegioes}
+                placeholder="Selecione as regiões desejadas para seu novo emprego"
+                searchPlaceholder="Digite a cidade ou o estado que você procura"
+                nothingFoundMessage="Nenhuma região encontrada"
+                summaryLabel={(count) => `${count} ${count == 1 ? 'região selecionada' : 'regiões selecionadas'}`}
+                countValue={(value) => value != todasAsRegioes}
+                maxDisplayedPills={2}
+                error={invalid}
             />
         </div>
     );

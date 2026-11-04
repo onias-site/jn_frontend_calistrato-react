@@ -1,9 +1,6 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import { ConfirmDialog } from 'primereact/confirmdialog';
-import 'primereact/resources/themes/lara-light-cyan/theme.css';
-import 'primereact/resources/primereact.min.css';
-import 'primeicons/primeicons.css';
+import { ConfirmModal } from '@/presentation/components/source/ConfirmModal';
 import JnAjax from '@/app/JnAjax';
 
 // os limites do apelido em vis_viewed_resume
@@ -80,12 +77,11 @@ export const ViewResumeFromEmail = () => {
 
     return (
         <div className="panel mx-auto mt-6 max-w-2xl">
-            <ConfirmDialog
+            <ConfirmModal
                 visible={situation == 'confirming'}
                 onHide={() => setSituation((current) => (current == 'confirming' ? 'canceled' : current))}
                 header="Ver currículo"
                 message="Deseja abrir este currículo? Ele será aberto numa nova aba, e esta visualização ficará registrada para você."
-                icon="pi pi-eye"
                 acceptLabel="Sim, abrir"
                 rejectLabel="Não"
                 accept={openTheResume}

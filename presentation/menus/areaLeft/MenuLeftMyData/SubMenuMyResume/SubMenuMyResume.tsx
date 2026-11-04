@@ -1,11 +1,16 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import { ConfirmDialog } from 'primereact/confirmdialog';
-import 'primereact/resources/themes/lara-light-cyan/theme.css';
-
-import 'primeicons/primeicons.css';
+import { ConfirmModal } from '@/presentation/components/source/ConfirmModal';
 import './SubMenuMyResume.css';
-import 'primereact/resources/primereact.min.css';
+import IconEye from '@/presentation/icons/icon-eye';
+import IconRefresh from '@/presentation/icons/icon-refresh';
+import IconTrash from '@/presentation/icons/icon-trash';
+import IconFile from '@/presentation/icons/icon-file';
+import IconGlobe from '@/presentation/icons/icon-globe';
+import IconSettings from '@/presentation/icons/icon-settings';
+import IconDollarSign from '@/presentation/icons/icon-dollar-sign';
+import IconGithub from '@/presentation/icons/icon-github';
+import IconSave from '@/presentation/icons/icon-save';
 import { RegioesStore, IRegioesStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabFilter/RegioesComponent';
 import { TabOptions, TabOptionsStore, ITabOptionsStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabFilter/FormFilter';
 import { TabLanguages, TabLanguagesStore, ITabLanguagesStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabLanguages/ChooserLanguages';
@@ -269,52 +274,51 @@ const ResumeStatusButtons = ({ resumeStatus, setResumeStatus }: { resumeStatus: 
 
     const statusButton =
         resumeStatus === 'active' ? (
-            <button onClick={() => !isDoneToday('inactivation') && setConfirmingInactivate(true)} type="button" className="btn btn-warning whitespace-nowrap">
-                <i className="pi pi-eye-slash" style={{ marginRight: '8px' }} />
+            <button onClick={() => !isDoneToday('inactivation') && setConfirmingInactivate(true)} type="button" className="btn btn-warning gap-2 whitespace-nowrap">
+                <IconEye className="h-4 w-4" />
                 Inativar
             </button>
         ) : (
-            <button onClick={() => !isDoneToday('reactivation') && setConfirmingReactivate(true)} type="button" className="btn btn-success whitespace-nowrap">
-                <i className="pi pi-replay" style={{ marginRight: '8px' }} />
+            <button onClick={() => !isDoneToday('reactivation') && setConfirmingReactivate(true)} type="button" className="btn btn-success gap-2 whitespace-nowrap">
+                <IconRefresh className="h-4 w-4" />
                 Reativar
             </button>
         );
 
     return (
         <>
-            <ConfirmDialog
+            <ConfirmModal
                 visible={confirmingInactivate}
                 onHide={() => setConfirmingInactivate(false)}
                 header="Inativar currículo"
                 message={`Seu currículo deixará de aparecer para os recrutadores até que você o reative. ${getResumeDailyActionConfirmMessage('inactivation')}`}
-                icon="pi pi-exclamation-triangle"
+                danger
                 acceptLabel="Sim, inativar"
                 rejectLabel="Não"
                 accept={() => changeResumeStatus('inactive', setResumeStatus)}
             />
-            <ConfirmDialog
+            <ConfirmModal
                 visible={confirmingReactivate}
                 onHide={() => setConfirmingReactivate(false)}
                 header="Reativar currículo"
                 message={`Seu currículo voltará a aparecer para os recrutadores. ${getResumeDailyActionConfirmMessage('reactivation')}`}
-                icon="pi pi-question-circle"
                 acceptLabel="Sim, reativar"
                 rejectLabel="Não"
                 accept={() => changeResumeStatus('active', setResumeStatus)}
             />
-            <ConfirmDialog
+            <ConfirmModal
                 visible={confirmingDelete}
                 onHide={() => setConfirmingDelete(false)}
                 header="Excluir currículo"
                 message={`Todos os dados do seu currículo serão apagados de vez, sem como recuperar. ${getResumeDailyActionConfirmMessage('exclusion')}`}
-                icon="pi pi-exclamation-triangle"
+                danger
                 acceptLabel="Sim, excluir"
                 rejectLabel="Não"
                 accept={() => deleteResume(setResumeStatus)}
             />
             {statusButton}
-            <button onClick={() => !isDoneToday('exclusion') && setConfirmingDelete(true)} type="button" className="btn btn-danger whitespace-nowrap">
-                <i className="pi pi-trash" style={{ marginRight: '8px' }} />
+            <button onClick={() => !isDoneToday('exclusion') && setConfirmingDelete(true)} type="button" className="btn btn-danger gap-2 whitespace-nowrap">
+                <IconTrash className="h-4 w-4" />
                 Excluir
             </button>
         </>
@@ -464,20 +468,20 @@ const SubMenuMyResume = () => {
     const tabs = [
         {
             label: 'Currículo',
-            icon: 'pi pi-file-pdf',
+            icon: <IconFile className="h-4 w-4" />,
             onMoveOnFowardTabs: () => loadSkillsFromBackEnd(stateResume, stateSkills, stateSubMenuMyResume),
             getPendingRequirements: stateResume.getPendingRequirements,
         },
-        { label: 'Idiomas', icon: 'pi pi-language', onMoveOnFowardTabs: stateLanguage.onMoveOnFowardTabs, getPendingRequirements: stateLanguage.getPendingRequirements },
+        { label: 'Idiomas', icon: <IconGlobe className="h-4 w-4" />, onMoveOnFowardTabs: stateLanguage.onMoveOnFowardTabs, getPendingRequirements: stateLanguage.getPendingRequirements },
         {
             label: 'Opções',
-            icon: 'pi pi-cog',
+            icon: <IconSettings className="h-4 w-4" />,
             onMoveOnFowardTabs: () => getOptionsPendingRequirements(stateRegioes, stateOptions),
             getPendingRequirements: () => getOptionsPendingRequirements(stateRegioes, stateOptions),
         },
         {
             label: 'Salários',
-            icon: 'pi pi-dollar',
+            icon: <IconDollarSign className="h-4 w-4" />,
             onMoveOnFowardTabs: requestSave,
             getPendingRequirements: () => getAllPendingRequirements(stateSkills, stateResume, stateLanguage, stateSalary, stateRegioes, stateOptions),
         },
@@ -487,7 +491,7 @@ const SubMenuMyResume = () => {
     const mainSkillsCount = mainSkillsGroup && mainSkillsGroup.list ? mainSkillsGroup.list.length : 0;
     const tabSkills: any = {
         label: `${mainSkillsCount} Habilidades`,
-        icon: 'pi pi-github',
+        icon: <IconGithub className="h-4 w-4" />,
         title: 'Caso as habilidades estiverem desatualizadas / incorretas, volte à aba currículo e preencha o texto do currículo, para que possamos atualizar corretamente a sua lista de habilidades',
         onMoveOnFowardTabs: stateSkills.getPendingRequirements,
         getPendingRequirements: stateSkills.getPendingRequirements,
@@ -506,16 +510,15 @@ const SubMenuMyResume = () => {
         }
         return requestSave();
     };
-    const saveShortcutButton = isEditing ? { label: 'Salvar dados', icon: 'pi pi-save', onClick: saveFromAnyTab } : undefined;
+    const saveShortcutButton = isEditing ? { label: 'Salvar dados', icon: <IconSave className="h-4 w-4" />, onClick: saveFromAnyTab } : undefined;
 
     return (
-        <div className="card">
-            <ConfirmDialog
+        <div>
+            <ConfirmModal
                 visible={confirmingUpdate}
                 onHide={() => setConfirmingUpdate(false)}
                 header="Atualizar currículo"
                 message={`Os dados do seu currículo serão substituídos pelos desta tela. ${getResumeDailyActionConfirmMessage('update')}`}
-                icon="pi pi-question-circle"
                 acceptLabel="Sim, atualizar"
                 rejectLabel="Não"
                 accept={confirmTheSave}
@@ -527,7 +530,7 @@ const SubMenuMyResume = () => {
                 </div>
             )}
             {hasTabSkills ? (
-                <Tabs key={stateSubMenuMyResume.formVersion} tabs={tabs} lastButtonLabel="Salvar dados" lastButtonIcon="pi pi-save" shortcutButton={saveShortcutButton}>
+                <Tabs key={stateSubMenuMyResume.formVersion} tabs={tabs} lastButtonLabel="Salvar dados" lastButtonIcon={<IconSave className="h-4 w-4" />} shortcutButton={saveShortcutButton}>
                     <TabResume />
                     <TabLanguages />
                     <TabSkills2 getAccordionList={getImplicitSkills} />
@@ -535,7 +538,7 @@ const SubMenuMyResume = () => {
                     <TabSalary />
                 </Tabs>
             ) : (
-                <Tabs key={stateSubMenuMyResume.formVersion} tabs={tabs} lastButtonLabel="Salvar dados" lastButtonIcon="pi pi-save" shortcutButton={saveShortcutButton}>
+                <Tabs key={stateSubMenuMyResume.formVersion} tabs={tabs} lastButtonLabel="Salvar dados" lastButtonIcon={<IconSave className="h-4 w-4" />} shortcutButton={saveShortcutButton}>
                     <TabResume />
                     <TabLanguages />
                     <TabOptions />

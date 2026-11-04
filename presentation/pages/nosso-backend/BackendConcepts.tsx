@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { Accordion, AccordionTab } from 'primereact/accordion';
+import { Accordion } from '@mantine/core';
 import { conceptSections } from './conceptsCatalog';
 import { GITHUB_ACCOUNT_URL, repositorySections } from './repositoriesCatalog';
 
@@ -19,11 +19,11 @@ const navigationSections = [
  * abre a aba e rola até ela. Em telas estreitas o painel some e fica só o acordeão.
  */
 export const BackendConcepts = () => {
-    const [openSections, setOpenSections] = useState<number[]>([]);
+    const [openSections, setOpenSections] = useState<string[]>([]);
     const [currentSection, setCurrentSection] = useState(0);
     const accordionArea = useRef<HTMLDivElement>(null);
 
-    const sectionElements = () => Array.from(accordionArea.current?.querySelectorAll<HTMLElement>('.p-accordion-tab') || []);
+    const sectionElements = () => Array.from(accordionArea.current?.querySelectorAll<HTMLElement>('.backend-section') || []);
 
     useEffect(() => {
         // a seção atual é a última cujo topo já passou da linha do painel; no fim da página, a última seção (curta
@@ -43,7 +43,8 @@ export const BackendConcepts = () => {
     }, [openSections]);
 
     const goToSection = (index: number) => {
-        setOpenSections((opened) => (opened.includes(index) ? opened : [...opened, index]));
+        const title = navigationSections[index];
+        setOpenSections((opened) => (opened.includes(title) ? opened : [...opened, title]));
         // espera a aba abrir para a rolagem cair no lugar certo
         setTimeout(() => {
             const section = sectionElements()[index];
@@ -57,61 +58,73 @@ export const BackendConcepts = () => {
         <div className="mt-6 flex items-start gap-6">
             <div className="panel min-w-0 flex-1" ref={accordionArea}>
                 <p className="mb-4">As regras de arquitetura que guiam o código do Onias.Site, os centros de custo em que ele se divide e os repositórios onde ele está. Clique numa seção para ver o seu conteúdo.</p>
-                <Accordion multiple activeIndex={openSections} onTabChange={(e) => setOpenSections(e.index as number[])}>
-                    {conceptSections.map((section) => (
-                        <AccordionTab key={section.title} header={`${section.title} (${section.concepts.length})`} headerClassName="py-2 text-lg font-semibold">
-                            <div className="table-responsive">
-                                <table className="table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>#</th>
-                                            <th>Sigla</th>
-                                            <th>Acrônimo</th>
-                                            <th>O que é</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {section.concepts.map((concept, index) => (
-                                            <tr key={concept.acronym}>
-                                                <td>{index + 1}</td>
-                                                <td className="font-semibold">{concept.acronym}</td>
-                                                <td className="whitespace-nowrap">{concept.name}</td>
-                                                <td>{concept.explanation}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </AccordionTab>
-                    ))}
-                    {repositorySections.map((section) => (
-                        <AccordionTab key={section.title} header={`${section.title} (${section.repositories.length})`} headerClassName="py-2 text-lg font-semibold">
-                            <div className="table-responsive">
-                                <table className="table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>#</th>
-                                            <th>Endereço do Repositório</th>
-                                            <th>Descrição do repositório</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {section.repositories.map((repository, index) => (
-                                            <tr key={repository.name}>
-                                                <td>{index + 1}</td>
-                                                <td>
-                                                    <a href={`${GITHUB_ACCOUNT_URL}/${repository.name}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                                                        {`${GITHUB_ACCOUNT_URL}/${repository.name}`}
-                                                    </a>
-                                                </td>
-                                                <td>{repository.description}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </AccordionTab>
-                    ))}
+                <Accordion multiple value={openSections} onChange={setOpenSections} classNames={{ item: 'backend-section', label: 'text-lg font-semibold' }}>
+                    {conceptSections.map((section) => {
+                        const title = `${section.title} (${section.concepts.length})`;
+                        return (
+                            <Accordion.Item key={title} value={title}>
+                                <Accordion.Control>{title}</Accordion.Control>
+                                <Accordion.Panel>
+                                    <div className="table-responsive">
+                                        <table className="table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>#</th>
+                                                    <th>Sigla</th>
+                                                    <th>Acrônimo</th>
+                                                    <th>O que é</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {section.concepts.map((concept, index) => (
+                                                    <tr key={concept.acronym}>
+                                                        <td>{index + 1}</td>
+                                                        <td className="font-semibold">{concept.acronym}</td>
+                                                        <td className="whitespace-nowrap">{concept.name}</td>
+                                                        <td>{concept.explanation}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </Accordion.Panel>
+                            </Accordion.Item>
+                        );
+                    })}
+                    {repositorySections.map((section) => {
+                        const title = `${section.title} (${section.repositories.length})`;
+                        return (
+                            <Accordion.Item key={title} value={title}>
+                                <Accordion.Control>{title}</Accordion.Control>
+                                <Accordion.Panel>
+                                    <div className="table-responsive">
+                                        <table className="table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>#</th>
+                                                    <th>Endereço do Repositório</th>
+                                                    <th>Descrição do repositório</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {section.repositories.map((repository, index) => (
+                                                    <tr key={repository.name}>
+                                                        <td>{index + 1}</td>
+                                                        <td>
+                                                            <a href={`${GITHUB_ACCOUNT_URL}/${repository.name}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                                                {`${GITHUB_ACCOUNT_URL}/${repository.name}`}
+                                                            </a>
+                                                        </td>
+                                                        <td>{repository.description}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </Accordion.Panel>
+                            </Accordion.Item>
+                        );
+                    })}
                 </Accordion>
             </div>
             <aside className="panel sticky hidden w-60 shrink-0 self-start overflow-y-auto lg:block" style={{ top: STICKY_TOP, maxHeight: `calc(100vh - ${STICKY_TOP + 16}px)` }}>

@@ -1,25 +1,20 @@
 'use client';
-import React, { useState } from 'react';
-import { Dialog } from 'primereact/dialog';
-
-// largura do diálogo por largura máxima da tela (breakpoints do PrimeReact): quase a tela toda no celular, 3/4 no tablet
-export const dialogBreakpoints = { '960px': '75vw', '640px': '92vw' };
+import React from 'react';
+import { Modal as MantineModal, MantineSize } from '@mantine/core';
 
 export interface ModalProps {
     setVisible: (visible: boolean) => void;
     children: React.ReactNode;
     visible: boolean;
     title: string;
+    size?: MantineSize | string | number;
 }
 
-export const Modal: React.FC<ModalProps> = ({children, visible, title, setVisible }) => {
-
+/** O modal padrão das telas: fecha pelo X, pelo Esc e pelo clique fora. */
+export const Modal: React.FC<ModalProps> = ({ children, visible, title, setVisible, size = 'lg' }) => {
     return (
-        // 50vw só em tela larga: num celular de 360 px dava 180 px, e o modal de login espremia o rótulo e o campo
-        <Dialog header={title} visible={visible} style={{ width: '50vw' }} breakpoints={dialogBreakpoints} onHide={() => visible && setVisible(false)}>
+        <MantineModal opened={visible} onClose={() => visible && setVisible(false)} title={title} size={size}>
             {children}
-        </Dialog>
+        </MantineModal>
     );
-
-}
-
+};

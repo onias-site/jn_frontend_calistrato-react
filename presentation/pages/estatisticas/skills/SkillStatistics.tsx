@@ -2,9 +2,12 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Column } from 'primereact/column';
-import { DataTable, DataTableExpandedRows } from 'primereact/datatable';
-import { Dialog } from 'primereact/dialog';
+import { Modal, Pagination, Table } from '@mantine/core';
+import IconCaretDown from '@/presentation/icons/icon-caret-down';
+import IconCircleCheck from '@/presentation/icons/icon-circle-check';
+import IconXCircle from '@/presentation/icons/icon-x-circle';
+import IconInfoCircle from '@/presentation/icons/icon-info-circle';
+import IconTrendingUp from '@/presentation/icons/icon-trending-up';
 import PubSub from 'pubsub-js';
 import React, { useState } from 'react';
 import JnAjax from '@/app/JnAjax';
@@ -211,7 +214,7 @@ const SkillsPie = ({ skills, vacancies }: { skills: SkillTotal[]; vacancies: num
     return (
         <div className="mb-6 rounded border border-[#d3d3d3] dark:border-[#1b2e4b]">
             <button type="button" className="flex w-full items-center gap-2 px-3 py-2 font-semibold" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
-                <i className={expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'} />
+                <IconCaretDown className={`h-4 w-4 transition-transform ${expanded ? '' : '-rotate-90'}`} />
                 Ver distribuição por habilidades
             </button>
             {expanded && (
@@ -252,7 +255,7 @@ const TelegramGroupsAccordion = () => {
     return (
         <div className="w-full max-w-[520px] rounded border border-[#d3d3d3] dark:border-[#1b2e4b] sm:w-auto sm:min-w-[260px]">
             <button type="button" className="flex w-full items-center gap-2 px-3 py-2 font-semibold" aria-expanded={expanded} onClick={toggle}>
-                <i className={expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'} />
+                <IconCaretDown className={`h-4 w-4 transition-transform ${expanded ? '' : '-rotate-90'}`} />
                 De onde vieram essas vagas?
             </button>
             {expanded && (
@@ -292,14 +295,14 @@ const SkillInTheResume = ({ hasTheSkill }: { hasTheSkill: boolean }) => {
     if (hasTheSkill) {
         return (
             <span className="badge ml-2 inline-flex items-center gap-1 whitespace-nowrap bg-success text-xs" title="Esta habilidade está no seu currículo">
-                <i className="pi pi-check-circle text-xs" />
+                <IconCircleCheck className="h-3.5 w-3.5" />
                 Você tem
             </span>
         );
     }
     return (
         <span className="badge badge-outline-danger ml-2 inline-flex items-center gap-1 whitespace-nowrap text-xs" title="Esta habilidade não está no seu currículo">
-            <i className="pi pi-times-circle text-xs" />
+            <IconXCircle className="h-3.5 w-3.5" />
             Não está no seu currículo
         </span>
     );
@@ -309,16 +312,23 @@ const SkillInTheResume = ({ hasTheSkill }: { hasTheSkill: boolean }) => {
  * O grid paginado das skills, 50 por página, filtrado no navegador pelo nome da skill: cada linha expande o gráfico de
  * linhas com os meses da skill. Com resumeSkills (pesquisa "Vagas compatíveis comigo"), cada habilidade diz se está no currículo.
  */
+const PAGE_SIZE = 50;
+
 const SkillsGrid = ({ skills, seniority, ddd, resumeSkills }: { skills: SkillTotal[]; seniority: string; ddd: string; resumeSkills: string[] | null }) => {
-    const [expandedRows, setExpandedRows] = useState<DataTableExpandedRows>({});
+    const [expandedRows, setExpandedRows] = useState<{ [skill: string]: boolean }>({});
     const [filter, setFilter] = useState('');
+    const [page, setPage] = useState(1);
     const rankedSkills: RankedSkill[] = skills.map((item, index) => ({ ...item, position: index + 1 }));
     const normalizedFilter = normalizeForFilter(filter.trim());
     const filteredSkills = normalizedFilter ? rankedSkills.filter((item) => normalizeForFilter(skillLabel(item.skill)).includes(normalizedFilter)) : rankedSkills;
+    const totalPages = Math.max(1, Math.ceil(filteredSkills.length / PAGE_SIZE));
+    const currentPage = Math.min(page, totalPages);
+    const first = (currentPage - 1) * PAGE_SIZE;
+    const pageSkills = filteredSkills.slice(first, first + PAGE_SIZE);
     // a linha inteira abre e fecha o gráfico: a coluna "Ver evolução" só mostra o que o clique faz
     const toggle = (item: RankedSkill) =>
         setExpandedRows((current) => {
-            const { [item.skill]: wasExpanded, ...others } = current as { [skill: string]: boolean };
+            const { [item.skill]: wasExpanded, ...others } = current;
             return wasExpanded ? others : { ...others, [item.skill]: true };
         });
     return (
@@ -329,53 +339,74 @@ const SkillsGrid = ({ skills, seniority, ddd, resumeSkills }: { skills: SkillTot
                 placeholder="Filtrar habilidades"
                 aria-label="Filtrar habilidades"
                 value={filter}
-                onChange={(event) => setFilter(event.target.value)}
+                onChange={(event) => {
+                    setFilter(event.target.value);
+                    setPage(1);
+                }}
             />
-            <p className="mb-2 text-sm text-white-dark">
-                <i className="pi pi-info-circle mr-1" />
+            <p className="mb-2 flex items-center gap-1.5 text-sm text-white-dark">
+                <IconInfoCircle className="h-4 w-4 shrink-0" />
                 Clique em uma habilidade para ver quantas vagas pediram por ela mês a mês.
             </p>
-            <DataTable
-                value={filteredSkills}
-                emptyMessage="Nenhuma habilidade encontrada para este filtro."
-                dataKey="skill"
-                paginator
-                rows={50}
-                paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
-                currentPageReportTemplate="{first} a {last} de {totalRecords}"
-                expandedRows={expandedRows}
-                onRowClick={(event) => toggle(event.data as RankedSkill)}
-                rowClassName={() => 'cursor-pointer'}
-                rowHover
-                rowExpansionTemplate={(item: RankedSkill) => <SkillMonths skill={item.skill} seniority={seniority} ddd={ddd} />}
-                stripedRows
-                size="small"
-            >
-                <Column field="position" header="#" style={{ width: '4rem' }} />
-                <Column
-                    field="skill"
-                    header="Habilidade"
-                    body={(item: RankedSkill) => (
-                        <span className="inline-flex flex-wrap items-center gap-y-1">
-                            {skillLabel(item.skill)}
-                            {resumeSkills && <SkillInTheResume hasTheSkill={resumeHasTheSkill(resumeSkills, item.skill)} />}
-                        </span>
-                    )}
-                />
-                <Column field="total" header="Vagas" style={{ width: '6rem' }} />
-                <Column
-                    style={{ width: '10rem' }}
-                    body={(item: RankedSkill) => {
-                        const expanded = Boolean(expandedRows[item.skill]);
-                        return (
-                            <span className="inline-flex items-center gap-1 whitespace-nowrap text-primary" aria-expanded={expanded}>
-                                <i className={expanded ? 'pi pi-chevron-up' : 'pi pi-chart-line'} />
-                                {expanded ? 'Ocultar' : 'Ver evolução'}
-                            </span>
-                        );
-                    }}
-                />
-            </DataTable>
+            <Table.ScrollContainer minWidth={520}>
+                <Table highlightOnHover striped withRowBorders={false} verticalSpacing="xs">
+                    <Table.Thead>
+                        <Table.Tr>
+                            <Table.Th className="w-16">#</Table.Th>
+                            <Table.Th>Habilidade</Table.Th>
+                            <Table.Th className="w-24">Vagas</Table.Th>
+                            <Table.Th className="w-40"></Table.Th>
+                        </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                        {pageSkills.length == 0 && (
+                            <Table.Tr>
+                                <Table.Td colSpan={4} className="text-center text-white-dark">
+                                    Nenhuma habilidade encontrada para este filtro.
+                                </Table.Td>
+                            </Table.Tr>
+                        )}
+                        {pageSkills.map((item) => {
+                            const expanded = Boolean(expandedRows[item.skill]);
+                            return (
+                                <React.Fragment key={item.skill}>
+                                    <Table.Tr className="cursor-pointer" onClick={() => toggle(item)} aria-expanded={expanded}>
+                                        <Table.Td>{item.position}</Table.Td>
+                                        <Table.Td>
+                                            <span className="inline-flex flex-wrap items-center gap-y-1 font-semibold">
+                                                {skillLabel(item.skill)}
+                                                {resumeSkills && <SkillInTheResume hasTheSkill={resumeHasTheSkill(resumeSkills, item.skill)} />}
+                                            </span>
+                                        </Table.Td>
+                                        <Table.Td>{item.total}</Table.Td>
+                                        <Table.Td>
+                                            <span className="inline-flex items-center gap-1 whitespace-nowrap text-primary">
+                                                {expanded ? <IconCaretDown className="h-4 w-4 rotate-180" /> : <IconTrendingUp className="h-4 w-4" />}
+                                                {expanded ? 'Ocultar' : 'Ver evolução'}
+                                            </span>
+                                        </Table.Td>
+                                    </Table.Tr>
+                                    {expanded && (
+                                        <Table.Tr>
+                                            <Table.Td colSpan={4} className="bg-white p-4 dark:bg-black">
+                                                <SkillMonths skill={item.skill} seniority={seniority} ddd={ddd} />
+                                            </Table.Td>
+                                        </Table.Tr>
+                                    )}
+                                </React.Fragment>
+                            );
+                        })}
+                    </Table.Tbody>
+                </Table>
+            </Table.ScrollContainer>
+            {filteredSkills.length > 0 && (
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm text-white-dark">
+                    <span>
+                        {first + 1} a {Math.min(first + PAGE_SIZE, filteredSkills.length)} de {filteredSkills.length}
+                    </span>
+                    {totalPages > 1 && <Pagination total={totalPages} value={currentPage} onChange={setPage} size="sm" />}
+                </div>
+            )}
         </>
     );
 };
@@ -385,7 +416,7 @@ const DddChooser = ({ ddds, onChoose, onCancel }: { ddds: number[]; onChoose: (d
     const [chosen, setChosen] = useState('');
     const options = regions.filter((region) => ddds.map(String).includes(region.id));
     return (
-        <Dialog visible header="Escolha o DDD de preferência" style={{ width: '90vw', maxWidth: '420px' }} onHide={onCancel}>
+        <Modal opened title="Escolha o DDD de preferência" size="sm" onClose={onCancel}>
             <label htmlFor="compatiblePositionsDdd" className="font-semibold">
                 Região Metropolitana
             </label>
@@ -400,7 +431,7 @@ const DddChooser = ({ ddds, onChoose, onCancel }: { ddds: number[]; onChoose: (d
             <button type="button" className="btn btn-primary" disabled={!chosen} onClick={() => onChoose(chosen)}>
                 Pesquisar
             </button>
-        </Dialog>
+        </Modal>
     );
 };
 
@@ -586,7 +617,7 @@ export const SkillStatistics = ({ initialSeniority = 'pleno', searchOnOpening = 
                                 button={
                                     <>
                                         Pesquisar
-                                        <i className="pi pi-chevron-down ml-2" />
+                                        <IconCaretDown className="ml-2 h-4 w-4" />
                                     </>
                                 }
                             >

@@ -1,9 +1,6 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import { ConfirmDialog } from 'primereact/confirmdialog';
-import 'primereact/resources/themes/lara-light-cyan/theme.css';
-import 'primereact/resources/primereact.min.css';
-import 'primeicons/primeicons.css';
+import { ConfirmModal } from '@/presentation/components/source/ConfirmModal';
 import JnAjax from '@/app/JnAjax';
 import { getLinkParameters } from '@/presentation/pages/recrutador/ViewResumeFromEmail';
 
@@ -43,12 +40,12 @@ export const UnsubscribeFromResumesEmail = () => {
 
     return (
         <div className="panel mx-auto mt-6 max-w-2xl">
-            <ConfirmDialog
+            <ConfirmModal
                 visible={situation == 'confirming'}
                 onHide={() => setSituation((current) => (current == 'confirming' ? 'canceled' : current))}
                 header="Não receber mais o e-mail de currículos"
                 message={`Deseja mesmo deixar de receber o e-mail de currículos em ${link.email}?`}
-                icon="pi pi-exclamation-triangle"
+                danger
                 acceptLabel="Sim, descadastrar"
                 rejectLabel="Não"
                 accept={unsubscribe}

@@ -3,13 +3,9 @@
 import React from 'react';
 import { create } from 'zustand';
 
-import { InputText } from 'primereact/inputtext';
-
-import { InputTextarea } from 'primereact/inputtextarea';
+import { Select, TextInput, Textarea } from '@mantine/core';
 import { LabelComponent } from '@/presentation/components/source/LabelComponent';
 import { NotAllowedCompany } from './NotAllowedCompany';
-
-import { Dropdown } from 'primereact/dropdown';
 
 export interface TabResumeProps {}
 
@@ -124,7 +120,9 @@ const getResumeTextPlaceholder = (savedResume: boolean, savedTechResume: boolean
     return savedResume ? savedResumeTextPlaceholder : emptyResumeTextPlaceholder;
 };
 
-export const TabResume:React.FC<TabResumeProps> = ({}) => {
+const resumeTypeOptions = resumeTypes.map((type) => ({ value: String(type.id), label: type.label }));
+
+export const TabResume: React.FC<TabResumeProps> = ({}) => {
     const {
         fieldErrors,
         resumeType,
@@ -151,7 +149,7 @@ export const TabResume:React.FC<TabResumeProps> = ({}) => {
                 property="desiredJob"
                 errors={fieldErrors}
             >
-                <InputText invalid={fieldErrors.desiredJob} id="desiredJob" style={{ width: '75%' }} value={desiredJob} onChange={(e) => setDesiredJob(e.target.value)} />
+                <TextInput error={!!fieldErrors.desiredJob} id="desiredJob" maxLength={50} value={desiredJob} onChange={(e) => setDesiredJob(e.currentTarget.value)} />
             </LabelComponent>
             <LabelComponent
                 explanation="Esta informação é uma das mais importantes aos recrutadores, porém, somente deve ser preenchida se você não estiver pleiteando estágio / primeira oportunidade."
@@ -159,7 +157,7 @@ export const TabResume:React.FC<TabResumeProps> = ({}) => {
                 errors={fieldErrors}
                 property="lastJob"
             >
-                <InputText invalid={fieldErrors.lastJob} style={{ width: '75%' }} id="lastJob" value={lastJob} onChange={(e) => setLastJob(e.target.value)} />
+                <TextInput error={!!fieldErrors.lastJob} id="lastJob" maxLength={50} value={lastJob} onChange={(e) => setLastJob(e.currentTarget.value)} />
             </LabelComponent>
             <LabelComponent
                 explanation="Para nos resguardar da LGPD (Lei Geral de Proteção de Dados), não guardamos o seu currículo e nem nada sobre ele (como texto, por exemplo) em nossa base de dados, sendo assim, você precisa informar o endereço do seu perfil no linkedin (no formato https://www.linkedin.com/in/seu-perfil). É por ele que o recrutador vai te contactar, então mantenha no seu linkedin um meio de contato (e-mail, telefone, etc). Somente endereços do linkedin são aceitos neste campo."
@@ -167,7 +165,13 @@ export const TabResume:React.FC<TabResumeProps> = ({}) => {
                 property="linkedinAddress"
                 errors={fieldErrors}
             >
-                <InputText id= "linkedinAddress" invalid={fieldErrors.linkedinAddress} style={{ width: '75%' }} value={linkedinAddress} onChange={(e) => setLinkedinAddress(e.target.value)} />
+                <TextInput
+                    id="linkedinAddress"
+                    error={!!fieldErrors.linkedinAddress}
+                    placeholder="https://www.linkedin.com/in/seu-perfil"
+                    value={linkedinAddress}
+                    onChange={(e) => setLinkedinAddress(e.currentTarget.value)}
+                />
             </LabelComponent>
             <LabelComponent
                 explanation="Recrutadores cujo os domínios de e-mail das empresas / consultorias mencionados aqui neste campo não poderão ver o seu endereço de linkedin / contato. Cabe ressaltar que se o recrutador estiver logado por outro e-mail com um domínio que não estiver mencionado aqui neste campo ou se ele estiver usando e-mails pessoais (gmail, outlook e afins), este recrutador poderá ter acesso ao seu link de linkedin / contato."
@@ -175,7 +179,7 @@ export const TabResume:React.FC<TabResumeProps> = ({}) => {
                 property="notAllowedCompany"
                 errors={fieldErrors}
             >
-                <NotAllowedCompany setNotAllowedCompany={(e) => setNotAllowedCompany(e)} invalid={fieldErrors.notAllowedCompany} notAllowedCompany={notAllowedCompany} />
+                <NotAllowedCompany setNotAllowedCompany={(e) => setNotAllowedCompany(e)} invalid={!!fieldErrors.notAllowedCompany} notAllowedCompany={notAllowedCompany} />
             </LabelComponent>
 
             <LabelComponent
@@ -184,19 +188,20 @@ export const TabResume:React.FC<TabResumeProps> = ({}) => {
                 property="resumeType"
                 errors={fieldErrors}
             >
-                <Dropdown
-                    id = "resumeType"
-                    style={{ width: '75%' }}
-                    value={resumeType}
-                    invalid={fieldErrors.resumeType}
-                    onChange={(e) => {
+                <Select
+                    id="resumeType"
+                    value={resumeType && resumeType.id ? String(resumeType.id) : null}
+                    error={!!fieldErrors.resumeType}
+                    onChange={(value) => {
+                        const chosen = resumeTypes.filter((type) => String(type.id) == value)[0];
+                        if (!chosen) return;
                         resumeType.id != 1 && setResumeText('');
-                        setResumeType(e.value);
+                        setResumeType(chosen);
                     }}
-                    options={resumeTypes}
-                    optionLabel="label"
+                    data={resumeTypeOptions}
                     placeholder="Escolha o tipo do seu currículo"
-                    className="md:w-14rem w-full"
+                    allowDeselect={false}
+                    comboboxProps={{ withinPortal: false }}
                 />
             </LabelComponent>
             {resumeType.id == 1 && (
@@ -206,15 +211,15 @@ export const TabResume:React.FC<TabResumeProps> = ({}) => {
                     property="resumeText"
                     errors={fieldErrors}
                 >
-                    <InputTextarea
-                        id = "resumeText"
+                    <Textarea
+                        id="resumeText"
                         placeholder={getResumeTextPlaceholder(savedResume, savedTechResume)}
-                        invalid={fieldErrors.resumeText}
-                        style={{ width: '75%' }}
+                        error={!!fieldErrors.resumeText}
                         value={resumeText}
-                        onChange={(e) => setResumeText(e.target.value)}
-                        rows={15}
-                        cols={100}
+                        onChange={(e) => setResumeText(e.currentTarget.value)}
+                        autosize
+                        minRows={10}
+                        maxRows={25}
                     />
                 </LabelComponent>
             )}

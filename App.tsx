@@ -32,7 +32,7 @@ function App({ children }: PropsWithChildren) {
         <div
             className={`${(themeConfig.sidebar && 'toggle-sidebar') || ''} ${themeConfig.menu} ${themeConfig.layout} ${
                 themeConfig.rtlClass
-            } main-section relative font-nunito text-sm font-normal antialiased`}
+            } main-section relative font-nunito text-[15px] font-normal antialiased`}
         >
             {isLoading ? <Loading /> : children}
         </div>

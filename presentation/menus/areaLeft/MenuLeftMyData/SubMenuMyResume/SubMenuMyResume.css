@@ -1,52 +1,10 @@
-.linkParaAbrirModal{
-    font-size: 9px;
-    color: blue;
-}
-.linkParaAbrirModal:hover  {
-}
-.p-highlight {
-    color: red;
-}
-/* sem largura fixa: os 300px estouravam a tela estreita; quem precisa de largura a define no próprio elemento */
-.letraPequena {
-    font-size: 10px;
-    text-align: left;
-    padding-left: 5px;
-}
-.p-inputtext,
-.p-checkbox {
-    border-width: 1px;
-}
-.p-inputtext {
-    padding: 10px;
-}
-.p-multiselect {
-    border-style: solid;
-    border-width: 1px;
-    width: 100%;
-}
-.p-dropdown-label,.p-accordion-header, li {
-    font-size: 10px;
-}
-/* numa tela estreita o menu de abas rola na horizontal; sem isto, o nome da aba quebrava em duas linhas e era cortado */
-.p-tabmenu .p-menuitem-link {
-    white-space: nowrap;
-}
-.tituloDaAba {
-    text-align: center;
-    font-size: 10px;
-    color: blue;
-}
-.p-invalid {
-    border-color: #e24c4c;
-}
 /* situação do currículo, mostrada ao entrar na tela */
 .resume-status {
-    font-size: 11px;
+    font-size: 0.875rem;
     text-align: center;
-    padding: 4px 8px;
-    margin-bottom: 6px;
-    border-radius: 4px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    border-radius: 6px;
 }
 .resume-status-active {
     color: #1b5e20;
@@ -64,10 +22,26 @@
     color: #0d47a1;
     background-color: #e3f2fd;
 }
+body.dark .resume-status-not-logged {
+    color: #90caf9;
+    background-color: rgba(33, 150, 243, 0.15);
+}
 .resume-status-login-link {
     font-weight: bold;
     text-decoration: underline;
     cursor: pointer;
+}
+body.dark .resume-status-active {
+    color: #a5d6a7;
+    background-color: rgba(0, 171, 85, 0.15);
+}
+body.dark .resume-status-inactive {
+    color: #ffcc80;
+    background-color: rgba(226, 160, 63, 0.15);
+}
+body.dark .resume-status-none {
+    color: #bfc9d4;
+    background-color: rgba(255, 255, 255, 0.08);
 }
 /* a faixa leva Inativar / Reativar / Excluir, visíveis em todas as abas */
 .resume-status-actions {
@@ -78,6 +52,6 @@
     gap: 8px;
 }
 .resume-status-actions .btn {
-    font-size: 11px;
-    padding: 2px 10px;
+    font-size: 0.8125rem;
+    padding: 4px 12px;
 }

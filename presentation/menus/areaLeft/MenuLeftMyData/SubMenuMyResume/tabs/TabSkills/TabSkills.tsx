@@ -3,22 +3,12 @@ import { create } from 'zustand';
 
 import { ReactSortable } from 'react-sortablejs';
 
-import { InputText } from 'primereact/inputtext';
-
-import React, { useRef, useState } from 'react';
-
-import { ScrollPanel } from 'primereact/scrollpanel';
-
-import { Accordion, AccordionTab } from 'primereact/accordion';
-
-import { Tooltip } from 'primereact/tooltip';
-import { Button } from 'primereact/button';
-import { Dialog } from 'primereact/dialog';
-import { dialogBreakpoints } from '@/presentation/components/source/Modal';
-import { InputTextarea } from 'primereact/inputtextarea';
-import { MultiSelect } from 'primereact/multiselect';
-import { Chips } from 'primereact/chips';
-import { ConfirmDialog } from 'primereact/confirmdialog';
+import React, { useState } from 'react';
+import { Accordion, ActionIcon, Modal, MultiSelect, TagsInput, TextInput, Textarea, Tooltip } from '@mantine/core';
+import { ConfirmModal } from '@/presentation/components/source/ConfirmModal';
+import { HelpButton } from '@/presentation/components/source/HelpButton';
+import IconPlusCircle from '@/presentation/icons/icon-plus-circle';
+import IconTrash from '@/presentation/icons/icon-trash';
 import { LabelComponent } from '@/presentation/components/source/LabelComponent';
 import { LoadingButton } from '@/presentation/components/source/LoadingButton';
 import PubSub from 'pubsub-js';
@@ -435,35 +425,16 @@ const SkillList: React.FC<SkillListProps> = ({ title, width, list, filter, setFi
         const hiddenByFilter = list.filter((item: any) => !filtro(item));
         setList([...hiddenByFilter, ...newFilteredList]);
     };
-    const [helpVisible, setHelpVisible] = useState(false);
-    const helpButtonId = main ? 'btnHelpSkillsFromResume' : 'btnHelpExcludedSkillsFromResume';
     return (
-        <ScrollPanel className="w-full md:w-[var(--skills-column-width)]" style={{ ['--skills-column-width' as any]: width, padding: '10px' }}>
-            <Dialog
-                header={title}
-                visible={helpVisible}
-                style={{ width: '50vw' }} breakpoints={dialogBreakpoints}
-                onHide={() => {
-                    if (!helpVisible) return;
-                    setHelpVisible(false);
-                }}
-            >
-                <p className="m-0">{main ? SKILLS_FROM_RESUME_HELP : EXCLUDED_SKILLS_FROM_RESUME_HELP}</p>
-            </Dialog>
-            <div className="mb-5" style={{ fontSize: '10px' }}>
-                <Tooltip target={`#${helpButtonId}`} content="Clique aqui para saber mais detalhes sobre esta lista" position="bottom" />
-                <label>
-                    <Button icon="pi pi-question-circle" id={helpButtonId} onClick={() => setHelpVisible(true)} />
-                    {`${title} (${list.length})`}
-                </label>
+        <div className="w-full p-2.5 md:w-[var(--skills-column-width)]" style={{ ['--skills-column-width' as any]: width }}>
+            <div className="mb-5">
+                <div className="mb-2 flex items-start gap-1.5">
+                    <label className="font-semibold leading-snug">{`${title} (${list.length})`}</label>
+                    <HelpButton title={title} explanation={main ? SKILLS_FROM_RESUME_HELP : EXCLUDED_SKILLS_FROM_RESUME_HELP} tooltip="Clique aqui para saber mais detalhes sobre esta lista" />
+                </div>
 
                 {(list.length >= 7 || filter) && (
-                    <InputText
-                        style={{ padding: '10px', width: '100%' }}
-                        placeholder="Digite a habilidade para filtrar da listagem abaixo"
-                        value={filter}
-                        onChange={(e) => setFilter(e.target.value)}
-                    />
+                    <TextInput className="mb-2" placeholder="Digite a habilidade para filtrar da listagem abaixo" value={filter || ''} onChange={(e) => setFilter(e.currentTarget.value)} />
                 )}
                 {main ? (
                     <SkillSuggestionModal />
@@ -510,7 +481,7 @@ const SkillList: React.FC<SkillListProps> = ({ title, width, list, filter, setFi
                     </ul>
                 </div>
             </div>
-        </ScrollPanel>
+        </div>
     );
 };
 interface AccordionListProps {
@@ -520,74 +491,54 @@ const AccordionList: React.FC<AccordionListProps> = ({ width }) => {
     const { accordionList } = TabSkillStore((state: ITabSkillStore) => ({
         ...state,
     }));
-    const [visible, setVisible] = useState(false);
     // mesmo filtro das outras duas listas: aparece a partir de 7 itens (ou enquanto houver texto digitado) e filtra pelo começo do nome
     const [filter, setFilter] = useState('');
     const filteredAccordionList = (accordionList || []).filter((item: any) => !filter || ('' + item.skill).toUpperCase().startsWith(filter.trim().toUpperCase()));
     return (
-        <ScrollPanel className="w-full md:w-[var(--skills-column-width)]" style={{ ['--skills-column-width' as any]: width, padding: '10px' }}>
+        <div className="w-full p-2.5 md:w-[var(--skills-column-width)]" style={{ ['--skills-column-width' as any]: width }}>
             {accordionList && !!accordionList.length && (
                 <div>
-                    <div className="align-items-center flex">
-                        <Dialog
-                            header={'O que são conhecimentos implicitos?'}
-                            visible={visible}
-                            style={{ width: '50vw' }} breakpoints={dialogBreakpoints}
-                            onHide={() => {
-                                if (!visible) return;
-                                setVisible(false);
-                            }}
-                        >
-                            <p className="m-0">
-                                São conhecimentos que você não mencionou no seu currículo, porém subentende-se que você os tem, pois estes conhecimentos são pré requisitos para outros conhecimentos,
-                                exemplo: Não há como você saber oracle ou mysql sem saber sql.
-                            </p>
-                        </Dialog>
-                        <div className="mb-5" style={{ fontSize: '10px' }}>
-                            <Tooltip target="#btnHelp" content="Clique aqui para saber o que são conhecimentos implícitos" position="bottom" />
-                            <label>
-                                <Button icon="pi pi-question-circle" id="btnHelp" onClick={() => setVisible(true)} />
-                                {`Conhecimentos implícitos (${accordionList.length})`}
-                            </label>
-
-                            {(accordionList.length >= 7 || filter) && (
-                                <InputText
-                                    style={{ padding: '10px', width: '100%' }}
-                                    placeholder="Digite o conhecimento para filtrar da listagem abaixo"
-                                    value={filter}
-                                    onChange={(e) => setFilter(e.target.value)}
-                                />
-                            )}
+                    <div className="mb-5">
+                        <div className="mb-2 flex items-start gap-1.5">
+                            <label className="font-semibold leading-snug">{`Conhecimentos implícitos (${accordionList.length})`}</label>
+                            <HelpButton
+                                title="O que são conhecimentos implícitos?"
+                                tooltip="Clique aqui para saber o que são conhecimentos implícitos"
+                                explanation="São conhecimentos que você não mencionou no seu currículo, porém subentende-se que você os tem, pois estes conhecimentos são pré requisitos para outros conhecimentos, exemplo: Não há como você saber oracle ou mysql sem saber sql."
+                            />
                         </div>
+
+                        {(accordionList.length >= 7 || filter) && (
+                            <TextInput className="mb-2" placeholder="Digite o conhecimento para filtrar da listagem abaixo" value={filter} onChange={(e) => setFilter(e.currentTarget.value)} />
+                        )}
                     </div>
                     <div className="panel mb-3" style={{ maxHeight: '400px', overflow: 'auto', boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.2)' }}>
-                        <div className="gap-x-12 sm:grid-cols-2">
-                            <Accordion>
-                                {filteredAccordionList.map((item: any) => (
-                                    <AccordionTab
-                                        key={item.skill}
-                                        header={
-                                            <span className="inline-flex items-center gap-2">
-                                                <span>{`${item.skill} (${item.children.length})`}</span>
-                                                <AddSkillsToAccordion accordionItem={item} />
-                                                <RemoveSkillsFromAccordion accordionItem={item} />
-                                            </span>
-                                        }
-                                    >
-                                        <h1 style={{ fontSize: '7px' }}>Habilidades associadas a {item.skill}:</h1>
+                        <Accordion chevronPosition="left" classNames={{ label: 'py-2 text-sm font-semibold' }}>
+                            {filteredAccordionList.map((item: any) => (
+                                <Accordion.Item key={item.skill} value={item.skill}>
+                                    {/* os botões de sugestão ficam fora do botão do accordion: um botão dentro de outro não é HTML válido */}
+                                    <div className="flex items-center">
+                                        <Accordion.Control className="min-w-0 flex-1">{`${item.skill} (${item.children.length})`}</Accordion.Control>
+                                        <span className="flex shrink-0 items-center gap-1 pr-2">
+                                            <AddSkillsToAccordion accordionItem={item} />
+                                            <RemoveSkillsFromAccordion accordionItem={item} />
+                                        </span>
+                                    </div>
+                                    <Accordion.Panel>
+                                        <h6 className="mb-1 text-xs font-semibold text-white-dark">Habilidades associadas a {item.skill}:</h6>
                                         {item.children.map((child: any, counter: any) => (
-                                            <p className="m-0" key={child.label} style={{ fontSize: '12px' }}>
+                                            <p className="m-0 text-sm" key={child.label}>
                                                 {counter + 1 + ': ' + child.label}
                                             </p>
                                         ))}
-                                    </AccordionTab>
-                                ))}
-                            </Accordion>
-                        </div>
+                                    </Accordion.Panel>
+                                </Accordion.Item>
+                            ))}
+                        </Accordion>
                     </div>
                 </div>
             )}
-        </ScrollPanel>
+        </div>
     );
 };
 type SkillFixHierarchyType = 'add' | 'remove';
@@ -786,10 +737,13 @@ const SkillFixHierarchyStatusView: React.FC<SkillFixHierarchyStatusViewProps> = 
     <div className="text-left">
         <label className="font-semibold">{`status: ${SKILL_FIX_HIERARCHY_STATUS_LABELS[suggestion.status]}`}</label>
         {suggestion.status !== 'pending' && (
-            <Accordion className="mt-2">
-                <AccordionTab header="Justificativa do suporte">
-                    <p className="m-0" style={{ whiteSpace: 'pre-line' }}>{suggestion.explanation}</p>
-                </AccordionTab>
+            <Accordion className="mt-2" variant="contained">
+                <Accordion.Item value="explanation">
+                    <Accordion.Control>Justificativa do suporte</Accordion.Control>
+                    <Accordion.Panel>
+                        <p className="m-0" style={{ whiteSpace: 'pre-line' }}>{suggestion.explanation}</p>
+                    </Accordion.Panel>
+                </Accordion.Item>
             </Accordion>
         )}
     </div>
@@ -799,7 +753,7 @@ interface SkillFixHierarchyModalProps {
     accordionItem: any;
     type: SkillFixHierarchyType;
     options: any[];
-    icon: string;
+    icon: React.ReactNode;
     linkText: string;
     headerModal: string;
     reasonExplanation: string;
@@ -837,23 +791,9 @@ const SkillFixHierarchyModal: React.FC<SkillFixHierarchyModalProps> = ({
     const setLoadingOf = (request: 'load' | 'save' | 'withdraw') => (loading: boolean) => setLoadingRequest(loading ? request : null);
     const busy = loadingRequest !== null;
 
+    // o modal é filho deste componente na árvore do React: sem barrar a propagação, clicar ou digitar nele mexeria no
+    // accordion onde o botão de abrir fica
     const stopPropagation = (e: React.SyntheticEvent) => e.stopPropagation();
-
-    // O stopPropagation acima também barra o clique que o MultiSelect escuta no window para fechar a lista ao clicar
-    // fora dela (o Dialog vai para o body por portal, mas o evento sobe pela árvore do React até este span): sem isto a
-    // lista ficava aberta por cima dos outros campos. Por isso o fechamento é feito aqui, antes de barrar o clique.
-    const skillsMultiSelect = useRef<MultiSelect>(null);
-    const closeSkillListWhenClickedOutside = (e: React.MouseEvent) => {
-        const clicked = e.target as Node;
-        const multiSelectElement = skillsMultiSelect.current?.getElement();
-        const skillList = skillsMultiSelect.current?.getOverlay();
-        const clickedInsideTheMultiSelect = !!multiSelectElement && multiSelectElement.contains(clicked);
-        const clickedInsideTheList = !!skillList && skillList.contains(clicked);
-        if (!clickedInsideTheMultiSelect && !clickedInsideTheList) {
-            skillsMultiSelect.current?.hide();
-        }
-        e.stopPropagation();
-    };
 
     const loadSuggestion = () => {
         setSelectedSkills([]);
@@ -957,12 +897,12 @@ const SkillFixHierarchyModal: React.FC<SkillFixHierarchyModalProps> = ({
     const withdrawButton = (close: () => void) =>
         pending && (
             <>
-                <ConfirmDialog
+                <ConfirmModal
                     visible={confirmingWithdraw}
                     onHide={() => setConfirmingWithdraw(false)}
                     header="Desistir da sugestão"
                     message="Tem certeza de que deseja desistir desta sugestão? Ela deixará de ser analisada."
-                    icon="pi pi-exclamation-triangle"
+                    danger
                     acceptLabel="Sim, desistir"
                     rejectLabel="Não"
                     accept={() => withdraw(close)}
@@ -992,7 +932,7 @@ const SkillFixHierarchyModal: React.FC<SkillFixHierarchyModalProps> = ({
     const mainButton = getMainButton();
 
     return (
-        <span onClick={closeSkillListWhenClickedOutside} onKeyDown={stopPropagation}>
+        <span onClick={stopPropagation} onKeyDown={stopPropagation}>
             <LinkModal
                 onSave={mainButton.onSave}
                 saveButtonLabel={mainButton.label}
@@ -1005,31 +945,27 @@ const SkillFixHierarchyModal: React.FC<SkillFixHierarchyModalProps> = ({
                 <div className="flex w-full flex-col items-stretch">
                     <LabelComponent explanation={skillsHelp} labelValue="Habilidades" property={`skillFixHierarchySkills-${type}`} errors={{}}>
                         <MultiSelect
-                            ref={skillsMultiSelect}
                             id={`skillFixHierarchySkills-${type}`}
-                            className="w-full"
                             value={selectedSkills}
-                            onChange={(e) => setSelectedSkills(e.value)}
-                            options={allOptions}
-                            optionLabel="label"
-                            optionValue="skill"
-                            filter
-                            maxSelectedLabels={3}
-                            selectedItemsLabel="{0} habilidades selecionadas"
-                            placeholder={multiSelectPlaceholder}
-                            // por padrão a lista de opções vai para o body e rola com a página, descolando do Dialog (fixo)
-                            appendTo="self"
+                            onChange={setSelectedSkills}
+                            data={allOptions.map((option: any) => ({ value: option.skill, label: option.label }))}
+                            searchable
+                            hidePickedOptions
+                            nothingFoundMessage="Nenhuma habilidade encontrada"
+                            placeholder={selectedSkills.length ? '' : multiSelectPlaceholder}
+                            // a lista de opções fica dentro do modal, para rolar com ele
+                            comboboxProps={{ withinPortal: false }}
                             disabled={!!suggestion}
                         />
                     </LabelComponent>
                     <LabelComponent explanation={reasonHelp} labelValue="Justificativa" property={`skillFixHierarchyReason-${type}`} errors={{}}>
-                        <InputTextarea
+                        <Textarea
                             id={`skillFixHierarchyReason-${type}`}
-                            className="w-full"
                             placeholder={reasonExplanation}
                             value={reason}
-                            onChange={(e) => setReason(e.target.value)}
-                            rows={6}
+                            onChange={(e) => setReason(e.currentTarget.value)}
+                            autosize
+                            minRows={5}
                             disabled={!!suggestion}
                         />
                     </LabelComponent>
@@ -1059,7 +995,7 @@ const AddSkillsToAccordion: React.FC<AccordionSkillsProps> = ({ accordionItem })
             accordionItem={accordionItem}
             type="add"
             options={availableSkills}
-            icon="pi-plus-circle"
+            icon={<IconPlusCircle className="h-5 w-5" />}
             linkText="Sugira adicionar habilidades (presentes no seu currículo) que você acredita que deveria estar aqui e não estão"
             headerModal={`Sugira adicionar (presentes no seu currículo) que você acredita que dependem do conhecimento em ${accordionItem.skill}`}
             reasonExplanation={`Explique por que as habilidades selecionadas acima deveriam ser associadas a ${accordionItem.skill}`}
@@ -1086,7 +1022,7 @@ const RemoveSkillsFromAccordion: React.FC<AccordionSkillsProps> = ({ accordionIt
         accordionItem={accordionItem}
         type="remove"
         options={accordionItem.children}
-        icon="pi-trash"
+        icon={<IconTrash className="h-5 w-5" />}
         linkText={`Sugira remover habilidades que você acredita que não dependem do conhecimento em ${accordionItem.skill}`}
         headerModal={`Sugira remover habilidades que você acredita que não dependem do conhecimento em ${accordionItem.skill}`}
         reasonExplanation={`Explique por que as habilidades selecionadas acima não deveriam estar associadas a ${accordionItem.skill}`}
@@ -1258,10 +1194,13 @@ const SkillSuggestionStatusView: React.FC<SkillSuggestionStatusViewProps> = ({ s
     <div className="text-left">
         <label className="font-semibold">{`status: ${SKILL_SUGGESTION_STATUS_LABELS[suggestion.status]}`}</label>
         {suggestion.status !== 'pending' && (
-            <Accordion className="mt-2">
-                <AccordionTab header="Motivo">
-                    <p className="m-0" style={{ whiteSpace: 'pre-line' }}>{suggestion.explanation}</p>
-                </AccordionTab>
+            <Accordion className="mt-2" variant="contained">
+                <Accordion.Item value="explanation">
+                    <Accordion.Control>Motivo</Accordion.Control>
+                    <Accordion.Panel>
+                        <p className="m-0" style={{ whiteSpace: 'pre-line' }}>{suggestion.explanation}</p>
+                    </Accordion.Panel>
+                </Accordion.Item>
             </Accordion>
         )}
     </div>
@@ -1466,12 +1405,12 @@ const SkillSuggestionModal: React.FC = () => {
     const withdrawButton = (close: () => void) =>
         pending && (
             <>
-                <ConfirmDialog
+                <ConfirmModal
                     visible={confirmingWithdraw}
                     onHide={() => setConfirmingWithdraw(false)}
                     header="Desistir da sugestão"
                     message="Tem certeza de que deseja desistir desta sugestão? Ela deixará de ser analisada."
-                    icon="pi pi-exclamation-triangle"
+                    danger
                     acceptLabel="Sim, desistir"
                     rejectLabel="Não"
                     accept={() => withdraw(close)}
@@ -1525,44 +1464,40 @@ const SkillSuggestionModal: React.FC = () => {
             <div className="flex w-full flex-col items-stretch">
                 {resumeTextMissing && <ResumeTextMissingHint />}
                 <LabelComponent explanation={SKILL_SUGGESTION_SKILL_HELP} labelValue="Habilidade" property="skillSuggestionSkill" errors={{}}>
-                    <InputText
+                    <TextInput
                         id="skillSuggestionSkill"
-                        className="w-full"
                         placeholder="Habilidade que consta no seu currículo (ex.: REACT NATIVE)"
                         value={skill}
                         disabled={hasSuggestion || resumeTextMissing}
                         maxLength={SKILL_MAX_LENGTH}
                         onChange={(e) => {
-                            setSkill(e.target.value.toUpperCase());
+                            setSkill(e.currentTarget.value.toUpperCase());
                             setSkillValid(false);
                         }}
                         onBlur={onSkillBlur}
                     />
                 </LabelComponent>
                 <LabelComponent explanation={SKILL_SUGGESTION_SYNONYMS_HELP} labelValue="Sinônimos" property="skillSuggestionSynonyms" errors={{}}>
-                    <Chips
+                    <TagsInput
                         id="skillSuggestionSynonyms"
-                        className="w-full"
-                        // a raiz do Chips é inline-flex e a lista de frases não ocupa a largura do modal sem isso
-                        pt={{ container: { className: 'w-full' } }}
                         value={synonyms}
                         disabled={otherFieldsDisabled}
-                        onChange={(e) => onSynonymsChange(e.value || [])}
+                        onChange={onSynonymsChange}
                         // sair do campo com um sinônimo digitado vale como teclar Enter
-                        addOnBlur
-                        separator=","
-                        placeholder="Sinônimos: digite cada um e tecle Enter (ou separe por vírgula)"
+                        acceptValueOnBlur
+                        splitChars={[',']}
+                        placeholder={synonyms.length ? '' : 'Sinônimos: digite cada um e tecle Enter (ou separe por vírgula)'}
                     />
                 </LabelComponent>
                 <LabelComponent explanation={SKILL_SUGGESTION_REASON_HELP} labelValue="Justificativa" property="skillSuggestionReason" errors={{}}>
-                    <InputTextarea
+                    <Textarea
                         id="skillSuggestionReason"
-                        className="w-full"
                         placeholder="Explique por que esta habilidade deveria ser reconhecida (ex.: em que parte do currículo ela aparece)"
                         value={reason}
                         disabled={otherFieldsDisabled}
-                        onChange={(e) => setReason(e.target.value)}
-                        rows={6}
+                        onChange={(e) => setReason(e.currentTarget.value)}
+                        autosize
+                        minRows={5}
                     />
                 </LabelComponent>
                 {suggestion && <SkillSuggestionStatusView suggestion={suggestion} />}
@@ -1590,7 +1525,7 @@ interface LinkModalProps {
     extraActions?: (close: () => void) => React.ReactNode;
     labelText: string;
     linkText: string;
-    icon?: string;
+    icon?: React.ReactNode;
     // os campos trazem o próprio botão de ajuda (um LabelComponent por campo): o modal não põe o botão único do topo
     fieldsHaveOwnHelp?: boolean;
 }
@@ -1601,40 +1536,20 @@ const LinkModal: React.FC<LinkModalProps> = ({ onSave, onOpen, saveButtonLabel =
         onOpen && onOpen();
     };
     return (
-        <div className={icon ? 'inline-flex items-center' : undefined}>
-            {labelText && !icon && <label style={{ fontSize: '10px' }}>{labelText}</label>}
+        <div className={icon ? 'inline-flex items-center' : 'mt-2'}>
+            {labelText && !icon && <label className="text-sm">{labelText}</label>}
             {icon ? (
-                // span em vez de <a>: o ícone pode ficar dentro do cabeçalho do AccordionTab, que já é um <a>; o
-                // preventDefault impede que o clique siga o href desse <a> e troque o hash da URL
-                <span
-                    role="button"
-                    tabIndex={0}
-                    className="linkParaAbrirModal inline-flex cursor-pointer items-center"
-                    title={linkText}
-                    aria-label={linkText}
-                    onClick={(e) => {
-                        e.preventDefault();
-                        open();
-                    }}
-                    onKeyDown={(e) => e.key === 'Enter' && open()}
-                >
-                    <i className={`pi ${icon}`} style={{ fontSize: '12px', lineHeight: 1 }} />
-                </span>
+                <Tooltip label={linkText} position="bottom" multiline w={280}>
+                    <ActionIcon variant="subtle" color="primary" radius="xl" aria-label={linkText} onClick={open}>
+                        {icon}
+                    </ActionIcon>
+                </Tooltip>
             ) : (
-                <a href="#" className="linkParaAbrirModal" onClick={open}>
+                <button type="button" className="text-sm text-primary hover:underline" onClick={open}>
                     {linkText}
-                </a>
+                </button>
             )}
-            <Dialog
-                style={{ width: '50vw' }} breakpoints={dialogBreakpoints}
-                header={headerModal}
-                blockScroll
-                visible={visible}
-                onHide={() => {
-                    if (!visible) return;
-                    setVisible(false);
-                }}
-            >
+            <Modal size="lg" title={headerModal} opened={visible} onClose={() => visible && setVisible(false)}>
                 {fieldsHaveOwnHelp ? (
                     <div className="mb-5">{children}</div>
                 ) : (
@@ -1656,7 +1571,7 @@ const LinkModal: React.FC<LinkModalProps> = ({ onSave, onOpen, saveButtonLabel =
                         />
                     </div>
                 </div>
-            </Dialog>
+            </Modal>
         </div>
     );
 };

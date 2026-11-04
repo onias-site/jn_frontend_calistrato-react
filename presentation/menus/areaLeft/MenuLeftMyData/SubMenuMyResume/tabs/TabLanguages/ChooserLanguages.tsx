@@ -1,12 +1,9 @@
 'use client';
 
-import { MultiSelect } from 'primereact/multiselect';
 import React from 'react';
-
 import { create } from 'zustand';
-
-import { Dropdown } from 'primereact/dropdown';
-import { Checkbox } from 'primereact/checkbox';
+import { Checkbox, Select } from '@mantine/core';
+import { SummaryMultiSelect } from '@/presentation/components/source/SummaryMultiSelect';
 
 export interface ITabLanguagesStore {
     language: any;
@@ -70,252 +67,55 @@ export const TabLanguagesStore = create<ITabLanguagesStore>((set, get) => ({
 }));
 
 const languages = [
-    {
-        name: 'Alemão',
-        id: 11,
-        level: 1,
-    },
-    {
-        name: 'Amárico',
-        id: 33,
-        level: 1,
-    },
-    {
-        name: 'Árabe',
-        id: 5,
-        level: 1,
-    },
-    {
-        name: 'Azerbaijano',
-        id: 35,
-        level: 1,
-    },
-    {
-        name: 'Bengali',
-        id: 6,
-        level: 1,
-    },
-    {
-        name: 'Birmanês',
-        id: 34,
-        level: 1,
-    },
-    {
-        name: 'Búlgaro',
-        id: 42,
-        level: 1,
-    },
-    {
-        name: 'Cebuano',
-        id: 37,
-        level: 1,
-    },
-    {
-        name: 'Coreano',
-        id: 18,
-        level: 1,
-    },
-    {
-        name: 'Croata',
-        id: 49,
-        level: 1,
-    },
-    {
-        name: 'Dinamarquês',
-        id: 45,
-        level: 1,
-    },
-    {
-        name: 'Eslovaco',
-        id: 47,
-        level: 1,
-    },
-    {
-        name: 'Espanhol',
-        id: 3,
-        level: 1,
-    },
-    {
-        name: 'Finlandês',
-        id: 46,
-        level: 1,
-    },
-    {
-        name: 'Francês',
-        id: 4,
-        level: 1,
-    },
-    {
-        name: 'Grego',
-        id: 36,
-        level: 1,
-    },
-    {
-        name: 'Gujarati',
-        id: 22,
-        level: 1,
-    },
-    {
-        name: 'Hausa',
-        id: 32,
-        level: 1,
-    },
-    {
-        name: 'Hebraico',
-        id: 44,
-        level: 1,
-    },
-    {
-        name: 'Hindi',
-        id: 2,
-        level: 1,
-    },
-    {
-        name: 'Holandês',
-        id: 31,
-        level: 1,
-    },
-    {
-        name: 'Húngaro',
-        id: 41,
-        level: 1,
-    },
-    {
-        name: 'Indonésio',
-        id: 10,
-        level: 1,
-    },
-    {
-        name: 'Inglês',
-        id: 0,
-        level: 1,
-    },
-    {
-        name: 'Italiano',
-        id: 20,
-        level: 1,
-    },
-    {
-        name: 'Japonês',
-        id: 12,
-        level: 1,
-    },
-    {
-        name: 'Kannada',
-        id: 27,
-        level: 1,
-    },
-    {
-        name: 'Malaio',
-        id: 26,
-        level: 1,
-    },
-    {
-        name: 'Mandarim (Chinês)',
-        id: 1,
-        level: 1,
-    },
-    {
-        name: 'Marathi',
-        id: 14,
-        level: 1,
-    },
-    {
-        name: 'Norueguês',
-        id: 48,
-        level: 1,
-    },
-    {
-        name: 'Oriya (Odia)',
-        id: 28,
-        level: 1,
-    },
-    {
-        name: 'Persa (Farsi)',
-        id: 24,
-        level: 1,
-    },
-    {
-        name: 'Polonês',
-        id: 23,
-        level: 1,
-    },
-
-    {
-        name: 'Punjabi',
-        id: 29,
-        level: 1,
-    },
-    {
-        name: 'Romeno',
-        id: 30,
-        level: 1,
-    },
-    {
-        name: 'Russo',
-        id: 8,
-        level: 1,
-    },
-    {
-        name: 'Sérvio',
-        id: 43,
-        level: 1,
-    },
-    {
-        name: 'Suaíli',
-        id: 13,
-        level: 1,
-    },
-    {
-        name: 'Sueco',
-        id: 40,
-        level: 1,
-    },
-    {
-        name: 'Tailandês',
-        id: 21,
-        level: 1,
-    },
-    {
-        name: 'Tamil',
-        id: 17,
-        level: 1,
-    },
-    {
-        name: 'Tcheco',
-        id: 39,
-        level: 1,
-    },
-    {
-        name: 'Telugu',
-        id: 15,
-        level: 1,
-    },
-    {
-        name: 'Turco',
-        id: 16,
-        level: 1,
-    },
-    {
-        name: 'Ucraniano',
-        id: 25,
-        level: 1,
-    },
-    {
-        name: 'Urdu',
-        id: 9,
-        level: 1,
-    },
-    {
-        name: 'Vietnamita',
-        id: 19,
-        level: 1,
-    },
-    {
-        name: 'Zulu',
-        id: 38,
-        level: 1,
-    },
+    { name: 'Alemão', id: 11, level: 1 },
+    { name: 'Amárico', id: 33, level: 1 },
+    { name: 'Árabe', id: 5, level: 1 },
+    { name: 'Azerbaijano', id: 35, level: 1 },
+    { name: 'Bengali', id: 6, level: 1 },
+    { name: 'Birmanês', id: 34, level: 1 },
+    { name: 'Búlgaro', id: 42, level: 1 },
+    { name: 'Cebuano', id: 37, level: 1 },
+    { name: 'Coreano', id: 18, level: 1 },
+    { name: 'Croata', id: 49, level: 1 },
+    { name: 'Dinamarquês', id: 45, level: 1 },
+    { name: 'Eslovaco', id: 47, level: 1 },
+    { name: 'Espanhol', id: 3, level: 1 },
+    { name: 'Finlandês', id: 46, level: 1 },
+    { name: 'Francês', id: 4, level: 1 },
+    { name: 'Grego', id: 36, level: 1 },
+    { name: 'Gujarati', id: 22, level: 1 },
+    { name: 'Hausa', id: 32, level: 1 },
+    { name: 'Hebraico', id: 44, level: 1 },
+    { name: 'Hindi', id: 2, level: 1 },
+    { name: 'Holandês', id: 31, level: 1 },
+    { name: 'Húngaro', id: 41, level: 1 },
+    { name: 'Indonésio', id: 10, level: 1 },
+    { name: 'Inglês', id: 0, level: 1 },
+    { name: 'Italiano', id: 20, level: 1 },
+    { name: 'Japonês', id: 12, level: 1 },
+    { name: 'Kannada', id: 27, level: 1 },
+    { name: 'Malaio', id: 26, level: 1 },
+    { name: 'Mandarim (Chinês)', id: 1, level: 1 },
+    { name: 'Marathi', id: 14, level: 1 },
+    { name: 'Norueguês', id: 48, level: 1 },
+    { name: 'Oriya (Odia)', id: 28, level: 1 },
+    { name: 'Persa (Farsi)', id: 24, level: 1 },
+    { name: 'Polonês', id: 23, level: 1 },
+    { name: 'Punjabi', id: 29, level: 1 },
+    { name: 'Romeno', id: 30, level: 1 },
+    { name: 'Russo', id: 8, level: 1 },
+    { name: 'Sérvio', id: 43, level: 1 },
+    { name: 'Suaíli', id: 13, level: 1 },
+    { name: 'Sueco', id: 40, level: 1 },
+    { name: 'Tailandês', id: 21, level: 1 },
+    { name: 'Tamil', id: 17, level: 1 },
+    { name: 'Tcheco', id: 39, level: 1 },
+    { name: 'Telugu', id: 15, level: 1 },
+    { name: 'Turco', id: 16, level: 1 },
+    { name: 'Ucraniano', id: 25, level: 1 },
+    { name: 'Urdu', id: 9, level: 1 },
+    { name: 'Vietnamita', id: 19, level: 1 },
+    { name: 'Zulu', id: 38, level: 1 },
 ];
 
 // os idiomas mais pedidos pelos recrutadores primeiro, nesta ordem (desde 2026-11-07; até então tudo em ordem alfabética,
@@ -328,6 +128,14 @@ const demandRank = (name: string) => {
 };
 languages.sort((a, b) => demandRank(a.name) - demandRank(b.name) || a.name.localeCompare(b.name, 'pt-BR'));
 
+const levelOptions = [
+    { value: '1', label: 'Intermediário (Leio e escrevo bem, entendo parte do que me dizem, porém, tenho lentidão ao expressar idéias neste idioma)' },
+    {
+        value: '2',
+        label: 'Fluente (Leio e escrevo com quase a mesma velocidade do meu idioma nativo, me expresso bem neste idioma e entendo os regionalismos em parte ou totalmente)',
+    },
+];
+
 export interface TabResumeProps{
 
 }
@@ -335,85 +143,73 @@ export const TabLanguages: React.FC<TabResumeProps> = ({}) => {
     const {selectedLanguages, setSelectedLanguages, setLanguage, setSpeakOtherLanguages, speakOtherLanguages } = TabLanguagesStore((state: ITabLanguagesStore) => ({
         ...state,
     }));
-    const selectLanguages = (e: any) => {
-        const language = languages.filter((x) => x.id == e.selectedOption.id)[0];
+
+    // os ids são números na store e textos no componente de escolha
+    const selectLanguages = (values: string[], changed: string) => {
+        const language = languages.filter((x) => String(x.id) == changed)[0];
         if (language) {
             language.level = 1;
             setLanguage(language);
         }
-        setSelectedLanguages(e.value);
+        setSelectedLanguages(values.map((value) => Number(value)));
     };
 
     const getLanguageLevelCombobox = (id: any) => {
         const language = languages.filter((x) => x.id == id)[0];
-
+        if (!language) {
+            return null;
+        }
         return (
-            <div>
-                {/* no celular o rótulo fica acima do nível; a partir do sm, ao lado */}
-                <div className="flex flex-col sm:flex-row">
-                    <label htmlFor="lastJob" style={{ marginTop: '10px' }} className="letraPequena w-full sm:w-[30%]">
-                        Meu nível em idioma {language.name} é:
-                    </label>
-
-                    <Dropdown
-                        key={language.id}
-                        value={language.level}
-                        onChange={(e) => {
-                            language.level = e.value;
-                            setLanguage(language);
-                        }}
-                        options={[
-                            { name: 'Intermediário (Leio e escrevo bem, entendo parte do que me dizem, porém, tenho lentidão ao expressar idéias neste idioma)', level: 1 },
-                            {
-                                name: 'Fluente (Leio e escrevo com quase a mesma velocidade do meu idioma nativo, me expresso bem neste idioma e entendo os regionalismos em parte ou totalmente)',
-                                level: 2,
-                            },
-                        ]}
-                        optionLabel="name"
-                        optionValue="level"
-                        placeholder="Escolha o nível do idioma"
-                        className="md:w-14rem w-full"
-                    />
-                </div>
-                <div className="mb-5 text-center">
-                    <div className="flex-column flex">&nbsp;</div>
-                </div>
+            <div key={language.id} className="mb-4 md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] md:items-start md:gap-4">
+                <label htmlFor={`languageLevel-${language.id}`} className="mb-1.5 block font-semibold text-dark dark:text-white-light md:mb-0 md:pt-2">
+                    Meu nível em idioma {language.name} é:
+                </label>
+                <Select
+                    id={`languageLevel-${language.id}`}
+                    value={String(language.level)}
+                    onChange={(value) => {
+                        if (!value) return;
+                        language.level = Number(value);
+                        setLanguage(language);
+                    }}
+                    data={levelOptions}
+                    placeholder="Escolha o nível do idioma"
+                    allowDeselect={false}
+                    comboboxProps={{ withinPortal: false }}
+                />
             </div>
         );
     };
 
     return (
         <div>
-            <div className="mb-5 text-center">
-                <div className="flex items-center">
-                    <Checkbox id = "doNotSpeakAnyLanguage" className="shrink-0" onChange={(e) => setSpeakOtherLanguages(e.checked)} checked={speakOtherLanguages} name="doNotSpeakAnyLanguage" />
-                    <label onClick={() => setSpeakOtherLanguages(!speakOtherLanguages)} className="letraPequena ml-2 min-w-0" style={{maxWidth:'500px'}}>
-                        Tenho conhecimento em outro(s) idioma(s) além do meu idioma nativo
-                    </label>
-                </div>
+            <div className="mb-5">
+                <Checkbox
+                    id="doNotSpeakAnyLanguage"
+                    name="doNotSpeakAnyLanguage"
+                    checked={speakOtherLanguages}
+                    onChange={(e) => setSpeakOtherLanguages(e.currentTarget.checked)}
+                    label="Tenho conhecimento em outro(s) idioma(s) além do meu idioma nativo"
+                />
             </div>
             {speakOtherLanguages && (
-                <MultiSelect
-                    style={{ borderStyle: 'solid', borderColor: 'black' }}
-                    value={selectedLanguages}
-                    onChange={selectLanguages}
-                    options={languages}
-                    selectedItemsLabel="{label} Idiomas selecionados"
-                    filter
-                    filterLocale="pt-BR"
-                    filterPlaceholder="Digite o idioma que você procura"
-                    emptyFilterMessage="Nenhum idioma encontrado"
-                    optionLabel="name"
-                    optionValue="id"
-                    placeholder="Selecione os idiomas em que você possui algum nível de conhecimento"
-                    maxSelectedLabels={10}
-                    className="form-input"
-                />
+                <div className="mb-6">
+                    <label className="mb-1.5 block font-semibold text-dark dark:text-white-light">Idiomas que conheço</label>
+                    <SummaryMultiSelect
+                        id="spokenLanguages"
+                        data={languages.map((language) => ({ value: String(language.id), label: language.name }))}
+                        value={selectedLanguages.map((id: any) => String(id))}
+                        onChange={selectLanguages}
+                        placeholder="Selecione os idiomas em que você possui algum nível de conhecimento"
+                        searchPlaceholder="Digite o idioma que você procura"
+                        nothingFoundMessage="Nenhum idioma encontrado"
+                        summaryLabel={(count) => `${count} idiomas selecionados`}
+                        maxDisplayedPills={6}
+                        error={!selectedLanguages.length}
+                    />
+                </div>
             )}
-              <div className="mb-5 text-center">
-                <div className="flex-column flex">&nbsp;</div>
-            </div>
-            {selectedLanguages.map((id: any) => getLanguageLevelCombobox(id))}
+            {speakOtherLanguages && selectedLanguages.map((id: any) => getLanguageLevelCombobox(id))}
         </div>
     );
 };

@@ -1,10 +1,6 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-// o modal de login (aberto pelo 401) é um Dialog do PrimeReact: sem o tema ele fica transparente sobre a tela
-import 'primereact/resources/themes/lara-light-cyan/theme.css';
-import 'primereact/resources/primereact.min.css';
-import 'primeicons/primeicons.css';
-import { Dialog } from 'primereact/dialog';
+import { Modal } from '@mantine/core';
 import JnAjax from '@/app/JnAjax';
 import { groupParentId } from '../acessos/accessesReconciliation';
 import { TICKET_KINDS, Ticket, abbreviate, ticketsFromGroups } from './ticketsFromGroups';
@@ -126,9 +122,9 @@ export const Tickets = () => {
                 </>
             )}
             {fullCell && (
-                <Dialog visible header={fullCell.title} style={{ width: '90vw', maxWidth: '640px' }} onHide={() => setFullCell(null)}>
+                <Modal opened title={fullCell.title} size="lg" onClose={() => setFullCell(null)}>
                     <div className="whitespace-pre-line break-words">{fullCell.text}</div>
-                </Dialog>
+                </Modal>
             )}
         </div>
     );

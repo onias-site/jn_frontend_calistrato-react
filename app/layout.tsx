@@ -1,19 +1,18 @@
 'use client';
 import ProviderComponent from '@/presentation/layouts/provider-component';
 import 'react-perfect-scrollbar/dist/css/styles.css';
-// o tema do PrimeReact vem antes do tailwind e vale para todas as telas: o modal de login (Dialog) e o Toast deste layout
-// aparecem em qualquer página, e sem o tema o modal fica transparente sobre a tela (a tela inicial não o importava)
-import 'primereact/resources/themes/lara-light-cyan/theme.css';
-import 'primereact/resources/primereact.min.css';
-import 'primeicons/primeicons.css';
+// o tailwind vem primeiro: é nele que a ordem das camadas de CSS é declarada (preflight do tailwind abaixo do Mantine)
 import '../styles/tailwind.css';
+import '@mantine/core/styles.layer.css';
+import '@mantine/notifications/styles.layer.css';
+import './loading.css';
 import { Nunito } from 'next/font/google';
 
-import React, { useRef, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { QueryProvider } from '@/presentation/contexts/QueryProvider';
-import './loading.css';
 import PubSub from 'pubsub-js';
-import { Toast } from 'primereact/toast';
+import { ColorSchemeScript } from '@mantine/core';
+import { notify } from '@/presentation/components/source/notify';
 import { ModalLogin, ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogin';
 
 const nunito = Nunito({
@@ -24,9 +23,6 @@ const nunito = Nunito({
 });
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-
-    const toast = useRef(null);
-
     const translate = (error: any) => {
         const translations = {};
         return translations[error.errorName] || (typeof error.errorDescription === 'string' ? error.errorDescription : showErrorMessages(error.errorDescription.errors));
@@ -38,11 +34,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             errorsInTheField.forEach((error: any) => {
                 const detail = translate(error);
                 const summary = fieldName;
-                toast.current.show({ severity: 'error', summary, detail, life: 10000 });
+                notify({ severity: 'error', summary, detail, life: 10000 });
             });
         }
     };
-    const showMessage = (message: any) => message && message.summary && toast.current.show({ severity: message.severity || 'success', life: message.life || 10000, ...message });
+    const showMessage = (message: any) => message && message.summary && notify(message);
 
     const { showModal } = ModalLoginStore((state: IModalLoginStore) => ({
         ...state,
@@ -54,15 +50,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         PubSub.subscribe('httpStatus401', (msg: any, retryAfter401: any) => showModal('RequestEmail', 'Diga quem é você, antes de continuar...', retryAfter401));
     }, []);
 
-
     return (
         <QueryProvider>
-            <html lang="en">
+            <html lang="pt-BR">
+                <head>
+                    <ColorSchemeScript />
+                </head>
                 <body className={nunito.variable}>
-                    <Toast ref={toast} />
                     <div id="cover" style={{ display: 'none' }}></div>
-                    <ProviderComponent>{children}</ProviderComponent>
-                    <ModalLogin />
+                    <ProviderComponent>
+                        {children}
+                        <ModalLogin />
+                    </ProviderComponent>
                 </body>
             </html>
         </QueryProvider>

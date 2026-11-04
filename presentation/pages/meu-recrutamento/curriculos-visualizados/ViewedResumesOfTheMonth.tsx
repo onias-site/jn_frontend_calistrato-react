@@ -1,11 +1,8 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-// o modal de login (aberto pelo 401) é um Dialog do PrimeReact: sem o tema ele fica transparente sobre a tela
-import 'primereact/resources/themes/lara-light-cyan/theme.css';
-import 'primereact/resources/primereact.min.css';
-import 'primeicons/primeicons.css';
 import { useRouter } from 'next/navigation';
 import JnAjax from '@/app/JnAjax';
+import IconCaretDown from '@/presentation/icons/icon-caret-down';
 import { ModalLoginStore } from '@/presentation/auth/ModalLogin';
 import { MonthPicker, monthParameter, previousMonth } from '@/presentation/components/month-picker/MonthPicker';
 import { ViewedResumeDetails } from './ViewedResumeDetails';
@@ -117,7 +114,7 @@ export const ViewedResumesOfTheMonth = () => {
                                                 <td>{view.date}</td>
                                                 <td>
                                                     <button type="button" className="flex items-center gap-1 whitespace-nowrap text-primary hover:underline" aria-expanded={open} onClick={() => toggle(view.linkedin)}>
-                                                        <i className={open ? 'pi pi-chevron-down' : 'pi pi-chevron-right'} />
+                                                        <IconCaretDown className={`inline h-4 w-4 transition-transform ${open ? '' : '-rotate-90'}`} />
                                                         ver detalhes
                                                     </button>
                                                 </td>

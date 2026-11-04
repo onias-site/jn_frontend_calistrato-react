@@ -1,85 +1,35 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Tooltip } from 'primereact/tooltip';
-import { Button } from 'primereact/button';
-import { Dialog } from 'primereact/dialog';
-import { dialogBreakpoints } from '@/presentation/components/source/Modal';
-// o ícone do botão de ajuda (pi-question-circle) vem desta fonte; sem o import aqui, ele some nas páginas que não a
-// importam por conta própria (o modal de login, por exemplo, abre em qualquer página)
-import 'primeicons/primeicons.css';
+import React from 'react';
+import { HelpButton } from '@/presentation/components/source/HelpButton';
 
 export interface LabelComponentProps {
     children: React.ReactNode;
     explanation: string;
     labelValue: string;
     property: string;
-
     errors: any;
-    // rótulo à esquerda numa coluna de largura fixa e campo à direita, com fonte menor: em linhas seguidas, os rótulos
-    // ficam alinhados uns abaixo dos outros e os campos também (formulários como os do modal de login)
+    // mantido por compatibilidade: hoje todos os rótulos usam a mesma grade
     stacked?: boolean;
 }
-export const LabelComponent: React.FC<LabelComponentProps> = ({ children, labelValue, property, errors, explanation, stacked }) => {
-    const color = errors[property] ? '#e24c4c' : 'black';
-    const [visible, setVisible] = useState(false);
-    if (stacked) {
-        return (
-            <div className="mb-4 flex items-center gap-3 text-left">
-                <Dialog header={labelValue} visible={visible} style={{ width: '50vw' }} breakpoints={dialogBreakpoints} onHide={() => setVisible(false)}>
-                    <p className="m-0">{explanation}</p>
-                </Dialog>
-                <div className="flex w-44 shrink-0 items-center gap-1">
-                    <label htmlFor={property} style={{ color }} className="text-xs font-normal leading-tight">
+
+/**
+ * Rótulo com botão de ajuda e o campo ao lado: no celular o rótulo fica acima do campo; a partir do md, rótulo numa coluna
+ * de um terço e o campo nos dois terços restantes, de modo que os campos de linhas seguidas fiquem alinhados.
+ */
+export const LabelComponent: React.FC<LabelComponentProps> = ({ children, labelValue, property, errors, explanation }) => {
+    const invalid = !!errors[property];
+    return (
+        <div className="mb-5 md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] md:items-start md:gap-4">
+            <div className="mb-1.5 flex items-start gap-1.5 md:mb-0 md:pt-2">
+                {labelValue && (
+                    <label htmlFor={property} className={`mb-0 font-semibold leading-snug ${invalid ? 'text-danger' : 'text-dark dark:text-white-light'}`}>
                         {labelValue}
                     </label>
-                    <Tooltip target="#btnHelp" content="Clique aqui para saber mais detalhes sobre este campo" position="bottom" />
-                    <Button
-                        icon="pi pi-question-circle"
-                        id="btnHelp"
-                        text
-                        rounded
-                        className="h-6 w-6 shrink-0 p-0"
-                        onClick={(e) => {
-                            e && e.preventDefault && e.preventDefault();
-                            setVisible(true);
-                        }}
-                    />
-                </div>
-                <div className="min-w-0 flex-1">{children}</div>
+                )}
+                {explanation && <HelpButton title={labelValue || 'Ajuda'} explanation={explanation} />}
             </div>
-        );
-    }
-    return (
-        <div className="mb-5 text-center">
-            <Dialog
-                header={labelValue}
-                visible={visible}
-                style={{ width: '50vw' }} breakpoints={dialogBreakpoints}
-                onHide={() => {
-                    if (!visible) return;
-                    setVisible(false);
-                }}
-            >
-                <p className="m-0">{explanation}</p>
-            </Dialog>
-            <div className="flex-column flex">
-                <Tooltip target="#btnHelp" content="Clique aqui para saber mais detalhes sobre este campo" position="bottom" />
-                <Button
-                    icon="pi pi-question-circle"
-                    id="btnHelp"
-                    // sem isso, um campo de largura total ao lado espreme o botão até sumir
-                    className="shrink-0"
-                    onClick={(e) => {
-                        e && e.preventDefault && e.preventDefault()
-                        setVisible(true);
-                    }}
-                />
-                <label htmlFor={property} style={{ width: '25%', color }} className="letraPequena">
-                    {labelValue}
-                </label>
-                {children}
-            </div>
+            <div className="min-w-0">{children}</div>
         </div>
     );
 };
