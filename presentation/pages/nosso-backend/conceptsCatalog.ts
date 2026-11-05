@@ -20,7 +20,7 @@ export const conceptSections: BackendConceptSection[] = [
             { acronym: 'AE', name: 'Async Entity', explanation: 'Entidade cujas escritas rodam de forma assíncrona.' },
             { acronym: 'AEI', name: 'Automatic Entity Id', explanation: 'O id de toda entidade é calculado a partir dos campos marcados como chave primária.' },
             { acronym: 'CE', name: 'Cache Entity', explanation: 'Entidade cujos registros ficam em cache por um tempo definido em segundos.' },
-            { acronym: 'DSE', name: 'Disposable Entity', explanation: 'Entidade descartável: seus registros valem por um período (hora, dia, mês...) e depois são ignorados.' },
+            { acronym: 'DSE', name: 'Disposable Entity', explanation: 'Entidade descartável: seus registros valem por um período (hora, dia, mês...) e a manutenção diária apaga os períodos vencidos, salvo os que alimentam gráficos ou buscas.' },
             {
                 acronym: 'ED',
                 name: 'Entity Decorators',

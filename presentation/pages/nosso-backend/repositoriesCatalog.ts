@@ -49,7 +49,7 @@ export const repositorySections: BackendRepositorySection[] = [
             { name: 'jn_mensageria-consumer_gcp-pubsub-push-spring_dependency_chooser', description: 'Consumidor de mensagens do Pub/Sub por push, em Spring Boot.' },
             { name: 'jobsnow_workspace', description: 'Arquivos da raiz do workspace: pom agregador, scripts, documentação e configuração do Claude Code.' },
             { name: 'js_business_jobsnow', description: 'JobsNow System: login, validador de sessão e fale conosco.' },
-            { name: 'js_rest-api_spring_jobsnow_dependency-chooser', description: 'API REST do JobsNow System.' },
+            { name: 'js_rest-api_spring_jobsnow_dependency-chooser', description: 'API REST do JobsNow System (login) e webhook do Telegram em produção, que só publica as atualizações na fila do bot.' },
             { name: 'vis_business_jobsnow', description: 'Regras de negócio da Visualização.' },
             { name: 'vis_rest-api_spring_jobsnow_dependency-chooser', description: 'API REST da Visualização.' },
         ],
