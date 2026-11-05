@@ -1,4 +1,33 @@
-import { isFutureMonth, previousMonth } from './months';
+import { clampMonth, isFutureMonth, previousMonth, selectableMonthNumbers, selectableYears } from './months';
+
+describe('selects de mês e ano', () => {
+    beforeEach(() => {
+        jest.useFakeTimers();
+        jest.setSystemTime(new Date(2026, 10, 15));
+    });
+
+    afterEach(() => jest.useRealTimers());
+
+    it('os anos vão do corrente até o do mínimo, do mais recente ao mais antigo', () => {
+        expect(selectableYears('2024-05')).toEqual(['2026', '2025', '2024']);
+        expect(selectableYears('2015-01')).toHaveLength(12);
+    });
+
+    it('no ano corrente os meses param no mês corrente', () => {
+        expect(selectableMonthNumbers('2026', '2015-01')).toEqual(['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11']);
+    });
+
+    it('no ano do mínimo os meses começam nele, e nos outros anos vão de 01 a 12', () => {
+        expect(selectableMonthNumbers('2024', '2024-05')).toEqual(['05', '06', '07', '08', '09', '10', '11', '12']);
+        expect(selectableMonthNumbers('2025', '2024-05')).toHaveLength(12);
+    });
+
+    it('trocar o ano leva o mês fora da faixa ao limite mais próximo', () => {
+        expect(clampMonth('2026-12', '2015-01')).toBe('2026-11');
+        expect(clampMonth('2015-01', '2015-03')).toBe('2015-03');
+        expect(clampMonth('2020-07', '2015-01')).toBe('2020-07');
+    });
+});
 
 describe('previousMonth', () => {
     afterEach(() => jest.useRealTimers());

@@ -2,6 +2,8 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Column } from 'primereact/column';
+import { DataTable, DataTableExpandedRows } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
 import PubSub from 'pubsub-js';
 import React, { useState } from 'react';
@@ -20,7 +22,20 @@ import {
 import { MonthPicker, isFutureMonth, monthParameter, previousMonth } from '@/presentation/components/month-picker/MonthPicker';
 import { dddRegions } from '@/presentation/components/regions/dddRegions';
 import Dropdown from '@/presentation/utils/dropdown';
-import { MonthTotal, SkillTotal, monthLabel, parseMonths, parseSkills, percentLabel, pieSlices, pieTotal, requirementsLabel, skillLabel } from './skillStatisticsData';
+import {
+    MonthTotal,
+    SkillTotal,
+    firstOfLastMonths,
+    monthLabel,
+    monthsBetween,
+    parseMonths,
+    parseSkills,
+    percentLabel,
+    pieSlices,
+    pieTotal,
+    requirementsLabel,
+    skillLabel,
+} from './skillStatisticsData';
 
 const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
@@ -48,6 +63,9 @@ const lineColor = '#2a78d6';
 type Situation = 'idle' | 'loading' | 'loaded' | 'error';
 
 /** O gráfico de linhas de uma skill, lido quando ela é expandida. */
+/** O nome de uma opção dos filtros do topo pelo id; um id desconhecido aparece como veio. */
+const nameOf = (options: { id: string; nome: string }[], id: string) => options.find((option) => option.id == id)?.nome || id;
+
 const SkillMonths = ({ skill, seniority, ddd }: { skill: string; seniority: string; ddd: string }) => {
     const [situation, setSituation] = useState<Situation>('idle');
     const [months, setMonths] = useState<MonthTotal[]>([]);
@@ -69,20 +87,111 @@ const SkillMonths = ({ skill, seniority, ddd }: { skill: string; seniority: stri
     if (situation != 'loaded') {
         return <div>Carregando os meses...</div>;
     }
+    if (months.length == 0) {
+        return <div>Nenhum mês com vagas para esta habilidade.</div>;
+    }
+    return <SkillMonthsChart months={months} skill={skill} seniority={seniority} ddd={ddd} />;
+};
+
+/** Os atalhos de período do gráfico de linhas: a contagem é de meses, o mês corrente incluído; sem contagem, todos os meses. */
+const monthRanges = [
+    { id: '6', label: '6 meses', count: 6 },
+    { id: '12', label: '12 meses', count: 12 },
+    { id: '24', label: '2 anos', count: 24 },
+    { id: 'all', label: 'Tudo', count: 0 },
+];
+
+/** O gráfico de linhas com o período escolhido: um atalho ou o intervalo "De ... até ..." entre os meses da skill. */
+const SkillMonthsChart = ({ months, skill, seniority, ddd }: { months: MonthTotal[]; skill: string; seniority: string; ddd: string }) => {
+    const firstMonth = months[0].yearMonth;
+    const lastMonth = months[months.length - 1].yearMonth;
+    const [range, setRange] = useState('all');
+    const [from, setFrom] = useState(firstMonth);
+    const [to, setTo] = useState(lastMonth);
+
+    const chooseRange = (item: { id: string; count: number }) => {
+        setRange(item.id);
+        setFrom(item.count ? firstOfLastMonths(item.count) : firstMonth);
+        setTo(lastMonth);
+    };
+
+    // o intervalo vira personalizado, e uma ponta que cruza a outra a leva junto
+    const chooseFrom = (month: string) => {
+        setRange('custom');
+        setFrom(month);
+        month > to && setTo(month);
+    };
+
+    const chooseTo = (month: string) => {
+        setRange('custom');
+        setTo(month);
+        month < from && setFrom(month);
+    };
+
+    const shownMonths = monthsBetween(months, from, to);
+    // um atalho pode começar num mês sem vagas: os selects mostram o primeiro e o último mês do período que têm dados
+    const shownFrom = shownMonths.length ? shownMonths[0].yearMonth : from;
+    const shownTo = shownMonths.length ? shownMonths[shownMonths.length - 1].yearMonth : to;
+    const rangeSelect = (label: string, value: string, onChoose: (month: string) => void) => (
+        <select aria-label={label} className="form-select w-auto py-1 text-sm" value={value} onChange={(event) => onChoose(event.target.value)}>
+            {months.map((month) => (
+                <option key={month.yearMonth} value={month.yearMonth}>
+                    {monthLabel(month.yearMonth)}
+                </option>
+            ))}
+        </select>
+    );
     const options: any = {
         chart: { type: 'line', toolbar: { show: false }, zoom: { enabled: false } },
         colors: [lineColor],
         stroke: { width: 2, curve: 'straight' },
-        markers: { size: months.length == 1 ? 4 : 0, hover: { size: 5 } },
+        markers: { size: shownMonths.length == 1 ? 4 : 0, hover: { size: 5 } },
         grid: { borderColor: 'rgba(128, 128, 128, 0.2)', strokeDashArray: 3 },
-        xaxis: { categories: months.map((month) => monthLabel(month.yearMonth)), tickAmount: Math.min(months.length, 12), labels: { rotate: -45 } },
+        xaxis: { categories: shownMonths.map((month) => monthLabel(month.yearMonth)), tickAmount: Math.min(shownMonths.length, 12), labels: { rotate: -45 } },
         yaxis: { min: 0, forceNiceScale: true, labels: { formatter: (value: number) => `${Math.round(value)}` } },
         tooltip: { y: { title: { formatter: () => 'Vagas:' } } },
     };
-    return <ReactApexChart type="line" height={260} options={options} series={[{ name: 'Vagas', data: months.map((month) => month.total) }]} />;
+    // os filtros do topo que valem para este gráfico: o mês/ano não entra, porque o gráfico mostra todos os meses
+    const chosenFilters = [
+        { label: 'Habilidade', value: skillLabel(skill) },
+        { label: 'Senioridade', value: nameOf(seniorities, seniority) },
+        { label: 'Região Metropolitana', value: nameOf(regions, ddd) },
+    ];
+    return (
+        <div>
+            <div className="mb-2 flex flex-wrap items-center gap-2 text-sm">
+                {chosenFilters.map((filter) => (
+                    <span key={filter.label} className="rounded-full bg-primary-light px-3 py-1 text-primary dark:bg-primary-dark-light">
+                        <span className="font-semibold">{filter.label}:</span> {filter.value}
+                    </span>
+                ))}
+            </div>
+            <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
+                <span className="font-semibold">Período:</span>
+                {monthRanges.map((item) => (
+                    <button
+                        key={item.id}
+                        type="button"
+                        className={`btn btn-sm ${range == item.id ? 'btn-primary' : 'btn-outline-primary'}`}
+                        aria-pressed={range == item.id}
+                        onClick={() => chooseRange(item)}
+                    >
+                        {item.label}
+                    </button>
+                ))}
+                <span className="ml-2">De</span>
+                {rangeSelect('Mês inicial', shownFrom, chooseFrom)}
+                <span>até</span>
+                {rangeSelect('Mês final', shownTo, chooseTo)}
+            </div>
+            {shownMonths.length == 0 && <div>Nenhuma vaga para esta habilidade neste período.</div>}
+            {shownMonths.length > 0 && <ReactApexChart type="line" height={260} options={options} series={[{ name: 'Vagas', data: shownMonths.map((month) => month.total) }]} />}
+        </div>
+    );
 };
 
 /** A pizza das skills do filtro: o total por fora, a porcentagem de cada cor na fatia e na legenda, o número no tooltip. */
+// fica num accordion que nasce fechado, com o total de vagas e de skills dentro dele
 const SkillsPie = ({ skills, vacancies }: { skills: SkillTotal[]; vacancies: number }) => {
     const { labels, values } = pieSlices(skills);
     const total = pieTotal(values);
@@ -96,45 +205,145 @@ const SkillsPie = ({ skills, vacancies }: { skills: SkillTotal[]; vacancies: num
         dataLabels: { enabled: true, formatter: (percent: number, dataLabel: any) => percentLabel(values[dataLabel.seriesIndex], total) },
         tooltip: { y: { formatter: (value: number) => `${value} vagas` } },
     };
+    const [expanded, setExpanded] = useState(false);
     return (
-        <div className="mb-6">
-            <div className="mb-2 font-semibold">{requirementsLabel(total, vacancies)}</div>
-            <ReactApexChart type="pie" height={340} options={options} series={values} />
+        <div className="mb-6 rounded border border-[#d3d3d3] dark:border-[#1b2e4b]">
+            <button type="button" className="flex w-full items-center gap-2 px-3 py-2 font-semibold" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
+                <i className={expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'} />
+                Ver distribuição por vagas
+            </button>
+            {expanded && (
+                <div className="border-t border-[#d3d3d3] p-3 dark:border-[#1b2e4b]">
+                    <h5 className="mb-2 text-lg font-semibold">
+                        {vacancies} {vacancies == 1 ? 'vaga' : 'vagas'}, {skills.length} {skills.length == 1 ? 'Habilidade diferente' : 'Habilidades diferentes'}
+                    </h5>
+                    <div className="mb-2 font-semibold">{requirementsLabel(total, vacancies)}</div>
+                    <ReactApexChart type="pie" height={340} options={options} series={values} />
+                </div>
+            )}
         </div>
     );
 };
 
-/** O link que abre o modal com os grupos do Telegram pesquisados, lidos do backend ao abrir. */
-const TelegramGroupsLink = () => {
-    const [visible, setVisible] = useState(false);
+/** O accordion dos grupos do Telegram pesquisados: cada vez que é expandido, lê os grupos do backend. */
+const TelegramGroupsAccordion = () => {
+    const [expanded, setExpanded] = useState(false);
+    const [situation, setSituation] = useState<Situation>('idle');
     const [telegramGroups, setTelegramGroups] = useState<string[]>([]);
 
-    const open = () => {
-        setVisible(true);
+    const toggle = () => {
+        if (expanded) {
+            setExpanded(false);
+            return;
+        }
+        setExpanded(true);
+        setSituation('loading');
         const callbacks: any = { withoutSession: true };
-        callbacks[200] = (response: any) => setTelegramGroups(response.groups);
-        callbacks['onUnexpectedHttpStatus'] = () =>
-            PubSub.publish('showMessage', { summary: 'Atenção', detail: 'Não foi possível carregar os grupos agora. Tente de novo em alguns instantes.', severity: 'warn' });
+        callbacks[200] = (response: any) => {
+            setTelegramGroups(response.groups || []);
+            setSituation('loaded');
+        };
+        callbacks['onUnexpectedHttpStatus'] = () => setSituation('error');
         JnAjax.doAPersistedRequest('statistics/skills/telegramGroups', callbacks, API);
     };
 
     return (
-        <>
-            <button type="button" className="text-primary hover:underline" onClick={open}>
-                Grupos pesquisados
+        <div className="w-full max-w-[520px] rounded border border-[#d3d3d3] dark:border-[#1b2e4b] sm:w-auto sm:min-w-[260px]">
+            <button type="button" className="flex w-full items-center gap-2 px-3 py-2 font-semibold" aria-expanded={expanded} onClick={toggle}>
+                <i className={expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'} />
+                De onde vieram essas vagas?
             </button>
-            <Dialog visible={visible} header="Grupos pesquisados" style={{ width: '90vw', maxWidth: '520px' }} onHide={() => setVisible(false)}>
-                <ul className="space-y-2">
-                    {telegramGroups.map((group, index) => (
-                        <li key={group}>
-                            {index + 1}:{' '}
-                            <a href={group} target="_blank" rel="noopener noreferrer" className="break-all text-primary hover:underline">
-                                {group}
-                            </a>
-                        </li>
-                    ))}
-                </ul>
-            </Dialog>
+            {expanded && (
+                <div className="max-h-72 overflow-y-auto border-t border-[#d3d3d3] p-3 dark:border-[#1b2e4b]">
+                    {situation == 'loading' && <div>Carregando os grupos...</div>}
+                    {situation == 'error' && <div>Não foi possível carregar os grupos agora. Tente de novo em alguns instantes.</div>}
+                    {situation == 'loaded' && (
+                        <ul className="space-y-2">
+                            {telegramGroups.map((group, index) => (
+                                <li key={group}>
+                                    {index + 1}:{' '}
+                                    <a href={group} target="_blank" rel="noopener noreferrer" className="break-all text-primary hover:underline">
+                                        {group}
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
+/** As linhas do grid de skills: a posição vem da lista inteira, para não recomeçar em cada página. */
+type RankedSkill = SkillTotal & { position: number };
+
+/** O filtro do grid ignora maiúsculas e acentos. */
+const normalizeForFilter = (text: string) =>
+    text
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+
+/** O grid paginado das skills, 50 por página, filtrado no navegador pelo nome da skill: cada linha expande o gráfico de linhas com os meses da skill. */
+const SkillsGrid = ({ skills, seniority, ddd }: { skills: SkillTotal[]; seniority: string; ddd: string }) => {
+    const [expandedRows, setExpandedRows] = useState<DataTableExpandedRows>({});
+    const [filter, setFilter] = useState('');
+    const rankedSkills: RankedSkill[] = skills.map((item, index) => ({ ...item, position: index + 1 }));
+    const normalizedFilter = normalizeForFilter(filter.trim());
+    const filteredSkills = normalizedFilter ? rankedSkills.filter((item) => normalizeForFilter(skillLabel(item.skill)).includes(normalizedFilter)) : rankedSkills;
+    // a linha inteira abre e fecha o gráfico: a coluna "Ver evolução" só mostra o que o clique faz
+    const toggle = (item: RankedSkill) =>
+        setExpandedRows((current) => {
+            const { [item.skill]: wasExpanded, ...others } = current as { [skill: string]: boolean };
+            return wasExpanded ? others : { ...others, [item.skill]: true };
+        });
+    return (
+        <>
+            <input
+                type="search"
+                className="form-input mb-3 w-full sm:max-w-xs"
+                placeholder="Filtrar habilidades"
+                aria-label="Filtrar habilidades"
+                value={filter}
+                onChange={(event) => setFilter(event.target.value)}
+            />
+            <p className="mb-2 text-sm text-white-dark">
+                <i className="pi pi-info-circle mr-1" />
+                Clique em uma habilidade para ver quantas vagas pediram por ela mês a mês.
+            </p>
+            <DataTable
+                value={filteredSkills}
+                emptyMessage="Nenhuma habilidade encontrada para este filtro."
+                dataKey="skill"
+                paginator
+                rows={50}
+                paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
+                currentPageReportTemplate="{first} a {last} de {totalRecords}"
+                expandedRows={expandedRows}
+                onRowClick={(event) => toggle(event.data as RankedSkill)}
+                rowClassName={() => 'cursor-pointer'}
+                rowHover
+                rowExpansionTemplate={(item: RankedSkill) => <SkillMonths skill={item.skill} seniority={seniority} ddd={ddd} />}
+                stripedRows
+                size="small"
+            >
+                <Column field="position" header="#" style={{ width: '4rem' }} />
+                <Column field="skill" header="Habilidade" body={(item: RankedSkill) => skillLabel(item.skill)} />
+                <Column field="total" header="Vagas" style={{ width: '6rem' }} />
+                <Column
+                    style={{ width: '10rem' }}
+                    body={(item: RankedSkill) => {
+                        const expanded = Boolean(expandedRows[item.skill]);
+                        return (
+                            <span className="inline-flex items-center gap-1 whitespace-nowrap text-primary" aria-expanded={expanded}>
+                                <i className={expanded ? 'pi pi-chevron-up' : 'pi pi-chart-line'} />
+                                {expanded ? 'Ocultar' : 'Ver evolução'}
+                            </span>
+                        );
+                    }}
+                />
+            </DataTable>
         </>
     );
 };
@@ -178,12 +387,10 @@ export const SkillStatistics = ({ initialSeniority = 'pleno', searchOnOpening = 
     const [situation, setSituation] = useState<Situation>('idle');
     const [total, setTotal] = useState(0);
     const [skills, setSkills] = useState<SkillTotal[]>([]);
-    const [open, setOpen] = useState<string[]>([]);
     const [resumeToChooseDdd, setResumeToChooseDdd] = useState<ResumeCopy | null>(null);
 
     const hideResult = () => {
         setSituation('idle');
-        setOpen([]);
     };
 
     const searchBy = (month: string, seniority: string, ddd: string) => {
@@ -275,8 +482,6 @@ export const SkillStatistics = ({ initialSeniority = 'pleno', searchOnOpening = 
         searchOnOpening && search();
     }, []);
 
-    const toggle = (skill: string) => setOpen((current) => (current.includes(skill) ? current.filter((item) => item != skill) : [...current, skill]));
-
     return (
         <div>
             <ul className="flex space-x-2 rtl:space-x-reverse">
@@ -295,72 +500,73 @@ export const SkillStatistics = ({ initialSeniority = 'pleno', searchOnOpening = 
                         setMonth(chosenMonth);
                         hideResult();
                     }}
-                >
-                    <TelegramGroupsLink />
-                </MonthPicker>
-                <div className="mb-4 flex flex-wrap items-center gap-3">
-                    <label htmlFor="skillStatisticsSeniority" className="mb-0 font-semibold">
-                        Senioridade
-                    </label>
-                    <select
-                        id="skillStatisticsSeniority"
-                        className="form-select w-auto"
-                        value={seniority}
-                        onChange={(event) => {
-                            setSeniority(event.target.value);
-                            hideResult();
-                        }}
-                    >
-                        {seniorities.map((item) => (
-                            <option key={item.id} value={item.id}>
-                                {item.nome}
-                            </option>
-                        ))}
-                    </select>
-                    <label htmlFor="skillStatisticsDdd" className="mb-0 font-semibold">
-                        Região Metropolitana
-                    </label>
-                    <select
-                        id="skillStatisticsDdd"
-                        className="form-select w-auto"
-                        value={ddd}
-                        onChange={(event) => {
-                            setDdd(event.target.value);
-                            hideResult();
-                        }}
-                    >
-                        {regions.map((item) => (
-                            <option key={item.id} value={item.id}>
-                                {item.nome}
-                            </option>
-                        ))}
-                    </select>
-                    <div className="dropdown">
-                        <Dropdown
-                            offset={[0, 4]}
-                            placement="bottom-start"
-                            btnClassName="btn btn-primary"
-                            button={
-                                <>
-                                    Pesquisar
-                                    <i className="pi pi-chevron-down ml-2" />
-                                </>
-                            }
+                />
+                <div className="mb-4 flex flex-wrap items-start gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                        <label htmlFor="skillStatisticsSeniority" className="mb-0 font-semibold">
+                            Senioridade
+                        </label>
+                        <select
+                            id="skillStatisticsSeniority"
+                            className="form-select w-auto"
+                            value={seniority}
+                            onChange={(event) => {
+                                setSeniority(event.target.value);
+                                hideResult();
+                            }}
                         >
-                            <ul className="whitespace-nowrap">
-                                <li>
-                                    <button type="button" onClick={search}>
-                                        Todas as Vagas
-                                    </button>
-                                </li>
-                                <li>
-                                    <button type="button" onClick={findCompatiblePositions}>
-                                        Vagas compatíveis comigo
-                                    </button>
-                                </li>
-                            </ul>
-                        </Dropdown>
+                            {seniorities.map((item) => (
+                                <option key={item.id} value={item.id}>
+                                    {item.nome}
+                                </option>
+                            ))}
+                        </select>
+                        <label htmlFor="skillStatisticsDdd" className="mb-0 font-semibold">
+                            Região Metropolitana
+                        </label>
+                        <select
+                            id="skillStatisticsDdd"
+                            className="form-select w-auto"
+                            value={ddd}
+                            onChange={(event) => {
+                                setDdd(event.target.value);
+                                hideResult();
+                            }}
+                        >
+                            {regions.map((item) => (
+                                <option key={item.id} value={item.id}>
+                                    {item.nome}
+                                </option>
+                            ))}
+                        </select>
+                        <div className="dropdown">
+                            <Dropdown
+                                offset={[0, 4]}
+                                placement="bottom-start"
+                                btnClassName="btn btn-primary"
+                                button={
+                                    <>
+                                        Pesquisar
+                                        <i className="pi pi-chevron-down ml-2" />
+                                    </>
+                                }
+                            >
+                                <ul className="whitespace-nowrap">
+                                    <li>
+                                        <button type="button" onClick={search}>
+                                            Todas as Vagas
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button type="button" onClick={findCompatiblePositions}>
+                                            Vagas compatíveis comigo
+                                        </button>
+                                    </li>
+                                </ul>
+                            </Dropdown>
+                        </div>
                     </div>
+                    <TelegramGroupsAccordion />
                 </div>
                 {resumeToChooseDdd && (
                     <DddChooser ddds={resumeToChooseDdd.ddd} onChoose={(chosenDdd) => searchCompatiblePositions(resumeToChooseDdd, chosenDdd)} onCancel={() => setResumeToChooseDdd(null)} />
@@ -370,31 +576,8 @@ export const SkillStatistics = ({ initialSeniority = 'pleno', searchOnOpening = 
                 {situation == 'loaded' && skills.length == 0 && <div>Nenhuma vaga encontrada para este filtro.</div>}
                 {situation == 'loaded' && skills.length > 0 && (
                     <>
-                        <h5 className="mb-4 text-lg font-semibold">
-                            {total} {total == 1 ? 'vaga' : 'vagas'}, {skills.length} {skills.length == 1 ? 'Habilidade diferente' : 'Habilidades diferentes'}
-                        </h5>
                         <SkillsPie skills={skills} vacancies={total} />
-                        <div className="space-y-2 font-semibold">
-                            {skills.map((item, index) => {
-                                const expanded = open.includes(item.skill);
-                                return (
-                                    <div key={item.skill} className="rounded border border-[#d3d3d3] dark:border-[#1b2e4b]">
-                                        <button type="button" className="flex w-full items-center justify-between p-3" aria-expanded={expanded} onClick={() => toggle(item.skill)}>
-                                            <span className="flex items-center gap-2">
-                                                <i className={expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'} />
-                                                {index + 1}: {skillLabel(item.skill)}
-                                            </span>
-                                            <span>{item.total}</span>
-                                        </button>
-                                        {expanded && (
-                                            <div className="p-3 font-normal">
-                                                <SkillMonths skill={item.skill} seniority={seniority} ddd={ddd} />
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
+                        <SkillsGrid skills={skills} seniority={seniority} ddd={ddd} />
                     </>
                 )}
             </div>

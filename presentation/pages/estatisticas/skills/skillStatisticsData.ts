@@ -1,5 +1,5 @@
 /** Um item dos grupos das estatísticas: vem como texto JSON, e um item ilegível é descartado. */
-const parseItems = <T,>(texts: string[]): T[] =>
+const parseItems = <T>(texts: string[]): T[] =>
     (texts || [])
         .map((text) => {
             try {
@@ -18,8 +18,7 @@ export type MonthTotal = { yearMonth: string; total: number };
 const PIE_SLICES = 7;
 
 /** As skills da mais pedida para a menos pedida; no empate, em ordem alfabética. */
-export const parseSkills = (texts: string[]): SkillTotal[] =>
-    parseItems<SkillTotal>(texts).sort((a, b) => b.total - a.total || a.skill.localeCompare(b.skill));
+export const parseSkills = (texts: string[]): SkillTotal[] => parseItems<SkillTotal>(texts).sort((a, b) => b.total - a.total || a.skill.localeCompare(b.skill));
 
 /** Os meses em ordem cronológica. */
 export const parseMonths = (texts: string[]): MonthTotal[] => parseItems<MonthTotal>(texts).sort((a, b) => a.yearMonth.localeCompare(b.yearMonth));
@@ -48,3 +47,12 @@ export const requirementsLabel = (requirements: number, vacancies: number) =>
 
 /** 1 de 3 vira 33,3%. */
 export const percentLabel = (value: number, total: number) => `${((value * 100) / total).toFixed(1).replace('.', ',')}%`;
+
+/** The first month (yyyyMM) of the last "count" months, the current one included: 6 in November 2026 starts at 202606. */
+export const firstOfLastMonths = (count: number, now: Date = new Date()) => {
+    const first = new Date(now.getFullYear(), now.getMonth() - (count - 1), 1);
+    return `${first.getFullYear()}${String(first.getMonth() + 1).padStart(2, '0')}`;
+};
+
+/** The months between "from" and "to" (yyyyMM), both included. */
+export const monthsBetween = (months: MonthTotal[], from: string, to: string) => months.filter((month) => month.yearMonth >= from && month.yearMonth <= to);
