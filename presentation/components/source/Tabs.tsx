@@ -3,8 +3,7 @@ import React, { useState } from 'react';
 import { Tabs as MantineTabs } from '@mantine/core';
 import { notify } from '@/presentation/components/source/notify';
 import IconInfoTriangle from '@/presentation/icons/icon-info-triangle';
-import IconArrowLeft from '@/presentation/icons/icon-arrow-left';
-import IconArrowForward from '@/presentation/icons/icon-arrow-forward';
+import IconChevron from '@/presentation/icons/icon-chevron';
 import IconCircleCheck from '@/presentation/icons/icon-circle-check';
 
 export interface TabsModel {
@@ -52,7 +51,7 @@ export const Tabs: React.FC<TabsProps> = ({
     lastButtonLabel,
     lastButtonIcon = <IconCircleCheck className="h-4 w-4" />,
     firstButtonLabel = '',
-    firstButtonIcon = <IconArrowLeft className="h-4 w-4" />,
+    firstButtonIcon = <IconChevron direction="left" className="h-4 w-4" />,
     lastButtonSiblings,
     shortcutButton,
 }) => {
@@ -60,8 +59,8 @@ export const Tabs: React.FC<TabsProps> = ({
     // "Voltar" e "Avançar" (até 2026-11-08 os botões levavam o nome da aba vizinha, o que confundia: "Idiomas" parecia um atalho)
     const previousLabel = activeIndex > 0 ? 'Voltar' : firstButtonLabel;
     const nextLabel = tabs[activeIndex + 1] ? 'Avançar' : lastButtonLabel;
-    const previousIcon = activeIndex > 0 ? <IconArrowLeft className="h-4 w-4" /> : firstButtonIcon;
-    const nextIcon = tabs[activeIndex + 1] ? <IconArrowForward className="h-4 w-4" /> : lastButtonIcon;
+    const previousIcon = activeIndex > 0 ? <IconChevron direction="left" className="h-4 w-4" /> : firstButtonIcon;
+    const nextIcon = tabs[activeIndex + 1] ? <IconChevron direction="right" className="h-4 w-4" /> : lastButtonIcon;
 
     const changeTab = (index: number) => {
         if (index > activeIndex) {
