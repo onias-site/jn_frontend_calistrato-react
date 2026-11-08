@@ -35,12 +35,12 @@ export const RequestAnswers: React.FC<RequestAnswersProps> = ({}) => {
 
     return (
         <div className="relative">
-            <LabelComponent explanation={loginFieldsHelp.channel} labelValue="Como você nos conheceu?" property="loginChannel" errors={{}}>
+            <LabelComponent explanation={loginFieldsHelp.channel} labelValue="Como você nos conheceu?" property="loginChannel" errors={{}} stacked>
                 <div className="w-full text-left">
                     <Select inputId="loginChannel" defaultValue={context.channel || channels[0]} options={channels} isSearchable={false} onChange={hadleChannel} />
                 </div>
             </LabelComponent>
-            <LabelComponent explanation={loginFieldsHelp.goal} labelValue="Qual seu objetivo?" property="loginGoal" errors={{}}>
+            <LabelComponent explanation={loginFieldsHelp.goal} labelValue="Qual seu objetivo?" property="loginGoal" errors={{}} stacked>
                 <div className="mb-7 w-full text-left">
                     <Select inputId="loginGoal" defaultValue={context.goal || goals[0]} options={goals} isSearchable={false} onChange={handleGoal} />
                 </div>

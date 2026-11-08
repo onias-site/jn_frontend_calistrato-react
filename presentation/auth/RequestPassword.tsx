@@ -64,7 +64,7 @@ export const RequestPassword: React.FC<RequestPasswordProps> = ({}) => {
 
     return (
         <div className="relative">
-            <LabelComponent explanation={loginFieldsHelp.loginPassword} labelValue="Senha:" property="loginPassword" errors={fieldErrors}>
+            <LabelComponent explanation={loginFieldsHelp.loginPassword} labelValue="Senha" property="loginPassword" errors={fieldErrors} stacked>
                 <PasswordField id="loginPassword" placeholder="Digite uma senha" value={context.password} onChange={(value) => setField(() => setContextField('password', value), '')} />
             </LabelComponent>
         </div>

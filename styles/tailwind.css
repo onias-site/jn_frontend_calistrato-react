@@ -41,19 +41,17 @@
 /* Select2*/
 @import './select2.css';
 /*
- * Camadas de CSS: o reset (preflight) do tailwind fica abaixo do Mantine, senão ele zera o estilo dos botões e campos do
- * Mantine; as utilities do tailwind ficam acima, para className continuar valendo nos componentes do Mantine.
+ * Camadas de CSS: só o reset (preflight) do tailwind fica em camada, abaixo do Mantine, senão ele zera o estilo dos
+ * botões e campos do Mantine. Components e utilities ficam fora de camada, como no Vristo original: assim vencem o
+ * Mantine (className continua valendo) e seguem a especificidade entre si. Pô-los numa camada não funciona porque o
+ * tailwind emite as variantes responsivas (lg:hidden) fora dela, e aí o botão de reabrir o menu lateral sumia (2026-11-08).
  */
-@layer tailwind-base, mantine, tailwind-components, tailwind-utilities;
+@layer tailwind-base, mantine;
 @layer tailwind-base {
     @tailwind base;
 }
-@layer tailwind-components {
-    @tailwind components;
-}
-@layer tailwind-utilities {
-    @tailwind utilities;
-}
+@tailwind components;
+@tailwind utilities;
 
 @layer components {
     html {

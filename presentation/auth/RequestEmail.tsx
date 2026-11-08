@@ -1,6 +1,7 @@
 'use client';
 
 import IconUser from '@/presentation/icons/icon-user';
+import { TextInput } from '@mantine/core';
 
 import React, { useEffect } from 'react';
 import { ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogin';
@@ -33,8 +34,8 @@ export const RequestEmail: React.FC<RequestEmailProps> = ({}) => {
     useEffect(() => {
 
         setDetailMessage(detailMessage);
+        // o modal abre sem erro à mostra: o aviso só aparece depois que o usuário digita (até 2026-11-08 abria já em vermelho)
         if (!email) {
-            setDetailMessage(`Favor informar um e-mail ao qual você tenha pleno acesso`);
             setInvalid(true);
             return;
         }
@@ -42,13 +43,19 @@ export const RequestEmail: React.FC<RequestEmailProps> = ({}) => {
     }, []);
 
     return (
-        <LabelComponent explanation={loginFieldsHelp.email} labelValue="E-mail:" property="loginEmail" errors={{}}>
-            <div className="relative w-full">
-                <span className="absolute top-1/2 -translate-y-1/2 ltr:left-3 rtl:right-3 dark:text-white-dark">
-                    <IconUser className="h-5 w-5" />
-                </span>
-                <input id="loginEmail" readOnly={lockedToken} value={email} onChange={(e) => validateEmail(e.target.value, '')} type="email" placeholder="Email" className="form-input ltr:pl-10 rtl:pr-10" />
-            </div>
+        <LabelComponent explanation={loginFieldsHelp.email} labelValue="E-mail" property="loginEmail" errors={{}} stacked>
+            <TextInput
+                id="loginEmail"
+                type="email"
+                size="md"
+                readOnly={lockedToken}
+                value={email || ''}
+                onChange={(e) => validateEmail(e.currentTarget.value, '')}
+                placeholder="voce@exemplo.com"
+                leftSection={<IconUser className="h-5 w-5" />}
+                autoComplete="email"
+                autoFocus
+            />
         </LabelComponent>
     );
 };

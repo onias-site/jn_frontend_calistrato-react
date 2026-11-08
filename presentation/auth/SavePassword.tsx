@@ -100,19 +100,19 @@ export const SavePassword: React.FC<SavePasswordProps> = ({}) => {
 
     return (
         <div className="relative">
-            <LabelComponent explanation={loginFieldsHelp.newPassword} labelValue="Senha:" property="loginPassword" errors={fieldErrors} stacked>
+            <LabelComponent explanation={loginFieldsHelp.newPassword} labelValue="Senha" property="loginPassword" errors={fieldErrors} stacked>
                 <PasswordField id="loginPassword" placeholder="Digite uma senha" value={context.password} onChange={(value) => setField(() => setContextField('password', value), '')} withStrength />
             </LabelComponent>
             <LabelComponent
                 explanation={loginFieldsHelp.confirmPassword}
-                labelValue="Confirme a senha:"
+                labelValue="Confirme a senha"
                 property="loginConfirmPassword"
                 errors={fieldErrors}
                 stacked
             >
                 <PasswordField id="loginConfirmPassword" placeholder="Confirme a senha" value={context.confirmPassword} onChange={(value) => setField(() => setContextField('confirmPassword', value), '')} />
             </LabelComponent>
-            <LabelComponent explanation={loginFieldsHelp.token(email)} labelValue={`Token recebido no e-mail '${email}':`} property="loginToken" errors={fieldErrors} stacked>
+            <LabelComponent explanation={loginFieldsHelp.token(email)} labelValue={`Token recebido no e-mail '${email}'`} property="loginToken" errors={fieldErrors} stacked>
                 <TextInput
                     id="loginToken"
                     value={context.token || ''}

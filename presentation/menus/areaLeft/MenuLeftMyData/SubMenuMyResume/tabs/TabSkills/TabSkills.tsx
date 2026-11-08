@@ -942,7 +942,7 @@ const SkillFixHierarchyModal: React.FC<SkillFixHierarchyModalProps> = ({
                 fieldsHaveOwnHelp
                 headerModal={headerModal} labelText={reasonExplanation} linkText={linkText} icon={icon}>
                 <div className="flex w-full flex-col items-stretch">
-                    <LabelComponent explanation={skillsHelp} labelValue="Habilidades" property={`skillFixHierarchySkills-${type}`} errors={{}}>
+                    <LabelComponent explanation={skillsHelp} labelValue="Habilidades" property={`skillFixHierarchySkills-${type}`} errors={{}} stacked>
                         <MultiSelect
                             id={`skillFixHierarchySkills-${type}`}
                             value={selectedSkills}
@@ -957,7 +957,7 @@ const SkillFixHierarchyModal: React.FC<SkillFixHierarchyModalProps> = ({
                             disabled={!!suggestion}
                         />
                     </LabelComponent>
-                    <LabelComponent explanation={reasonHelp} labelValue="Justificativa" property={`skillFixHierarchyReason-${type}`} errors={{}}>
+                    <LabelComponent explanation={reasonHelp} labelValue="Justificativa" property={`skillFixHierarchyReason-${type}`} errors={{}} stacked>
                         <Textarea
                             id={`skillFixHierarchyReason-${type}`}
                             placeholder={reasonExplanation}
@@ -1461,7 +1461,7 @@ const SkillSuggestionModal: React.FC = () => {
         >
             <div className="flex w-full flex-col items-stretch">
                 {resumeTextMissing && <ResumeTextMissingHint />}
-                <LabelComponent explanation={SKILL_SUGGESTION_SKILL_HELP} labelValue="Habilidade" property="skillSuggestionSkill" errors={{}}>
+                <LabelComponent explanation={SKILL_SUGGESTION_SKILL_HELP} labelValue="Habilidade" property="skillSuggestionSkill" errors={{}} stacked>
                     <TextInput
                         id="skillSuggestionSkill"
                         placeholder="Habilidade que consta no seu currículo (ex.: REACT NATIVE)"
@@ -1475,7 +1475,7 @@ const SkillSuggestionModal: React.FC = () => {
                         onBlur={onSkillBlur}
                     />
                 </LabelComponent>
-                <LabelComponent explanation={SKILL_SUGGESTION_SYNONYMS_HELP} labelValue="Sinônimos" property="skillSuggestionSynonyms" errors={{}}>
+                <LabelComponent explanation={SKILL_SUGGESTION_SYNONYMS_HELP} labelValue="Sinônimos" property="skillSuggestionSynonyms" errors={{}} stacked>
                     <TagsInput
                         id="skillSuggestionSynonyms"
                         value={synonyms}
@@ -1487,7 +1487,7 @@ const SkillSuggestionModal: React.FC = () => {
                         placeholder={synonyms.length ? '' : 'Sinônimos: digite cada um e tecle Enter (ou separe por vírgula)'}
                     />
                 </LabelComponent>
-                <LabelComponent explanation={SKILL_SUGGESTION_REASON_HELP} labelValue="Justificativa" property="skillSuggestionReason" errors={{}}>
+                <LabelComponent explanation={SKILL_SUGGESTION_REASON_HELP} labelValue="Justificativa" property="skillSuggestionReason" errors={{}} stacked>
                     <Textarea
                         id="skillSuggestionReason"
                         placeholder="Explique por que esta habilidade deveria ser reconhecida (ex.: em que parte do currículo ela aparece)"
@@ -1565,7 +1565,7 @@ const LinkModal: React.FC<LinkModalProps> = ({ onSave, onOpen, saveButtonLabel =
                             loading={saveLoading}
                             invalid={saveDisabled}
                             style={{ minWidth: '15%' }}
-                            className="btn btn-danger"
+                            className="btn btn-primary"
                         />
                     </div>
                 </div>

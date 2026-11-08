@@ -13,6 +13,8 @@ import { Modal } from '@/presentation/components/source/Modal';
 import JnAjax from '@/app/JnAjax';
 import PubSub from 'pubsub-js';
 import { BackToLoginLink } from '@/presentation/auth/BackToLoginLink';
+import IconInfoTriangle from '@/presentation/icons/icon-info-triangle';
+import IconInfoCircle from '@/presentation/icons/icon-info-circle';
 
 export interface ModalLoginProps {}
 
@@ -208,11 +210,22 @@ export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
         cursor: 'not-allowed',
     };
     return (
-        <Modal title={title || screen.headerLabel} visible={visible} setVisible={(show) => (show ? showModal(selectedScreen, title) : dismissModal())}>
-            <form>
+        <Modal title={title || screen.headerLabel} visible={visible} size="md" setVisible={(show) => (show ? showModal(selectedScreen, title) : dismissModal())}>
+            <form onSubmit={(e) => e.preventDefault()}>
                 <div className="relative mb-4" style={lockedToken ? disabledDiv : {}}>
                     {screen.component}
-                    {detailMessage && <p className="text-sm text-red-600">{detailMessage}</p>}
+                    {/* a mesma caixa serve para o erro (vermelha) e para as orientações, como o aviso de token enviado (azul) */}
+                    {detailMessage && (
+                        <div
+                            role={invalid ? 'alert' : 'status'}
+                            className={`-mt-2 mb-4 flex items-start gap-2 rounded-md border px-3 py-2.5 text-sm leading-snug ${
+                                invalid ? 'border-danger/30 bg-danger-light text-danger dark:bg-danger-dark-light' : 'border-info/30 bg-info-light text-info dark:bg-info-dark-light'
+                            }`}
+                        >
+                            <span className="mt-0.5 shrink-0">{invalid ? <IconInfoTriangle className="h-4 w-4" /> : <IconInfoCircle className="h-4 w-4" />}</span>
+                            <span>{detailMessage}</span>
+                        </div>
+                    )}
                 </div>
                 <LoadingButton
                     invalid={lockedToken || invalid}
