@@ -215,17 +215,29 @@ const SkillsPie = ({ skills, vacancies }: { skills: SkillTotal[]; vacancies: num
         tooltip: { y: { formatter: (value: number) => `${value} vagas` } },
     };
 
-    // nas barras, cada skill é uma barra com a sua cor da pizza e o percentual na ponta
+    // nas barras só entram as skills mais pedidas (sem "Outras", que esmagava a escala); cada barra traz vagas e percentual
+    const hasOthers = labels[labels.length - 1] == 'Outras';
+    const barLabels = hasOthers ? labels.slice(0, -1) : labels;
+    const barValues = hasOthers ? values.slice(0, -1) : values;
+    const othersValue = hasOthers ? values[values.length - 1] : 0;
     const barOptions: any = {
-        chart: { type: 'bar', fontFamily, toolbar: { show: false } },
+        chart: { type: 'bar', fontFamily, toolbar: { show: false }, animations: { enabled: false } },
         colors: sliceColors,
-        plotOptions: { bar: { horizontal: true, distributed: true, borderRadius: 4, barHeight: '70%' } },
-        xaxis: { categories: labels, labels: { formatter: (value: number) => `${Math.round(value)}` } },
-        yaxis: { labels: { style: { fontSize: '13px', fontWeight: 600 } } },
-        dataLabels: { enabled: true, textAnchor: 'start', offsetX: 6, style: { colors: ['#0e1726'] }, formatter: (value: number) => percentLabel(value, total) },
+        plotOptions: { bar: { horizontal: true, distributed: true, borderRadius: 6, barHeight: '60%', dataLabels: { position: 'top' } } },
+        xaxis: { categories: barLabels, labels: { show: false }, axisBorder: { show: false }, axisTicks: { show: false }, max: Math.max(...barValues) * 1.45 },
+        yaxis: { labels: { style: { fontSize: '14px', fontWeight: 600, colors: '#0e1726' }, maxWidth: 220 } },
+        dataLabels: {
+            enabled: true,
+            textAnchor: 'start',
+            offsetX: 8,
+            style: { fontSize: '13px', fontWeight: 600, colors: ['#3b3f5c'] },
+            formatter: (value: number) => `${value} ${value == 1 ? 'vaga' : 'vagas'}  ·  ${percentLabel(value, total)}`,
+            dropShadow: { enabled: false },
+        },
         legend: { show: false },
-        grid: { borderColor: 'rgba(128, 128, 128, 0.2)', strokeDashArray: 3 },
-        tooltip: { y: { title: { formatter: () => 'Vagas:' } } },
+        grid: { show: false, padding: { left: 8, right: 16 } },
+        tooltip: { enabled: false },
+        states: { hover: { filter: { type: 'none' } }, active: { filter: { type: 'none' } } },
     };
 
     return (
@@ -256,7 +268,14 @@ const SkillsPie = ({ skills, vacancies }: { skills: SkillTotal[]; vacancies: num
                     {chartType == 'pie' ? (
                         <ReactApexChart type="pie" height={340} options={pieOptions} series={values} />
                     ) : (
-                        <ReactApexChart type="bar" height={60 + labels.length * 36} options={barOptions} series={[{ name: 'Vagas', data: values }]} />
+                        <div>
+                            <ReactApexChart type="bar" height={40 + barLabels.length * 44} options={barOptions} series={[{ name: 'Vagas', data: barValues }]} />
+                            {hasOthers && (
+                                <p className="mt-1 text-sm text-white-dark">
+                                    As demais {skills.length - barLabels.length} habilidades somam {othersValue} exigências ({percentLabel(othersValue, total)}).
+                                </p>
+                            )}
+                        </div>
                     )}
                 </div>
             )}
