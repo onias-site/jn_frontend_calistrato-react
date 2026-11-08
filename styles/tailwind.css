@@ -727,3 +727,25 @@ img.dark-img {
     @apply !block;
 }
 
+
+/* Impressão da prévia do currículo: só o conteúdo da prévia sai no papel */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    .resume-print,
+    .resume-print * {
+        visibility: visible;
+    }
+    .resume-print {
+        position: fixed;
+        inset: 0;
+        margin: 0;
+        border: 0;
+        padding: 16mm;
+        background: #fff;
+    }
+    .mantine-Modal-overlay {
+        display: none;
+    }
+}

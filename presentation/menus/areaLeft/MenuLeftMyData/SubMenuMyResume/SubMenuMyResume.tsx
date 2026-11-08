@@ -11,6 +11,7 @@ import IconSettings from '@/presentation/icons/icon-settings';
 import IconDollarSign from '@/presentation/icons/icon-dollar-sign';
 import IconGithub from '@/presentation/icons/icon-github';
 import IconSave from '@/presentation/icons/icon-save';
+import { ResumePreview } from './ResumePreview';
 import { RegioesStore, IRegioesStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabFilter/RegioesComponent';
 import { TabOptions, TabOptionsStore, ITabOptionsStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabFilter/FormFilter';
 import { TabLanguages, TabLanguagesStore, ITabLanguagesStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabLanguages/ChooserLanguages';
@@ -425,7 +426,17 @@ const saveResume = (stateSkills: any, stateResume: any, stateLanguage: any, stat
 const SubMenuMyResume = () => {
     const router = useRouter();
     // quem veio de "Vagas compatíveis comigo" sem currículo volta para a pesquisa que pediu
-    const returnToThePendingSearch = () => resumeSavedForTheSearch() && router.push('/estatisticas/skills');
+    // depois de salvar: volta à primeira aba e abre a prévia do currículo (ou volta à pesquisa que pediu o currículo)
+    const [previewOpen, setPreviewOpen] = useState(false);
+    const [tabsReset, setTabsReset] = useState(0);
+    const returnToThePendingSearch = () => {
+        if (resumeSavedForTheSearch()) {
+            router.push('/estatisticas/skills');
+            return;
+        }
+        setTabsReset((value) => value + 1);
+        setPreviewOpen(true);
+    };
     const stateSkills = TabSkillStore((state: ITabSkillStore) => ({
         ...state,
     }));
@@ -542,14 +553,21 @@ const SubMenuMyResume = () => {
                 rejectLabel="Não"
                 accept={confirmTheSave}
             />
+            <ResumePreview opened={previewOpen} onClose={() => setPreviewOpen(false)} />
             {resumeStatusLabel && (
                 <div className={`${resumeStatusLabel.className} resume-status-actions`}>
                     {resumeStatus === 'notLogged' ? <NotLoggedText setResumeStatus={setResumeStatus} /> : <span>{resumeStatusLabel.text}</span>}
+                    {isEditing && (
+                        <button onClick={() => setPreviewOpen(true)} type="button" className="btn btn-outline-primary gap-2 whitespace-nowrap">
+                            <IconEye className="h-4 w-4" />
+                            Ver prévia
+                        </button>
+                    )}
                     {statusButtons}
                 </div>
             )}
             {hasTabSkills ? (
-                <Tabs key={stateSubMenuMyResume.formVersion} tabs={tabs} lastButtonLabel="Salvar dados" lastButtonIcon={<IconSave className="h-4 w-4" />} shortcutButton={saveShortcutButton}>
+                <Tabs key={stateSubMenuMyResume.formVersion} tabs={tabs} lastButtonLabel="Salvar dados" lastButtonIcon={<IconSave className="h-4 w-4" />} shortcutButton={saveShortcutButton} resetSignal={tabsReset}>
                     <TabResume />
                     <TabLanguages />
                     <TabSkills2 getAccordionList={getImplicitSkills} />
@@ -557,7 +575,7 @@ const SubMenuMyResume = () => {
                     <TabSalary />
                 </Tabs>
             ) : (
-                <Tabs key={stateSubMenuMyResume.formVersion} tabs={tabs} lastButtonLabel="Salvar dados" lastButtonIcon={<IconSave className="h-4 w-4" />} shortcutButton={saveShortcutButton}>
+                <Tabs key={stateSubMenuMyResume.formVersion} tabs={tabs} lastButtonLabel="Salvar dados" lastButtonIcon={<IconSave className="h-4 w-4" />} shortcutButton={saveShortcutButton} resetSignal={tabsReset}>
                     <TabResume />
                     <TabLanguages />
                     <TabOptions />
