@@ -24,9 +24,18 @@ export interface TabsProps {
     firstButtonClick: () => void;
     // botões mostrados ao lado do último botão (o de concluir), só na última aba
     lastButtonSiblings?: React.ReactNode;
+    // atalho mostrado à esquerda do botão de avançar em todas as abas menos a última (ex.: salvar sem passar pelas
+    // demais abas); devolve as pendências, mostradas como as do avançar
+    shortcutButton?: TabsShortcutButton;
 }
 
-export const Tabs: React.FC<TabsProps> = ({ firstButtonClick, tabs, children, lastButtonLabel, lastButtonIcon = 'pi pi-check', firstButtonLabel, firstButtonIcon = 'pi pi-arrow-left', lastButtonSiblings }) => {
+export interface TabsShortcutButton {
+    label: string;
+    icon: string;
+    onClick: () => string[] | void;
+}
+
+export const Tabs: React.FC<TabsProps> = ({ firstButtonClick, tabs, children, lastButtonLabel, lastButtonIcon = 'pi pi-check', firstButtonLabel, firstButtonIcon = 'pi pi-arrow-left', lastButtonSiblings, shortcutButton }) => {
     const toast = useRef(null);
     const [activeIndex, setActiveIndex] = useState(0);
     const previousLabel = activeIndex > 0 ? tabs[activeIndex - 1].label : firstButtonLabel;
@@ -56,15 +65,20 @@ export const Tabs: React.FC<TabsProps> = ({ firstButtonClick, tabs, children, la
     const pendingRequirements = (tab.getPendingRequirements && tab.getPendingRequirements()) || [];
     const canMoveForward = !pendingRequirements.length;
 
+    // devolve true quando havia pendências (e as mostrou)
+    const showErrors = (errors: string[] | void) => {
+        if (!errors || !errors.length) {
+            return false;
+        }
+        errors.forEach((detail) => (toast.current as any)?.show({ severity: 'error', summary: 'Falha!!!', detail, life: 10000 }));
+        return true;
+    };
+
     const goToNextTab = () => {
         const index = activeIndex + 1;
         const hasError = tab.onMoveOnFowardTabs && tab.onMoveOnFowardTabs();
 
-        if (hasError && hasError.length) {
-            for(let item in hasError){
-                const detail = hasError[item];
-                toast.current.show({ severity: 'error', summary: 'Falha!!!', detail, life: 10000 });
-            }
+        if (showErrors(hasError)) {
             return;
         }
         const hasNextTab = !!tabs[index];
@@ -98,6 +112,12 @@ export const Tabs: React.FC<TabsProps> = ({ firstButtonClick, tabs, children, la
                               ))}
                     </div>
                     {isLastTab && lastButtonSiblings && <div className="flex shrink-0 gap-3">{lastButtonSiblings}</div>}
+                    {!isLastTab && shortcutButton && (
+                        <button onClick={() => showErrors(shortcutButton.onClick())} type="button" className="btn btn-success shrink-0 whitespace-nowrap">
+                            <i className={shortcutButton.icon} style={{ marginRight: '8px' }} />
+                            {shortcutButton.label}
+                        </button>
+                    )}
                     {nextLabel && (
                         <span style={canMoveForward ? {} : { cursor: 'not-allowed' }} className="shrink-0">
                             <button

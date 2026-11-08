@@ -23,6 +23,7 @@ import { LabelComponent } from '@/presentation/components/source/LabelComponent'
 import { LoadingButton } from '@/presentation/components/source/LoadingButton';
 import PubSub from 'pubsub-js';
 import JnAjax from '@/app/JnAjax';
+import { getTicketConfirmMessage, getTicketQuotaBlockMessage, recordTicketQuota } from '@/presentation/components/ticket-quota/ticketDailyQuota';
 import { TabResumeStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabResume/FormResume';
 
 export class SkillListModel {
@@ -240,8 +241,14 @@ const getSkillsContext = (context: any, groups: any[], accordionList: any[]) => 
 
 // A habilidade sugerida precisa constar no texto do currículo exatamente como foi escrita: a frase inteira, sem ser
 // pedaço de outra palavra (maiúsculas e espaços repetidos não contam). Devolve true (e avisa o candidato) quando não consta.
+// Currículo de tecnologia já salvo e nenhum texto colado: não há como conferir aqui (o texto não é gravado), e quem
+// confere é o suporte ao avaliar a sugestão.
 const isSkillOutOfTheResume = (word: string) => {
-    const resumeText = TabResumeStore.getState().resumeText || '';
+    const { resumeText: typedResumeText, savedTechResume } = TabResumeStore.getState();
+    const resumeText = typedResumeText || '';
+    if (!resumeText.trim() && savedTechResume) {
+        return false;
+    }
     const normalizedResume = resumeText.toUpperCase().replace(/\s+/g, ' ');
     const escapedWord = word.toUpperCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/ /g, '\\s');
     const wholePhrase = new RegExp(`(?<![\\p{L}\\p{N}])${escapedWord}(?![\\p{L}\\p{N}])`, 'u');
@@ -621,17 +628,20 @@ const withButtonLoading = (callbacks: any, setLoading: (loading: boolean) => voi
  * Não pode ser uma requisição por skill: a chave da sugestão é email + parent + type, então uma sobrescreveria a outra.
  */
 const sendSkillFixHierarchy = (parent: string, skills: string[], type: SkillFixHierarchyType, description: string, onSuccess: () => void, setLoading: (loading: boolean) => void) => {
+    if (sharedQuotaAlreadySpent()) return;
     const callbacks: any = {};
     callbacks['retryAfterAuthentication'] = () => sendSkillFixHierarchy(parent, skills, type, description, onSuccess, setLoading);
     callbacks[200] = () => {
+        recordSharedQuota();
         PubSub.publish('showMessage', {
             summary: 'Sugestão enviada',
             detail: 'Obrigado! Sua sugestão será analisada e você será avisado do resultado.',
         });
         onSuccess();
     };
-    // todas as habilidades do pedido já foram avaliadas antes: nada fica pendente e o resultado vai por e-mail
+    // todas as habilidades do pedido já foram avaliadas antes: nada fica pendente e o resultado vai por e-mail (gasta a cota)
     callbacks[208] = () => {
+        recordSharedQuota();
         PubSub.publish('showMessage', {
             summary: 'Solicitação já atendida',
             detail: 'Sua solicitação está completa: todas as habilidades dela já foram avaliadas pelo nosso time. Estamos enviando um e-mail com o resultado.',
@@ -679,16 +689,37 @@ interface DailyLimitHintProps {
 }
 const DailyLimitHint: React.FC<DailyLimitHintProps> = ({ kind }) => (
     <p className="m-0 text-left" style={{ fontSize: '12px' }}>
-        {`Atenção: depois deste envio, um novo chamado (sugestão de habilidade, ajuste de hierarquia ou fale conosco) só poderá ser aberto quando completar 24 horas. Confira os dados antes de enviar.`}
+        {`Atenção: depois deste envio, um novo chamado (sugestão de habilidade, ajuste de hierarquia ou fale conosco, exceto bug, dúvida e crítica) só poderá ser aberto quando completar 24 horas. Confira os dados antes de enviar.`}
     </p>
 );
 
 const showDailyLimitReached = (kind: string) => {
     PubSub.publish('showMessage', {
         summary: 'Limite de 24 horas atingido',
-        detail: `Você já abriu um chamado (sugestão de habilidade, ajuste de hierarquia ou fale conosco) nas últimas 24 horas. A sugestão de ${kind} poderá ser enviada quando completar 24 horas do envio anterior.`,
+        detail: `Você já abriu um chamado (sugestão de habilidade, ajuste de hierarquia ou fale conosco, exceto bug, dúvida e crítica) nas últimas 24 horas. A sugestão de ${kind} poderá ser enviada quando completar 24 horas do envio anterior.`,
         severity: 'error',
     });
+};
+
+// O e-mail do login, a quem pertence a marca da cota no localStorage; sem login, o envio segue para o 401 do JnAjax
+const loggedEmail = (): string => (JnAjax.getLogin() || ({} as any)).email || '';
+
+/**
+ * A cota compartilhada (sugestão de habilidade, ajuste de hierarquia e fale conosco exceto bug, dúvida e crítica) já
+ * gasta neste navegador nas últimas 24 horas: avisa e devolve true, para o envio nem ir ao backend.
+ */
+const sharedQuotaAlreadySpent = (): boolean => {
+    const email = loggedEmail();
+    const quotaBlock = email && getTicketQuotaBlockMessage(email, 'sharedTickets');
+    if (!quotaBlock) return false;
+    PubSub.publish('showMessage', { summary: 'Limite de 24 horas atingido', detail: quotaBlock, severity: 'error' });
+    return true;
+};
+
+// O backend gravou o chamado e gastou a cota do dia: o navegador guarda a marca por 24 horas
+const recordSharedQuota = () => {
+    const email = loggedEmail();
+    if (email) recordTicketQuota(email, 'sharedTickets');
 };
 
 type SkillFixHierarchyStatus = 'pending' | 'fulfiled';
@@ -863,6 +894,16 @@ const SkillFixHierarchyModal: React.FC<SkillFixHierarchyModalProps> = ({
         if (!isValidDescription(reason)) {
             return;
         }
+        if (sharedQuotaAlreadySpent()) {
+            return;
+        }
+        setConfirmingSend(true);
+    };
+
+    // o diálogo de confirmação avisa da cota compartilhada e dos chamados que ficarão bloqueados por 24 horas
+    const [confirmingSend, setConfirmingSend] = useState(false);
+
+    const sendConfirmed = (close: () => void) => {
         sendSkillFixHierarchy(
             accordionItem.skill,
             selectedSkills,
@@ -897,6 +938,22 @@ const SkillFixHierarchyModal: React.FC<SkillFixHierarchyModalProps> = ({
 
     // ConfirmDialog controlado (e não o confirmDialog() global): cada accordion tem os seus modais, e o global
     // exigiria um único <ConfirmDialog /> na página, compartilhado entre todos.
+    const extraActions = (close: () => void) => (
+        <>
+            <ConfirmDialog
+                visible={confirmingSend}
+                onHide={() => setConfirmingSend(false)}
+                header="Confirmar envio"
+                message={getTicketConfirmMessage('skillFixHierarchy')}
+                icon="pi pi-exclamation-triangle"
+                acceptLabel="Sim, enviar"
+                rejectLabel="Não"
+                accept={() => sendConfirmed(close)}
+            />
+            {withdrawButton(close)}
+        </>
+    );
+
     const withdrawButton = (close: () => void) =>
         pending && (
             <>
@@ -941,7 +998,7 @@ const SkillFixHierarchyModal: React.FC<SkillFixHierarchyModalProps> = ({
                 saveButtonLabel={mainButton.label}
                 saveLoading={loadingRequest === 'load' || loadingRequest === 'save'}
                 saveDisabled={busy}
-                extraActions={withdrawButton}
+                extraActions={extraActions}
                 onOpen={loadSuggestion}
                 fieldsHaveOwnHelp
                 headerModal={headerModal} labelText={reasonExplanation} linkText={linkText} icon={icon}>
@@ -1110,9 +1167,11 @@ const SKILL_SUGGESTION_STATUS_LABELS: Record<SkillSuggestionStatus, string> = {
  * candidato não tem duas sugestões pendentes da mesma habilidade (409).
  */
 const sendSkillSuggestion = (skill: string, synonyms: string[], description: string, onSuccess: () => void, onAlreadyDecided: () => void, setLoading: (loading: boolean) => void) => {
+    if (sharedQuotaAlreadySpent()) return;
     const callbacks: any = {};
     callbacks['retryAfterAuthentication'] = () => sendSkillSuggestion(skill, synonyms, description, onSuccess, onAlreadyDecided, setLoading);
     callbacks[200] = () => {
+        recordSharedQuota();
         PubSub.publish('showMessage', {
             summary: 'Sugestão enviada',
             detail: 'Obrigado! Sua sugestão será analisada e você será avisado do resultado.',
@@ -1250,9 +1309,11 @@ const SkillSuggestionModal: React.FC = () => {
     const { context, groups, accordionList } = TabSkillStore((state: ITabSkillStore) => ({
         ...state,
     }));
-    // sem o texto do currículo não dá para sugerir: o campo da habilidade fica bloqueado e o modal diz o que fazer
+    // sem o texto do currículo e sem currículo de tecnologia salvo não dá para sugerir: o campo da habilidade fica
+    // bloqueado e o modal diz o que fazer. Com o currículo de tecnologia salvo o modal fica liberado mesmo sem texto.
     const resumeText = TabResumeStore((state) => state.resumeText) || '';
-    const resumeTextMissing = !resumeText.trim();
+    const savedTechResume = TabResumeStore((state) => state.savedTechResume);
+    const resumeTextMissing = !resumeText.trim() && !savedTechResume;
     const [skill, setSkill] = useState('');
     const [synonyms, setSynonyms] = useState<string[]>([]);
     const [reason, setReason] = useState('');
@@ -1363,6 +1424,17 @@ const SkillSuggestionModal: React.FC = () => {
         if (isSkillOutOfTheResume(normalizedSkill)) {
             return;
         }
+        if (sharedQuotaAlreadySpent()) {
+            return;
+        }
+        setConfirmingSend(true);
+    };
+
+    // o diálogo de confirmação avisa da cota compartilhada e dos chamados que ficarão bloqueados por 24 horas
+    const [confirmingSend, setConfirmingSend] = useState(false);
+
+    const sendConfirmed = (close: () => void) => {
+        const normalizedSkill = normalizeSkill(skill);
         sendSkillSuggestion(
             normalizedSkill,
             synonyms,
@@ -1415,6 +1487,22 @@ const SkillSuggestionModal: React.FC = () => {
             </>
         );
 
+    const extraActions = (close: () => void) => (
+        <>
+            <ConfirmDialog
+                visible={confirmingSend}
+                onHide={() => setConfirmingSend(false)}
+                header="Confirmar envio"
+                message={getTicketConfirmMessage('skillSuggestion')}
+                icon="pi pi-exclamation-triangle"
+                acceptLabel="Sim, enviar"
+                rejectLabel="Não"
+                accept={() => sendConfirmed(close)}
+            />
+            {withdrawButton(close)}
+        </>
+    );
+
     // Com sugestão carregada (pendente ou avaliada) o modal é só leitura: pendente se altera desistindo e enviando de novo,
     // e avaliada não se reenvia (a rejeição é definitiva; aprovada já é reconhecida). "Nova sugestão" limpa para outra habilidade.
     const hasSuggestion = !!suggestion;
@@ -1427,7 +1515,7 @@ const SkillSuggestionModal: React.FC = () => {
             saveButtonLabel={hasSuggestion ? 'Nova sugestão' : 'Enviar'}
             saveLoading={loadingRequest === 'load' || loadingRequest === 'save'}
             saveDisabled={busy || (!hasSuggestion && (!skillValid || resumeTextMissing))}
-            extraActions={withdrawButton}
+            extraActions={extraActions}
             onOpen={startNewSuggestion}
             fieldsHaveOwnHelp
             headerModal="Descreva a habilidade técnica que CONSTA no texto do seu currículo e que deixamos de listar aqui"

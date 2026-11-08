@@ -5,6 +5,8 @@ import JnAjax from '@/app/JnAjax';
 import { ModalLoginStore } from '@/presentation/auth/ModalLogin';
 import { CONTACT_US_TYPES, DESCRIPTION_LENGTH, TITLE_LENGTH, contactUsProblem } from './contactUsTypes';
 import { getLastStackTrace, listenToUnhandledErrors } from './lastStackTrace';
+import { ConfirmDialog } from 'primereact/confirmdialog';
+import { TicketKind, getContactUsQuotaGroup, getTicketConfirmMessage, getTicketQuotaBlockMessage, recordTicketQuota } from '@/presentation/components/ticket-quota/ticketDailyQuota';
 
 /**
  * O e-mail de quem escreve: o do login, senão o que o modal de login tem digitado. O "Fale Conosco" não exige sessão
@@ -30,6 +32,7 @@ const ContactUs = () => {
     const [text, setText] = useState('');
     const [problem, setProblem] = useState('');
     const [sending, setSending] = useState(false);
+    const [confirming, setConfirming] = useState(false);
 
     useEffect(listenToUnhandledErrors, []);
 
@@ -48,13 +51,13 @@ const ContactUs = () => {
         setOpen(false);
     };
 
-    // o Esc faz o mesmo que o X: limpa e fecha
+    // o Esc faz o mesmo que o X: limpa e fecha; com o diálogo de confirmação aberto, o Esc só fecha o diálogo
     useEffect(() => {
-        if (!open) return;
+        if (!open || confirming) return;
         const closeOnEsc = (e: KeyboardEvent) => e.key == 'Escape' && clearAndClose();
         window.addEventListener('keydown', closeOnEsc);
         return () => window.removeEventListener('keydown', closeOnEsc);
-    }, [open]);
+    }, [open, confirming]);
 
     const send = (e: React.FormEvent) => {
         e.preventDefault();
@@ -62,22 +65,36 @@ const ContactUs = () => {
         setProblem(found);
         if (found) return;
 
+        // a cota do tipo já gasta neste navegador nas últimas 24 horas: nem vai ao backend
+        const quotaGroup = getContactUsQuotaGroup(contactType);
+        const quotaBlock = quotaGroup && getTicketQuotaBlockMessage(email, quotaGroup);
+        if (quotaBlock) return setProblem(quotaBlock);
+
+        // todo envio pede confirmação: o da cota avisa do limite diário, o do bug só confirma
+        setConfirming(true);
+    };
+
+    const sendConfirmed = () => {
+        const quotaGroup = getContactUsQuotaGroup(contactType);
         const callbacks: any = {};
         callbacks['setLoading'] = () => setSending(true);
         callbacks['setNotLoading'] = () => setSending(false);
         // sem sessão: o e-mail vai no caminho, e não há 401 a tratar
         callbacks['getLogin'] = () => ({});
         callbacks[200] = () => {
+            if (quotaGroup) recordTicketQuota(email, quotaGroup);
             PubSub.publish('showMessage', { summary: 'Mensagem enviada!', detail: `Enviamos para ${email.trim()} um e-mail com os detalhes; o ticket está em análise.` });
             clearAndClose();
         };
         callbacks[403] = () => setProblem('O suporte não está aceitando novas mensagens deste e-mail.');
-        callbacks[429] = () =>
-            setProblem(
-                contactType == 'clarifyDoubts'
-                    ? 'Você já enviou uma dúvida nas últimas 24 horas. Aguarde a resposta ou envie outra quando completar 24 horas do envio anterior.'
-                    : 'Você já abriu um ticket nas últimas 24 horas (fale conosco, sugestão de habilidade ou ajuste de hierarquia). Um novo poderá ser aberto quando completar 24 horas do envio anterior; bugs podem ser reportados a qualquer momento.',
-            );
+        // o 429 chega quando a cota foi gasta por outro navegador ou sem a marca do localStorage
+        const quotaReachedMessages: Record<string, string> = {
+            clarifyDoubts: 'Você já enviou uma dúvida nas últimas 24 horas. Aguarde a resposta ou envie outra quando completar 24 horas do envio anterior.',
+            makeCriticism: 'Você já enviou uma crítica nas últimas 24 horas. Uma nova poderá ser enviada quando completar 24 horas do envio anterior.',
+            sharedTickets:
+                'Você já abriu um ticket nas últimas 24 horas (fale conosco, sugestão de habilidade ou ajuste de hierarquia). Um novo poderá ser aberto quando completar 24 horas do envio anterior; bugs podem ser reportados a qualquer momento.',
+        };
+        callbacks[429] = () => setProblem(quotaReachedMessages[quotaGroup || 'sharedTickets']);
         callbacks[400] = () => setProblem('Informe um e-mail válido.');
         callbacks[422] =() => setProblem('Confira os campos: algum deles não foi aceito.');
         callbacks['onUnexpectedHttpStatus'] = () => setProblem('Não foi possível enviar agora. Tente de novo em alguns instantes.');
@@ -92,6 +109,18 @@ const ContactUs = () => {
 
     return (
         <div className="fixed bottom-20 z-50 ltr:right-6 rtl:left-6">
+            {contactType && (
+                <ConfirmDialog
+                    visible={confirming}
+                    onHide={() => setConfirming(false)}
+                    header="Confirmar envio"
+                    message={getTicketConfirmMessage(contactType as TicketKind)}
+                    icon="pi pi-exclamation-triangle"
+                    acceptLabel="Sim, enviar"
+                    rejectLabel="Não"
+                    accept={sendConfirmed}
+                />
+            )}
             {open ? (
                 <div className="panel w-80 max-w-[calc(100vw-3rem)] shadow-lg">
                     <div className="mb-4 flex items-center justify-between">

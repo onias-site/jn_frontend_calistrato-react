@@ -56,7 +56,7 @@ export const BackendConcepts = () => {
     return (
         <div className="mt-6 flex items-start gap-6">
             <div className="panel min-w-0 flex-1" ref={accordionArea}>
-                <p className="mb-4">As regras de arquitetura que guiam o código do JobsNow, os centros de custo em que ele se divide e os repositórios onde ele está. Clique numa seção para ver o seu conteúdo.</p>
+                <p className="mb-4">As regras de arquitetura que guiam o código do Onias.Site, os centros de custo em que ele se divide e os repositórios onde ele está. Clique numa seção para ver o seu conteúdo.</p>
                 <Accordion multiple activeIndex={openSections} onTabChange={(e) => setOpenSections(e.index as number[])}>
                     {conceptSections.map((section) => (
                         <AccordionTab key={section.title} header={`${section.title} (${section.concepts.length})`} headerClassName="py-2 text-lg font-semibold">

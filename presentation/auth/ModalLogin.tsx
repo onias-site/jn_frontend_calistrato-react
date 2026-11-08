@@ -18,6 +18,7 @@ export interface ModalLoginProps {}
 
 export interface IModalLoginStore {
     retryAfterAuthentication: any;
+    dismissAction: any;
     selectedScreen: string;
     lockedToken: boolean;
     visible: boolean;
@@ -29,6 +30,8 @@ export interface IModalLoginStore {
     email: string;
     context: any;
     hideModal: () => void;
+    dismissModal: () => void;
+    setDismissAction: (dismissAction: any) => void;
     setEmail: (email: string) => void;
     setLoading: (loading: boolean) => void;
     setInvalid: (invalid: boolean) => void;
@@ -44,6 +47,17 @@ export interface IModalLoginStore {
 
 export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
     retryAfterAuthentication: null,
+
+    // o que fazer quando o usuário fecha o modal sem entrar (o login com sucesso não a executa); hideModal a limpa
+    dismissAction: null,
+
+    setDismissAction: (dismissAction: any) => set({ dismissAction }),
+
+    dismissModal: () => {
+        const { dismissAction, hideModal } = get();
+        hideModal();
+        dismissAction && dismissAction();
+    },
 
     lockedToken: false,
 
@@ -111,6 +125,7 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
     hideModal: () => {
         set({
             retryAfterAuthentication: null,
+            dismissAction: null,
             selectedScreen: 'RequestEmail',
             lockedToken: false,
             invalid: false,
@@ -140,7 +155,7 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
 }));
 
 export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
-    const { setLockedToken, lockedToken, invalid, title, selectedScreen, visible, hideModal, showModal, email, loading, setDetailMessage, detailMessage } = ModalLoginStore(
+    const { setLockedToken, lockedToken, invalid, title, selectedScreen, visible, dismissModal, showModal, email, loading, setDetailMessage, detailMessage } = ModalLoginStore(
         (state: IModalLoginStore) => ({
             ...state,
         })
@@ -193,7 +208,7 @@ export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
         cursor: 'not-allowed',
     };
     return (
-        <Modal title={title || screen.headerLabel} visible={visible} setVisible={(show) => (show ? showModal(selectedScreen, title) : hideModal())}>
+        <Modal title={title || screen.headerLabel} visible={visible} setVisible={(show) => (show ? showModal(selectedScreen, title) : dismissModal())}>
             <form>
                 <div className="relative mb-4" style={lockedToken ? disabledDiv : {}}>
                     {screen.component}

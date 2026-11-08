@@ -318,8 +318,15 @@ const languages = [
     },
 ];
 
-// em ordem alfabética, para quem procura o próprio idioma (até 2026-10-14 a lista era reordenada pelo id)
-languages.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+// os idiomas mais pedidos pelos recrutadores primeiro, nesta ordem (desde 2026-11-07; até então tudo em ordem alfabética,
+// e até 2026-10-14 pelo id); os demais vêm depois, em ordem alfabética, para quem procura o próprio idioma. Só muda a
+// ordem de exibição: o currículo grava o nome do idioma
+const languagesByRecruitersDemand = ['Inglês', 'Espanhol', 'Francês', 'Alemão', 'Italiano', 'Mandarim (Chinês)', 'Japonês', 'Coreano', 'Russo', 'Árabe', 'Holandês'];
+const demandRank = (name: string) => {
+    const rank = languagesByRecruitersDemand.indexOf(name);
+    return rank < 0 ? languagesByRecruitersDemand.length : rank;
+};
+languages.sort((a, b) => demandRank(a.name) - demandRank(b.name) || a.name.localeCompare(b.name, 'pt-BR'));
 
 export interface TabResumeProps{
 

@@ -6,7 +6,7 @@ const PASSWORD_RULES =
 
 export const loginFieldsHelp = {
     email:
-        'É o e-mail com que você entra no JobsNow. É também para ele que enviamos o token de criação de senha e os avisos sobre a sua conta. ' +
+        'É o e-mail com que você entra no Onias.Site. É também para ele que enviamos o token de criação de senha e os avisos sobre a sua conta. ' +
         'Como usar: digite um e-mail ao qual você tenha pleno acesso (ex.: nome@provedor.com) e clique em Avançar. ' +
         'Se for o seu primeiro acesso, pediremos que você confirme o e-mail e crie uma senha; se você já tiver uma senha, pediremos que a informe.',
 
@@ -16,13 +16,13 @@ export const loginFieldsHelp = {
         'Se perceber que digitou o e-mail errado antes, volte ao início pelo link abaixo e corrija.',
 
     loginPassword:
-        'É a senha que você criou para entrar no JobsNow com este e-mail. ' +
+        'É a senha que você criou para entrar no Onias.Site com este e-mail. ' +
         'Como usar: digite a sua senha e clique em Login; o ícone de olho ao lado mostra o que foi digitado. ' +
         PASSWORD_RULES +
         ' Depois de 3 tentativas erradas a senha é bloqueada por segurança e será preciso criar uma nova; se a esqueceu, use o link "Esqueceu sua senha?" abaixo.',
 
     newPassword:
-        'É a nova senha que você usará para entrar no JobsNow com este e-mail. ' +
+        'É a nova senha que você usará para entrar no Onias.Site com este e-mail. ' +
         'Como usar: digite a senha desejada; o indicador abaixo do campo mostra se ela é fácil ou difícil de descobrir, e o ícone de olho mostra o que foi digitado. ' +
         PASSWORD_RULES,
 
@@ -37,10 +37,10 @@ export const loginFieldsHelp = {
         'Depois de 3 tentativas erradas o token é bloqueado; se o e-mail não chegou, use o link de reenvio abaixo.',
 
     channel:
-        'É o canal pelo qual você conheceu o JobsNow; essa informação nos ajuda a saber onde divulgar a plataforma. ' +
+        'É o canal pelo qual você conheceu o Onias.Site; essa informação nos ajuda a saber onde divulgar a plataforma. ' +
         'Como usar: abra a lista e escolha a opção que mais se aproxima; se nenhuma servir, escolha "outros".',
 
     goal:
-        'É o que você pretende fazer no JobsNow: acompanhar salários e empregos, como candidato, ou ver currículos, como recrutador. ' +
+        'É o que você pretende fazer no Onias.Site: acompanhar salários e empregos, como candidato, ou ver currículos, como recrutador. ' +
         'Como usar: abra a lista e escolha o seu objetivo principal.',
 };

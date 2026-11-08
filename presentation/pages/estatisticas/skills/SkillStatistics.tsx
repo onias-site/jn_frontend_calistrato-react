@@ -10,8 +10,10 @@ import React, { useState } from 'react';
 import JnAjax from '@/app/JnAjax';
 import {
     ResumeCopy,
+    hasSkillsInTheCopy,
     isTechResumeCopy,
     readResumeCopy,
+    resumeHasTheSkill,
     resumeCopyFromSavedResume,
     saveResumeCopy,
     savedResumeFrom,
@@ -78,7 +80,7 @@ const SkillMonths = ({ skill, seniority, ddd }: { skill: string; seniority: stri
             setSituation('loaded');
         };
         callbacks['onUnexpectedHttpStatus'] = () => setSituation('error');
-        JnAjax.doAPersistedRequest(`statistics/skills/${seniority}/${ddd}/months?skill=${encodeURIComponent(skill)}`, callbacks, API);
+        JnAjax.doAPersistedRequest(`statistics/skills/${seniority}/${ddd}/months?skill=${encodeURIComponent(skill)}`, callbacks, API, JnAjax.PERSISTED_REQUEST_ONE_YEAR);
     }, [skill, seniority, ddd]);
 
     if (situation == 'error') {
@@ -210,7 +212,7 @@ const SkillsPie = ({ skills, vacancies }: { skills: SkillTotal[]; vacancies: num
         <div className="mb-6 rounded border border-[#d3d3d3] dark:border-[#1b2e4b]">
             <button type="button" className="flex w-full items-center gap-2 px-3 py-2 font-semibold" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
                 <i className={expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'} />
-                Ver distribuição por vagas
+                Ver distribuição por habilidades
             </button>
             {expanded && (
                 <div className="border-t border-[#d3d3d3] p-3 dark:border-[#1b2e4b]">
@@ -244,7 +246,7 @@ const TelegramGroupsAccordion = () => {
             setSituation('loaded');
         };
         callbacks['onUnexpectedHttpStatus'] = () => setSituation('error');
-        JnAjax.doAPersistedRequest('statistics/skills/telegramGroups', callbacks, API);
+        JnAjax.doAPersistedRequest('statistics/skills/telegramGroups', callbacks, API, JnAjax.PERSISTED_REQUEST_ONE_YEAR);
     };
 
     return (
@@ -285,8 +287,29 @@ const normalizeForFilter = (text: string) =>
         .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase();
 
-/** O grid paginado das skills, 50 por página, filtrado no navegador pelo nome da skill: cada linha expande o gráfico de linhas com os meses da skill. */
-const SkillsGrid = ({ skills, seniority, ddd }: { skills: SkillTotal[]; seniority: string; ddd: string }) => {
+/** Na pesquisa "Vagas compatíveis comigo", diz ao usuário, no título de cada habilidade, se o currículo dele tem a habilidade. */
+const SkillInTheResume = ({ hasTheSkill }: { hasTheSkill: boolean }) => {
+    if (hasTheSkill) {
+        return (
+            <span className="badge ml-2 inline-flex items-center gap-1 whitespace-nowrap bg-success text-xs" title="Esta habilidade está no seu currículo">
+                <i className="pi pi-check-circle text-xs" />
+                Você tem
+            </span>
+        );
+    }
+    return (
+        <span className="badge badge-outline-danger ml-2 inline-flex items-center gap-1 whitespace-nowrap text-xs" title="Esta habilidade não está no seu currículo">
+            <i className="pi pi-times-circle text-xs" />
+            Não está no seu currículo
+        </span>
+    );
+};
+
+/**
+ * O grid paginado das skills, 50 por página, filtrado no navegador pelo nome da skill: cada linha expande o gráfico de
+ * linhas com os meses da skill. Com resumeSkills (pesquisa "Vagas compatíveis comigo"), cada habilidade diz se está no currículo.
+ */
+const SkillsGrid = ({ skills, seniority, ddd, resumeSkills }: { skills: SkillTotal[]; seniority: string; ddd: string; resumeSkills: string[] | null }) => {
     const [expandedRows, setExpandedRows] = useState<DataTableExpandedRows>({});
     const [filter, setFilter] = useState('');
     const rankedSkills: RankedSkill[] = skills.map((item, index) => ({ ...item, position: index + 1 }));
@@ -329,7 +352,16 @@ const SkillsGrid = ({ skills, seniority, ddd }: { skills: SkillTotal[]; seniorit
                 size="small"
             >
                 <Column field="position" header="#" style={{ width: '4rem' }} />
-                <Column field="skill" header="Habilidade" body={(item: RankedSkill) => skillLabel(item.skill)} />
+                <Column
+                    field="skill"
+                    header="Habilidade"
+                    body={(item: RankedSkill) => (
+                        <span className="inline-flex flex-wrap items-center gap-y-1">
+                            {skillLabel(item.skill)}
+                            {resumeSkills && <SkillInTheResume hasTheSkill={resumeHasTheSkill(resumeSkills, item.skill)} />}
+                        </span>
+                    )}
+                />
                 <Column field="total" header="Vagas" style={{ width: '6rem' }} />
                 <Column
                     style={{ width: '10rem' }}
@@ -388,6 +420,8 @@ export const SkillStatistics = ({ initialSeniority = 'pleno', searchOnOpening = 
     const [total, setTotal] = useState(0);
     const [skills, setSkills] = useState<SkillTotal[]>([]);
     const [resumeToChooseDdd, setResumeToChooseDdd] = useState<ResumeCopy | null>(null);
+    // só a pesquisa "Vagas compatíveis comigo" preenche: as demais pesquisas não comparam com o currículo
+    const [resumeSkills, setResumeSkills] = useState<string[] | null>(null);
 
     const hideResult = () => {
         setSituation('idle');
@@ -408,16 +442,20 @@ export const SkillStatistics = ({ initialSeniority = 'pleno', searchOnOpening = 
             JnAjax.doAnAjaxRequest(uri, callbacks, 'GET', null as any, {}, API);
             return;
         }
-        JnAjax.doAPersistedRequest(uri, callbacks, API);
+        JnAjax.doAPersistedRequest(uri, callbacks, API, JnAjax.PERSISTED_REQUEST_ONE_YEAR);
     };
 
-    const search = () => searchBy(month, seniority, ddd);
+    const search = () => {
+        setResumeSkills(null);
+        searchBy(month, seniority, ddd);
+    };
 
     // o resultado segue os filtros da tela: eles passam a mostrar o que foi pesquisado, e os gráficos de linhas os usam
     const searchCompatiblePositions = (resume: ResumeCopy, chosenDdd: string) => {
         const chosenMonth = previousMonth();
         const chosenSeniority = seniorityOf(resume, new Date().getFullYear());
         setResumeToChooseDdd(null);
+        setResumeSkills(resume.skills);
         setMonth(chosenMonth);
         setSeniority(chosenSeniority);
         setDdd(chosenDdd);
@@ -467,7 +505,8 @@ export const SkillStatistics = ({ initialSeniority = 'pleno', searchOnOpening = 
     // a cópia do navegador só vale para quem fez login: sem ele, o endpoint responde 401 e pede o login
     const findCompatiblePositions = () => {
         const resumeCopy = JnAjax.hasLogin() ? readResumeCopy() : null;
-        if (resumeCopy) {
+        // a cópia gravada antes das habilidades entrarem nela é lida de novo do backend
+        if (resumeCopy && hasSkillsInTheCopy(resumeCopy)) {
             searchByTheResume(resumeCopy);
             return;
         }
@@ -577,7 +616,7 @@ export const SkillStatistics = ({ initialSeniority = 'pleno', searchOnOpening = 
                 {situation == 'loaded' && skills.length > 0 && (
                     <>
                         <SkillsPie skills={skills} vacancies={total} />
-                        <SkillsGrid skills={skills} seniority={seniority} ddd={ddd} />
+                        <SkillsGrid skills={skills} seniority={seniority} ddd={ddd} resumeSkills={resumeSkills} />
                     </>
                 )}
             </div>

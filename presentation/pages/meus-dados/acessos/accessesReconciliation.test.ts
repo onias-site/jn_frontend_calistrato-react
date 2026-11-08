@@ -1,7 +1,30 @@
-import { accessesFromGroups, groupParentId, reconcileLoginHistory, sha1AsTheBackEnd } from './accessesReconciliation';
+import { accessesFromGroups, currentSessionIndex, groupParentId, reconcileLoginHistory, sha1AsTheBackEnd } from './accessesReconciliation';
 
 const PC = { ip: '10.0.0.1', userAgent: 'Chrome' };
 const PHONE = { ip: '10.0.0.2', userAgent: 'Safari' };
+
+describe('currentSessionIndex', () => {
+    const accesses = reconcileLoginHistory(
+        [
+            { ...PC, loginDate: '01/10/2026 09:00:00' },
+            { ...PHONE, loginDate: '01/10/2026 10:00:00' },
+            { ...PC, loginDate: '01/10/2026 11:00:00' },
+            { ...PC, loginDate: '01/10/2026 12:00:00' },
+        ],
+        [{ ...PC, logoutDate: '01/10/2026 12:30:00' }],
+    );
+
+    it('é o login mais recente sem logout feito com este navegador; os outros sem logout expiraram', () => {
+        expect(accesses.map((access) => access.loginDate.substring(11, 13) + access.logoutDate.substring(11, 13))).toEqual(['1212', '11', '10', '09']);
+        expect(currentSessionIndex(accesses, 'Chrome')).toBe(1);
+        expect(currentSessionIndex(accesses, 'Safari')).toBe(2);
+    });
+
+    it('nenhuma sessão é a atual quando o navegador não tem login sem logout', () => {
+        expect(currentSessionIndex(accesses, 'Firefox')).toBe(-1);
+        expect(currentSessionIndex(accesses, '')).toBe(-1);
+    });
+});
 
 describe('sha1AsTheBackEnd', () => {
     it('escreve o SHA-1 como o BigInteger do Java, positivo', () => {

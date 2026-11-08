@@ -4,9 +4,10 @@ import React, { useEffect, useState } from 'react';
 import 'primereact/resources/themes/lara-light-cyan/theme.css';
 import 'primereact/resources/primereact.min.css';
 import 'primeicons/primeicons.css';
+import { Dialog } from 'primereact/dialog';
 import JnAjax from '@/app/JnAjax';
 import { groupParentId } from '../acessos/accessesReconciliation';
-import { TICKET_KINDS, Ticket, ticketsFromGroups } from './ticketsFromGroups';
+import { TICKET_KINDS, Ticket, abbreviate, ticketsFromGroups } from './ticketsFromGroups';
 
 type Situation = 'choosing' | 'loading' | 'loaded' | 'notLogged' | 'error';
 
@@ -28,6 +29,8 @@ export const Tickets = () => {
     const [kindValue, setKindValue] = useState('');
     const [situation, setSituation] = useState<Situation>('choosing');
     const [tickets, setTickets] = useState<Ticket[]>([]);
+    // a célula comprida demais para a grade, mostrada inteira no modal
+    const [fullCell, setFullCell] = useState<{ title: string; text: string } | null>(null);
 
     const kind = TICKET_KINDS.find((k) => k.value == kindValue);
 
@@ -98,17 +101,34 @@ export const Tickets = () => {
                                     <tr key={ticket.date + index}>
                                         <td className="whitespace-nowrap">{ticket.date || '—'}</td>
                                         <td className="whitespace-nowrap">{ticket.situation}</td>
-                                        {kind.columns.map((column) => (
-                                            <td key={column.title} className="whitespace-pre-line">
-                                                {column.value(ticket.json) || '—'}
-                                            </td>
-                                        ))}
+                                        {kind.columns.map((column) => {
+                                            const fullText = column.value(ticket.json);
+                                            const { shown, truncated } = abbreviate(fullText);
+                                            return (
+                                                <td key={column.title} className="whitespace-pre-line">
+                                                    {shown || '—'}
+                                                    {truncated && (
+                                                        <>
+                                                            {' '}
+                                                            <button type="button" className="whitespace-nowrap text-primary underline" onClick={() => setFullCell({ title: column.title, text: fullText })}>
+                                                                ver tudo
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </td>
+                                            );
+                                        })}
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
                 </>
+            )}
+            {fullCell && (
+                <Dialog visible header={fullCell.title} style={{ width: '90vw', maxWidth: '640px' }} onHide={() => setFullCell(null)}>
+                    <div className="whitespace-pre-line break-words">{fullCell.text}</div>
+                </Dialog>
             )}
         </div>
     );

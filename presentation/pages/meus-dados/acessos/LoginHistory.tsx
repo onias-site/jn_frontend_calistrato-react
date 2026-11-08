@@ -5,7 +5,18 @@ import 'primereact/resources/themes/lara-light-cyan/theme.css';
 import 'primereact/resources/primereact.min.css';
 import 'primeicons/primeicons.css';
 import JnAjax from '@/app/JnAjax';
-import { Access, CHILD_NAME, PARENT_NAME, accessesFromGroups, groupParentId } from './accessesReconciliation';
+import { Access, CHILD_NAME, PARENT_NAME, accessesFromGroups, currentSessionIndex, groupParentId } from './accessesReconciliation';
+
+/** A coluna Logout: a data do logout; sem ela, "Sessão atual" para a sessão deste navegador e "Expirou" para as demais. */
+const LogoutCell = ({ access, isCurrentSession }: { access: Access; isCurrentSession: boolean }) => {
+    if (access.logoutDate) {
+        return <>{access.logoutDate}</>;
+    }
+    if (isCurrentSession) {
+        return <span className="font-semibold text-success" title="A sessão aberta neste navegador">Sessão atual</span>;
+    }
+    return <span className="text-white-dark" title="A sessão expirou sem logout">Expirou</span>;
+};
 
 type Situation = 'loading' | 'loaded' | 'notLogged' | 'error';
 
@@ -52,6 +63,10 @@ export const LoginHistory = () => {
 
     useEffect(load, []);
 
+    // na pré-renderização do Next não há navigator (e a tabela ainda não aparece)
+    const browserUserAgent = typeof navigator == 'undefined' ? '' : navigator.userAgent;
+    const currentSession = currentSessionIndex(accesses, browserUserAgent);
+
     return (
         <div className="panel mt-6">
             {situation != 'loaded' ? (
@@ -79,7 +94,9 @@ export const LoginHistory = () => {
                                         <td>{access.ip}</td>
                                         <td>{access.userAgent}</td>
                                         <td>{access.loginDate}</td>
-                                        <td>{access.logoutDate || <span title="Sem logout: a sessão expirou ou ainda está aberta">—</span>}</td>
+                                        <td>
+                                            <LogoutCell access={access} isCurrentSession={index == currentSession} />
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>

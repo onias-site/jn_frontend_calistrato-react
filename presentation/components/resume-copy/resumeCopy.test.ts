@@ -3,7 +3,10 @@ jest.mock('pubsub-js', () => ({ publish: jest.fn() }));
 
 import JnAjax from '@/app/JnAjax';
 import {
+    hasSkillsInTheCopy,
     isTechResumeCopy,
+    resumeHasTheSkill,
+    resumeSkillsFrom,
     readResumeCopy,
     removeResumeCopy,
     resumeCopyFromSavedResume,
@@ -24,7 +27,7 @@ const fakeStorage = () => {
     };
 };
 
-const copy = { resumeType: 1, ddd: [11, 19], experienceStartYear: 2022 };
+const copy = { resumeType: 1, ddd: [11, 19], experienceStartYear: 2022, skills: ['java'] };
 
 describe('resumeCopy', () => {
     const useLogin = (email: string) => ((JnAjax as any).getLogin = () => ({ email, sessionToken: 'S' }));
@@ -62,10 +65,31 @@ describe('resumeCopy', () => {
         expect(savedResumeFrom({ vis_resume: {}, vis_inactive_resume: {} })).toBeUndefined();
     });
 
+    it('guarda só as habilidades que o currículo tem, com as implícitas, e compara sem o sufixo 123 e sem maiúsculas', () => {
+        const savedSkills = [
+            { skill: 'Java', word: 'java', type: 'skillsFromResume', category: 'skillsFromResume', parent: ['Programming'] },
+            { skill: 'Go123', word: 'golang', type: 'skillsFromResume', category: 'skillsFromResume' },
+            { skill: 'Programming', word: 'Programming', type: 'parent', category: 'parent' },
+            { skill: 'Cobol', word: 'cobol', type: 'excludedSkills', category: 'excludedSkills' },
+            { skill: 'Delphi', word: 'delphi', type: 'tooShort', category: 'discardedSkills' },
+        ];
+
+        const resumeSkills = resumeSkillsFrom(savedSkills);
+
+        expect(resumeSkills).toEqual(['java', 'programming', 'go']);
+        expect(['JAVA', 'Go', 'Go123', 'Programming', 'Cobol', 'Delphi', 'Python'].map((skill) => resumeHasTheSkill(resumeSkills, skill))).toEqual([true, true, true, true, false, false, false]);
+        expect(resumeSkillsFrom(undefined as any)).toEqual([]);
+    });
+
+    it('a cópia gravada antes das habilidades não serve para a pesquisa', () => {
+        expect(hasSkillsInTheCopy({ resumeType: 1, ddd: [11], experienceStartYear: 2020 } as any)).toBe(false);
+        expect(hasSkillsInTheCopy(copy)).toBe(true);
+    });
+
     it('monta a cópia do registro gravado e reconhece o currículo de tecnologia', () => {
         const fromRecord = resumeCopyFromSavedResume({ resumeType: 2, ddd: [10], experience: 2009, pj: 9000 });
 
-        expect(fromRecord).toEqual({ resumeType: 2, ddd: [10], experienceStartYear: 2009 });
+        expect(fromRecord).toEqual({ resumeType: 2, ddd: [10], experienceStartYear: 2009, skills: [] });
         expect(isTechResumeCopy(fromRecord)).toBe(false);
         expect(isTechResumeCopy(copy)).toBe(true);
     });

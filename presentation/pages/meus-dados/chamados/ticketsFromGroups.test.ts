@@ -1,4 +1,4 @@
-import { IN_ANALYSIS, TICKET_KINDS, ticketsFromGroups } from './ticketsFromGroups';
+import { CELL_MAX_CHARACTERS, IN_ANALYSIS, TICKET_KINDS, abbreviate, ticketsFromGroups } from './ticketsFromGroups';
 import { contactUsProblem } from '@/presentation/layouts/contactUsTypes';
 
 const kind = (value: string) => TICKET_KINDS.find((k) => k.value == value)!;
@@ -36,6 +36,37 @@ describe('ticketsFromGroups', () => {
 
     it('sem grupo em nenhum dos lados não há chamados', () => {
         expect(ticketsFromGroups({}, kind('clarifyDoubts'))).toEqual([]);
+    });
+});
+
+describe('abbreviate', () => {
+    it('mostra inteiro o texto que cabe na célula', () => {
+        expect(abbreviate('Corrigido, obrigado.')).toEqual({ shown: 'Corrigido, obrigado.', truncated: false });
+        expect(abbreviate('')).toEqual({ shown: '', truncated: false });
+    });
+
+    it('corta o texto comprido no último espaço, com reticências', () => {
+        const longText = 'palavra '.repeat(40).trim();
+
+        const { shown, truncated } = abbreviate(longText);
+
+        expect(truncated).toBe(true);
+        expect(shown.endsWith('palavra…')).toBe(true);
+        expect(shown.length).toBeLessThanOrEqual(CELL_MAX_CHARACTERS + 1);
+    });
+
+    it('corta nas 3 primeiras linhas o texto de muitas linhas curtas', () => {
+        const { shown, truncated } = abbreviate('a\nb\nc\nd');
+
+        expect(truncated).toBe(true);
+        expect(shown).toBe('a\nb\nc…');
+    });
+
+    it('corta no limite exato a palavra que não tem espaço', () => {
+        const { shown, truncated } = abbreviate('x'.repeat(CELL_MAX_CHARACTERS + 10));
+
+        expect(truncated).toBe(true);
+        expect(shown).toBe('x'.repeat(CELL_MAX_CHARACTERS) + '…');
     });
 });
 

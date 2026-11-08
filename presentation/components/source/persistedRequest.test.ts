@@ -77,6 +77,26 @@ describe('JnAjax.doAPersistedRequest', () => {
         expect(requests).toHaveLength(2);
     });
 
+    it('com o prazo de um ano, a resposta vale depois de 24 horas e vence só após um ano', () => {
+        const loadForAYear = () => {
+            const callbacks: any = {};
+            callbacks[200] = (body: any) => received.push(body);
+            JnAjax.doAPersistedRequest('statistics/skills/202610/pleno/10', callbacks, API, JnAjax.PERSISTED_REQUEST_ONE_YEAR);
+        };
+        loadForAYear();
+        requests[0].callbacks[200]({ total: 91 }, 200);
+        const now = new Date().getTime();
+        const getTime = jest.spyOn(Date.prototype, 'getTime');
+
+        getTime.mockReturnValue(now + JnAjax.PERSISTED_REQUEST_LIFETIME + 1);
+        loadForAYear();
+        expect(requests).toHaveLength(1);
+
+        getTime.mockReturnValue(now + JnAjax.PERSISTED_REQUEST_ONE_YEAR + 1);
+        loadForAYear();
+        expect(requests).toHaveLength(2);
+    });
+
     it('sem espaço, descarta só o que ela guardou e grava a resposta nova', () => {
         const storage = fakeStorage(2);
         useStorage(storage);

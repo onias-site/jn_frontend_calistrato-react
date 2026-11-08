@@ -1,7 +1,28 @@
 import JnAjax from '@/app/JnAjax';
 
-/** Só o que a pesquisa "Vagas compatíveis comigo" usa: salário, PCD e demais dados do currículo não vão para o navegador. */
-export type ResumeCopy = { resumeType: number; ddd: number[]; experienceStartYear: number };
+/**
+ * Só o que a pesquisa "Vagas compatíveis comigo" usa: salário, PCD e demais dados do currículo não vão para o navegador.
+ * skills são os nomes das habilidades que o currículo tem (as dele e as implícitas), já normalizados por skillKey; uma
+ * cópia gravada antes de 2026-11-07 não tem o campo e é lida de novo do backend.
+ */
+export type ResumeCopy = { resumeType: number; ddd: number[]; experienceStartYear: number; skills: string[] };
+
+/** As habilidades que o currículo tem: as da lista principal e as implícitas; as excluídas e as descartadas não contam. */
+const SKILL_TYPES_OF_THE_RESUME = ['skillsFromResume', 'parent'];
+
+/** Alguns nomes guardam o sufixo 123 para não serem achados nos textos: a comparação ignora o sufixo, as maiúsculas e os espaços das pontas. */
+export const skillKey = (skill: string) => skill.replace(/123$/, '').trim().toLowerCase();
+
+/** Os nomes das habilidades do campo skill do currículo (o gravado ou o que vai ser salvo), sem repetição. */
+export const resumeSkillsFrom = (savedSkills: any[]): string[] => {
+    const skillsOfTheResume = (savedSkills || []).filter((savedSkill: any) => savedSkill && SKILL_TYPES_OF_THE_RESUME.includes(savedSkill.type));
+    const names = skillsOfTheResume.flatMap((savedSkill: any) => [savedSkill.skill, ...(savedSkill.parent || [])]).filter((name: any) => typeof name == 'string');
+    return Array.from(new Set(names.map(skillKey)));
+};
+
+export const hasSkillsInTheCopy = (copy: ResumeCopy) => Array.isArray(copy.skills);
+
+export const resumeHasTheSkill = (resumeSkills: string[], skill: string) => resumeSkills.includes(skillKey(skill));
 
 const RESUME_COPY = 'resumeCopy';
 const COPY_STATUS = 200;
@@ -27,7 +48,12 @@ export const savedResumeFrom = (response: any) => {
 };
 
 /** O backend devolve em experience o ano em que a experiência começou. */
-export const resumeCopyFromSavedResume = (resume: any): ResumeCopy => ({ resumeType: resume.resumeType, ddd: resume.ddd, experienceStartYear: resume.experience });
+export const resumeCopyFromSavedResume = (resume: any): ResumeCopy => ({
+    resumeType: resume.resumeType,
+    ddd: resume.ddd,
+    experienceStartYear: resume.experience,
+    skills: resumeSkillsFrom(resume.skill),
+});
 
 export const isTechResumeCopy = (copy: ResumeCopy) => copy.resumeType == TECH_RESUME;
 

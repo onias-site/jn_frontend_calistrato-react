@@ -153,10 +153,12 @@ export default class JnAjax {
         JnAjax.doAnAjaxRequest(uri, callbacks, type, requestBody, headers, enviroment);
     }
 
-    // respostas públicas e caras de refazer (as estatísticas), guardadas no localStorage: sobrevivem a recarregar a página
-    // e a fechar o navegador, e vencem em 24 horas para que os dados de uma carga nova apareçam
+    // respostas públicas e caras de refazer (as estatísticas, a política de privacidade), guardadas no localStorage:
+    // sobrevivem a recarregar a página e a fechar o navegador, e vencem no prazo de cada uma (24 horas por padrão; as
+    // estatísticas, um ano)
     static PERSISTED_REQUEST_PREFIX = 'persistedRequest ';
     static PERSISTED_REQUEST_LIFETIME = 24 * 60 * 60 * 1000;
+    static PERSISTED_REQUEST_ONE_YEAR = 365 * JnAjax.PERSISTED_REQUEST_LIFETIME;
 
     static clearPersistedRequests() {
         try {
@@ -177,8 +179,8 @@ export default class JnAjax {
     }
 
     // sem espaço no localStorage, descarta o que está guardado e tenta uma vez; se ainda falhar, só deixa de guardar
-    static savePersistedRequest(key, responseBody) {
-        const expiresAt = new Date().getTime() + JnAjax.PERSISTED_REQUEST_LIFETIME;
+    static savePersistedRequest(key, responseBody, lifetime = JnAjax.PERSISTED_REQUEST_LIFETIME) {
+        const expiresAt = new Date().getTime() + lifetime;
         const persisted = JSON.stringify({ responseBody, expiresAt });
         try {
             localStorage.setItem(key, persisted);
@@ -191,8 +193,9 @@ export default class JnAjax {
     }
 
     // GET cuja resposta 200 fica no localStorage: a mesma pesquisa não volta ao backend enquanto a resposta valer. Os dados
-    // não são de um usuário, por isso a chave não leva o e-mail
-    static doAPersistedRequest(uri, callbacks = {}, enviroment = JnAjax.deafultEnviroment) {
+    // não são de um usuário, por isso a chave não leva o e-mail. O prazo (lifetime, em milissegundos) é de 24 horas quando
+    // não informado
+    static doAPersistedRequest(uri, callbacks = {}, enviroment = JnAjax.deafultEnviroment, lifetime = JnAjax.PERSISTED_REQUEST_LIFETIME) {
         const key = `${JnAjax.PERSISTED_REQUEST_PREFIX}${enviroment} ${uri}`;
         const original = callbacks[200];
         const persisted = JnAjax.readPersistedRequest(key);
@@ -201,7 +204,7 @@ export default class JnAjax {
             return;
         }
         callbacks[200] = (responseBody, httpStatus) => {
-            JnAjax.savePersistedRequest(key, responseBody);
+            JnAjax.savePersistedRequest(key, responseBody, lifetime);
             original(responseBody, httpStatus);
         };
         JnAjax.doAnAjaxRequest(uri, callbacks, 'GET', null, {}, enviroment);

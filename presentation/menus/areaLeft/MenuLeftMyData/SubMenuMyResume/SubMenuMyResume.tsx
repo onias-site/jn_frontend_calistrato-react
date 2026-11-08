@@ -16,16 +16,24 @@ import { NotAllowedCompanyStore } from '@/presentation/menus/areaLeft/MenuLeftMy
 import { SkillsInternalListStore, TabSkillsStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabSkills/ChooserSkills';
 
 import { Tabs } from '@/presentation/components/source/Tabs';
-import { removeResumeCopy, resumeCopyFromSavedResume, resumeSavedForTheSearch, saveResumeCopy } from '@/presentation/components/resume-copy/resumeCopy';
+import { removeResumeCopy, resumeCopyFromSavedResume, resumeSavedForTheSearch, resumeSkillsFrom, saveResumeCopy } from '@/presentation/components/resume-copy/resumeCopy';
 import JnAjax from '@/app/JnAjax';
 import { useRouter } from 'next/navigation';
 import { create } from 'zustand';
 import PubSub from 'pubsub-js';
 import { sha1 } from 'js-sha1';
+import {
+    ResumeDailyAction,
+    getResumeDailyActionBlockMessage,
+    getResumeDailyActionConfirmMessage,
+    getResumeDailyLimitReachedMessage,
+    recordResumeDailyAction,
+} from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/resumeDailyActions';
 
 // situação do currículo no backend: ativo em vis_resume, inativo na gêmea vis_inactive_resume, ou nenhum dos dois.
-// 'unknown' enquanto não se sabe (ainda carregando, ou sem login: aí a tela não mostra nada)
-export type ResumeStatus = 'unknown' | 'none' | 'active' | 'inactive';
+// 'notLogged' quando a busca leva 401 (sem login, login inválido ou sessão expirada): a faixa convida a fazer login.
+// 'unknown' enquanto não se sabe (ainda carregando, ou status inesperado: aí a tela não mostra nada)
+export type ResumeStatus = 'unknown' | 'notLogged' | 'none' | 'active' | 'inactive';
 
 export interface ISubMenuMyResumeStore {
     hasTabSkills: boolean;
@@ -34,6 +42,10 @@ export interface ISubMenuMyResumeStore {
     setResumeStatus: (resumeStatus: ResumeStatus) => void;
     // muda a cada exclusão: é a key das abas, que assim são montadas de novo e perdem o estado local dos componentes
     formVersion: number;
+    // texto do currículo cujas habilidades a aba Habilidades mostra: o "Salvar dados" das abas do meio não salva um
+    // texto novo sem que as habilidades dele tenham sido buscadas
+    skillsLoadedFromText: string;
+    setSkillsLoadedFromText: (skillsLoadedFromText: string) => void;
 }
 
 export const SubMenuMyResumeStore = create<ISubMenuMyResumeStore>((set) => ({
@@ -42,6 +54,8 @@ export const SubMenuMyResumeStore = create<ISubMenuMyResumeStore>((set) => ({
     setResumeStatus: (resumeStatus: ResumeStatus) => set({ resumeStatus }),
     resumeStatus: 'unknown',
     formVersion: 0,
+    skillsLoadedFromText: '',
+    setSkillsLoadedFromText: (skillsLoadedFromText: string) => set({ skillsLoadedFromText }),
 }));
 
 // as stores das abas como estavam ao abrir a tela, antes de qualquer preenchimento
@@ -57,11 +71,13 @@ const clearTheForm = () => {
     removeResumeCopy();
     storesOfTheTabs.forEach((store, index) => store.setState(initialStatesOfTheTabs[index], true));
     const { formVersion } = SubMenuMyResumeStore.getState();
-    SubMenuMyResumeStore.setState({ hasTabSkills: false, resumeStatus: 'none', formVersion: formVersion + 1 });
+    SubMenuMyResumeStore.setState({ hasTabSkills: false, resumeStatus: 'none', formVersion: formVersion + 1, skillsLoadedFromText: '' });
 };
 
 const resumeStatusLabels: Record<Exclude<ResumeStatus, 'unknown'>, { text: string; className: string }> = {
-    none: { text: 'Você ainda não tem currículo salvo', className: 'resume-status resume-status-none' },
+    // o texto desta situação é montado em NotLoggedText, que tem o link para o modal de login
+    notLogged: { text: '', className: 'resume-status resume-status-not-logged' },
+    none:{ text: 'Você ainda não tem currículo salvo', className: 'resume-status resume-status-none' },
     active: { text: 'Currículo ativo: visível para os recrutadores', className: 'resume-status resume-status-active' },
     inactive: { text: 'Currículo inativo: oculto dos recrutadores', className: 'resume-status resume-status-inactive' },
 };
@@ -71,14 +87,14 @@ const isFilled = (record: any) => !!record && Object.keys(record).length > 0;
 /**
  * Busca a situação do currículo ao entrar na tela (GetData: o registro vem debaixo do nome da entidade onde está).
  * Entrar na tela não exige login (só salvar exige): sem login, ou com a sessão expirada, o 401 não abre o modal de
- * login, apenas deixa a situação desconhecida, como na busca da sugestão de habilidade.
+ * login, apenas mostra a faixa que convida a fazer login (NotLoggedText).
  */
 const loadResumeStatus = (setResumeStatus: (resumeStatus: ResumeStatus) => void, onResumeFound: (resume: any) => void = () => {}) => {
     const callbacks: any = {};
     callbacks[401] = () => {
         // sem login o JnAjax chama o 401 antes de enviar, e não desliga o carregamento que já ligou
         JnAjax.setNotLoading()();
-        setResumeStatus('unknown');
+        setResumeStatus('notLogged');
     };
     callbacks[200] = (response: any) => {
         const data = response || {};
@@ -102,6 +118,27 @@ const loadResumeStatus = (setResumeStatus: (resumeStatus: ResumeStatus) => void,
     callbacks['onUnexpectedHttpStatus'] = () => setResumeStatus('unknown');
     // GET sem corpo: com {} o jQuery poria "?{}" na URL
     JnAjax.doAnAjaxRequest('resume/{email}', callbacks, 'GET', null as any, {}, 'http://localhost:8081');
+};
+
+/**
+ * Faixa de quem não está logado (401 na busca do currículo): o "faça login" abre o modal de login (o mesmo do 401 das
+ * ações) e, depois de autenticar, a busca é refeita e as abas são preenchidas com o currículo gravado, se houver.
+ */
+const NotLoggedText = ({ setResumeStatus }: { setResumeStatus: (resumeStatus: ResumeStatus) => void }) => {
+    const retryAfterAuthentication = () => loadResumeStatus(setResumeStatus, loadSavedResume);
+    const openLoginModal = (event: React.MouseEvent) => {
+        event.preventDefault();
+        PubSub.publish('httpStatus401', retryAfterAuthentication);
+    };
+    return (
+        <span>
+            Você não está logado! Caso tenha cadastrado currículo conosco,{' '}
+            <a href="#" onClick={openLoginModal} className="resume-status-login-link">
+                faça login
+            </a>{' '}
+            que seus dados aparecerão aqui.
+        </span>
+    );
 };
 
 // o rótulo que o backend dá a cada habilidade em skills/fromText (VisServiceSkills.putLabel): a própria habilidade, ou
@@ -146,14 +183,39 @@ const loadSavedResume = (resume: any) => {
     isTechResume && loadSavedSkills(resume.skill || []);
 };
 
+const currentEmail = (): string => {
+    const login: any = JnAjax.getLogin() || {};
+    return login.email || '';
+};
+
+// Limite de uma vez ao dia de cada ação sobre o currículo salvo (desde 2026-11-07): avisa e devolve true quando a marca
+// do navegador diz que a ação já foi feita nas últimas 24 horas, sem abrir a confirmação nem ir ao backend
+const isDoneToday = (action: ResumeDailyAction) => {
+    const blockMessage = getResumeDailyActionBlockMessage(currentEmail(), action);
+    if (!blockMessage) {
+        return false;
+    }
+    PubSub.publish('showMessage', { summary: 'Limite diário atingido', detail: blockMessage, severity: 'warn' });
+    return true;
+};
+
+// 429 do backend: a ação já foi feita nas últimas 24 horas (em outra janela ou outro navegador); a marca passa a valer aqui
+const getHandler429 = (action: ResumeDailyAction) => () => {
+    recordResumeDailyAction(currentEmail(), action);
+    PubSub.publish('showMessage', { summary: 'Limite diário atingido', detail: getResumeDailyLimitReachedMessage(action), severity: 'warn' });
+};
+
 /**
  * Reativa ou inativa o currículo (ChangeStatus: o ativo vai para a gêmea, o inativo volta para a principal).
- * É ação do usuário: aqui o 401 abre o modal de login e, depois dele, a ação é refeita.
+ * É ação do usuário: aqui o 401 abre o modal de login e, depois dele, a ação é refeita. Uma de cada por dia (429).
  */
 const changeResumeStatus = (newStatus: ResumeStatus, setResumeStatus: (resumeStatus: ResumeStatus) => void) => {
+    const action: ResumeDailyAction = newStatus === 'active' ? 'reactivation' : 'inactivation';
     const callbacks: any = {};
     callbacks['retryAfterAuthentication'] = () => changeResumeStatus(newStatus, setResumeStatus);
+    callbacks[429] = getHandler429(action);
     callbacks[200] = () => {
+        recordResumeDailyAction(currentEmail(), action);
         setResumeStatus(newStatus);
         // título e detalhe diferentes: até 2026-10-15 o toast repetia o título no corpo (achado 29)
         const reactivated = newStatus === 'active';
@@ -174,12 +236,14 @@ const changeResumeStatus = (newStatus: ResumeStatus, setResumeStatus: (resumeSta
 
 /**
  * Apaga de vez o currículo, esteja onde estiver (Delete: deleteAnyWhere da entidade). Como no reativar, o 401 abre o
- * modal de login e a ação é refeita depois dele.
+ * modal de login e a ação é refeita depois dele. Uma exclusão por dia (429), mesmo depois de cadastrar de novo.
  */
 const deleteResume = (setResumeStatus: (resumeStatus: ResumeStatus) => void) => {
     const callbacks: any = {};
     callbacks['retryAfterAuthentication'] = () => deleteResume(setResumeStatus);
+    callbacks[429] = getHandler429('exclusion');
     callbacks[200] = () => {
+        recordResumeDailyAction(currentEmail(), 'exclusion');
         clearTheForm();
         PubSub.publish('showMessage', { summary: 'Currículo excluído', detail: 'Todos os dados do seu currículo foram apagados.' });
     };
@@ -205,12 +269,12 @@ const ResumeStatusButtons = ({ resumeStatus, setResumeStatus }: { resumeStatus: 
 
     const statusButton =
         resumeStatus === 'active' ? (
-            <button onClick={() => setConfirmingInactivate(true)} type="button" className="btn btn-warning whitespace-nowrap">
+            <button onClick={() => !isDoneToday('inactivation') && setConfirmingInactivate(true)} type="button" className="btn btn-warning whitespace-nowrap">
                 <i className="pi pi-eye-slash" style={{ marginRight: '8px' }} />
                 Inativar
             </button>
         ) : (
-            <button onClick={() => setConfirmingReactivate(true)} type="button" className="btn btn-success whitespace-nowrap">
+            <button onClick={() => !isDoneToday('reactivation') && setConfirmingReactivate(true)} type="button" className="btn btn-success whitespace-nowrap">
                 <i className="pi pi-replay" style={{ marginRight: '8px' }} />
                 Reativar
             </button>
@@ -222,7 +286,7 @@ const ResumeStatusButtons = ({ resumeStatus, setResumeStatus }: { resumeStatus: 
                 visible={confirmingInactivate}
                 onHide={() => setConfirmingInactivate(false)}
                 header="Inativar currículo"
-                message="Seu currículo deixará de aparecer para os recrutadores até que você o reative. Deseja continuar?"
+                message={`Seu currículo deixará de aparecer para os recrutadores até que você o reative. ${getResumeDailyActionConfirmMessage('inactivation')}`}
                 icon="pi pi-exclamation-triangle"
                 acceptLabel="Sim, inativar"
                 rejectLabel="Não"
@@ -232,7 +296,7 @@ const ResumeStatusButtons = ({ resumeStatus, setResumeStatus }: { resumeStatus: 
                 visible={confirmingReactivate}
                 onHide={() => setConfirmingReactivate(false)}
                 header="Reativar currículo"
-                message="Seu currículo voltará a aparecer para os recrutadores. Deseja continuar?"
+                message={`Seu currículo voltará a aparecer para os recrutadores. ${getResumeDailyActionConfirmMessage('reactivation')}`}
                 icon="pi pi-question-circle"
                 acceptLabel="Sim, reativar"
                 rejectLabel="Não"
@@ -242,14 +306,14 @@ const ResumeStatusButtons = ({ resumeStatus, setResumeStatus }: { resumeStatus: 
                 visible={confirmingDelete}
                 onHide={() => setConfirmingDelete(false)}
                 header="Excluir currículo"
-                message="Todos os dados do seu currículo serão apagados de vez, sem como recuperar. Deseja continuar?"
+                message={`Todos os dados do seu currículo serão apagados de vez, sem como recuperar. ${getResumeDailyActionConfirmMessage('exclusion')}`}
                 icon="pi pi-exclamation-triangle"
                 acceptLabel="Sim, excluir"
                 rejectLabel="Não"
                 accept={() => deleteResume(setResumeStatus)}
             />
             {statusButton}
-            <button onClick={() => setConfirmingDelete(true)} type="button" className="btn btn-danger whitespace-nowrap">
+            <button onClick={() => !isDoneToday('exclusion') && setConfirmingDelete(true)} type="button" className="btn btn-danger whitespace-nowrap">
                 <i className="pi pi-trash" style={{ marginRight: '8px' }} />
                 Excluir
             </button>
@@ -332,13 +396,18 @@ const saveResume = (stateSkills: any, stateResume: any, stateLanguage: any, stat
     });
 
     const callbacks: any = {};
+    // salvar um currículo que já existe (ativo ou inativo) é atualização: uma por dia (429); cadastrar não tem limite
+    const { resumeStatus } = SubMenuMyResumeStore.getState();
+    const isUpdate = resumeStatus === 'active' || resumeStatus === 'inactive';
 
     callbacks['retryAfterAuthentication'] = () => saveResume(stateSkills, stateResume, stateLanguage, stateSalary, stateRegioes, stateOptions, onSaved);
+    callbacks[429] = getHandler429('update');
     callbacks[200] = () => {
+        isUpdate && recordResumeDailyAction(currentEmail(), 'update');
         // callbacks[200] = (responseFromBackEnd: any) => {
         // salvar sempre deixa o currículo na entidade principal (reativa o inativo)
         SubMenuMyResumeStore.getState().setResumeStatus('active');
-        saveResumeCopy({ resumeType, ddd, experienceStartYear: new Date().getFullYear() - experience });
+        saveResumeCopy({ resumeType, ddd, experienceStartYear: new Date().getFullYear() - experience, skills: resumeSkillsFrom(skill) });
         PubSub.publish('showMessage', {
             summary: 'Currículo salvo com sucesso',
             detail: 'Seu currículo está ativo e visível para os recrutadores.',
@@ -369,6 +438,29 @@ const SubMenuMyResume = () => {
     useEffect(() => loadResumeStatus(setResumeStatus, loadSavedResume), []);
     const resumeStatusLabel = resumeStatus === 'unknown' ? null : resumeStatusLabels[resumeStatus];
 
+    // edição de currículo já salvo (ativo ou inativo): salvar é atualização, uma por dia, e pede confirmação
+    const isEditing = resumeStatus === 'active' || resumeStatus === 'inactive';
+    const [confirmingUpdate, setConfirmingUpdate] = useState(false);
+    const confirmTheSave = () => saveResume(stateSkills, stateResume, stateLanguage, stateSalary, stateRegioes, stateOptions, returnToThePendingSearch);
+    // o "Salvar dados" de qualquer aba: confere as pendências de todas as abas; cadastrar salva direto, atualizar abre a
+    // confirmação, a não ser que a atualização do dia já tenha sido feita (o aviso sai como as pendências)
+    const requestSave = (): string[] => {
+        const formErrors = getAllPendingRequirements(stateSkills, stateResume, stateLanguage, stateSalary, stateRegioes, stateOptions);
+        if (formErrors.length) {
+            return formErrors;
+        }
+        if (!isEditing) {
+            confirmTheSave();
+            return [];
+        }
+        const blockMessage = getResumeDailyActionBlockMessage(currentEmail(), 'update');
+        if (blockMessage) {
+            return [blockMessage];
+        }
+        setConfirmingUpdate(true);
+        return [];
+    };
+
     const tabs = [
         {
             label: 'Currículo',
@@ -386,7 +478,7 @@ const SubMenuMyResume = () => {
         {
             label: 'Salários',
             icon: 'pi pi-dollar',
-            onMoveOnFowardTabs: () => saveResume(stateSkills, stateResume, stateLanguage, stateSalary, stateRegioes, stateOptions, returnToThePendingSearch),
+            onMoveOnFowardTabs: requestSave,
             getPendingRequirements: () => getAllPendingRequirements(stateSkills, stateResume, stateLanguage, stateSalary, stateRegioes, stateOptions),
         },
     ];
@@ -405,16 +497,37 @@ const SubMenuMyResume = () => {
 
     const statusButtons = <ResumeStatusButtons resumeStatus={resumeStatus} setResumeStatus={setResumeStatus} />;
 
+    // edição de currículo já salvo: cada aba, menos a última, ganha o "Salvar dados", igual ao da última
+    const saveFromAnyTab = () => {
+        const typedResumeText = stateResume.resumeText || '';
+        const skillsOutdated = isTechResume(stateResume) && !!typedResumeText.trim() && typedResumeText !== stateSubMenuMyResume.skillsLoadedFromText;
+        if (skillsOutdated) {
+            return ['Aba Currículo: você colou um texto novo do currículo. Avance até a aba Habilidades para conferir as habilidades encontradas nele antes de salvar.'];
+        }
+        return requestSave();
+    };
+    const saveShortcutButton = isEditing ? { label: 'Salvar dados', icon: 'pi pi-save', onClick: saveFromAnyTab } : undefined;
+
     return (
         <div className="card">
+            <ConfirmDialog
+                visible={confirmingUpdate}
+                onHide={() => setConfirmingUpdate(false)}
+                header="Atualizar currículo"
+                message={`Os dados do seu currículo serão substituídos pelos desta tela. ${getResumeDailyActionConfirmMessage('update')}`}
+                icon="pi pi-question-circle"
+                acceptLabel="Sim, atualizar"
+                rejectLabel="Não"
+                accept={confirmTheSave}
+            />
             {resumeStatusLabel && (
                 <div className={`${resumeStatusLabel.className} resume-status-actions`}>
-                    <span>{resumeStatusLabel.text}</span>
+                    {resumeStatus === 'notLogged' ? <NotLoggedText setResumeStatus={setResumeStatus} /> : <span>{resumeStatusLabel.text}</span>}
                     {statusButtons}
                 </div>
             )}
             {hasTabSkills ? (
-                <Tabs key={stateSubMenuMyResume.formVersion} tabs={tabs} lastButtonLabel="Salvar dados" lastButtonIcon="pi pi-save">
+                <Tabs key={stateSubMenuMyResume.formVersion} tabs={tabs} lastButtonLabel="Salvar dados" lastButtonIcon="pi pi-save" shortcutButton={saveShortcutButton}>
                     <TabResume />
                     <TabLanguages />
                     <TabSkills2 getAccordionList={getImplicitSkills} />
@@ -422,7 +535,7 @@ const SubMenuMyResume = () => {
                     <TabSalary />
                 </Tabs>
             ) : (
-                <Tabs key={stateSubMenuMyResume.formVersion} tabs={tabs} lastButtonLabel="Salvar dados" lastButtonIcon="pi pi-save">
+                <Tabs key={stateSubMenuMyResume.formVersion} tabs={tabs} lastButtonLabel="Salvar dados" lastButtonIcon="pi pi-save" shortcutButton={saveShortcutButton}>
                     <TabResume />
                     <TabLanguages />
                     <TabOptions />
@@ -455,7 +568,10 @@ const loadSkillsFromBackEnd = (stateResume: any, stateSkills: any, stateSubMenuM
     }
 
     const callbacks: any = {};
-    callbacks[200] = (responseFromBackEnd: any) => putSkillsInStore(responseFromBackEnd, stateSkills, requestSkillsToBackEnd, stateSubMenuMyResume);
+    callbacks[200] = (responseFromBackEnd: any) => {
+        putSkillsInStore(responseFromBackEnd, stateSkills, requestSkillsToBackEnd, stateSubMenuMyResume);
+        SubMenuMyResumeStore.getState().setSkillsLoadedFromText(requestSkillsToBackEnd.text);
+    };
     const requestSkillsToBackEnd = createRequestSkillsToBackEnd(stateResume, stateSkills);
 
     JnAjax.doAnAjaxRequest('skills/fromText', callbacks, 'POST', requestSkillsToBackEnd, {}, 'http://localhost:8081');

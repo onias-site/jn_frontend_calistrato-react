@@ -129,6 +129,15 @@ export const reconcileLoginHistory = (logins: Login[], logouts: Logout[]): Acces
 };
 
 /**
+ * A sessão aberta neste navegador: o login mais recente sem logout feito com o mesmo navegador (userAgent). Os outros
+ * logins sem logout são sessões que expiraram.
+ * @param accesses os acessos, do login mais recente ao mais antigo (como reconcileLoginHistory os devolve)
+ * @returns a posição da sessão atual em accesses, ou -1 quando nenhum acesso é dela
+ */
+export const currentSessionIndex = (accesses: Access[], userAgent: string): number =>
+    accesses.findIndex((access) => access.logoutDate == '' && access.userAgent == userAgent);
+
+/**
  * Os acessos a partir da resposta do endpoint dos dois lados: o child de cada lado é uma lista de textos JSON.
  * @param groupOnBothSides a resposta, com o grupo de cada lado sob o nome da sua entidade ({} no lado onde não existe)
  */

@@ -23,6 +23,8 @@ export interface ITabResumeStore {
     resumeType: any;
     // o currículo de tecnologia já salvo traz as habilidades gravadas: sem texto novo, elas são mantidas
     savedTechResume: boolean;
+    // já existe currículo gravado (de qualquer tipo): o memo vem vazio e o placeholder explica por quê
+    savedResume: boolean;
 
     loadFromSavedResume: (resume: any) => void;
     onMoveOnFowardTabs: () => string[];
@@ -51,6 +53,7 @@ export const TabResumeStore = create<ITabResumeStore>((set, get) => ({
     resumeText: '',
     lastJob: '',
     savedTechResume: false,
+    savedResume: false,
     // o texto do currículo não é gravado (LGPD): volta vazio
     loadFromSavedResume: (resume: any) => {
         const resumeType = resumeTypes.filter((type) => type.id == resume.resumeType)[0] || resumeTypes[0];
@@ -62,6 +65,7 @@ export const TabResumeStore = create<ITabResumeStore>((set, get) => ({
             notAllowedCompany: resume.notAllowedCompany || [],
             resumeText: '',
             savedTechResume: resumeType.id == 1,
+            savedResume: true,
             fieldErrors: {},
         });
     },
@@ -107,7 +111,20 @@ const validateResume = ({ resumeType, desiredJob, lastJob, linkedinAddress, notA
     return { errors, fieldErrors };
 };
 
-export const TabResume: React.FC<TabResumeProps> = ({}) => {
+const emptyResumeTextPlaceholder = 'Copie o texto do seu currículo e cole aqui.';
+const savedResumeTextPlaceholder =
+    'Seu currículo já está cadastrado, mas o texto dele não aparece aqui porque não o guardamos: para nos resguardar da LGPD (Lei Geral de Proteção de Dados), gravamos somente o link do seu linkedin. Copie o texto do seu currículo e cole aqui.';
+const savedTechResumeTextPlaceholder =
+    'Seu currículo já está cadastrado, mas o texto dele não aparece aqui porque não o guardamos: para nos resguardar da LGPD (Lei Geral de Proteção de Dados), gravamos somente o link do seu linkedin e as habilidades encontradas no texto. As habilidades gravadas continuam valendo; cole aqui o texto do seu currículo somente se ele mudou.';
+
+const getResumeTextPlaceholder = (savedResume: boolean, savedTechResume: boolean) => {
+    if (savedTechResume) {
+        return savedTechResumeTextPlaceholder;
+    }
+    return savedResume ? savedResumeTextPlaceholder : emptyResumeTextPlaceholder;
+};
+
+export const TabResume:React.FC<TabResumeProps> = ({}) => {
     const {
         fieldErrors,
         resumeType,
@@ -122,6 +139,8 @@ export const TabResume: React.FC<TabResumeProps> = ({}) => {
         setNotAllowedCompany,
         setLinkedinAddress,
         setResumeType,
+        savedResume,
+        savedTechResume,
     } = TabResumeStore((state: ITabResumeStore) => ({ ...state }));
 
     return (
@@ -189,7 +208,7 @@ export const TabResume: React.FC<TabResumeProps> = ({}) => {
                 >
                     <InputTextarea
                         id = "resumeText"
-                        placeholder="Copie o texto do seu currículo e cole aqui."
+                        placeholder={getResumeTextPlaceholder(savedResume, savedTechResume)}
                         invalid={fieldErrors.resumeText}
                         style={{ width: '75%' }}
                         value={resumeText}

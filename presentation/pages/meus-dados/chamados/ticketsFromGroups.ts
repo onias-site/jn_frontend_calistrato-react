@@ -66,7 +66,26 @@ const sortable = (date: string): string => {
     return year + month + day + (time || '').replace(/:/g, '');
 };
 
-const parseAll = (children: string[] | undefined): any[] => (children || []).map((child) => JSON.parse(child));
+/** O máximo de caracteres e de linhas que uma célula da grade mostra; acima disso, o texto completo vai para um modal. */
+export const CELL_MAX_CHARACTERS = 120;
+export const CELL_MAX_LINES = 3;
+
+/**
+ * O texto de uma célula da grade: inteiro quando cabe, ou o começo dele (até CELL_MAX_CHARACTERS caracteres e
+ * CELL_MAX_LINES linhas, cortado no último espaço) com reticências, sinalizando que o completo deve ir para o modal.
+ */
+export const abbreviate = (fullText: string): { shown: string; truncated: boolean } => {
+    const lines = fullText.split('\n');
+    const fits = fullText.length <= CELL_MAX_CHARACTERS && lines.length <= CELL_MAX_LINES;
+    if (fits) return { shown: fullText, truncated: false };
+    const firstLines = lines.slice(0, CELL_MAX_LINES).join('\n');
+    const beginning = firstLines.slice(0, CELL_MAX_CHARACTERS);
+    const lastSpace = beginning.lastIndexOf(' ');
+    const cut = lastSpace > CELL_MAX_CHARACTERS / 2 ? beginning.slice(0, lastSpace) : beginning;
+    return { shown: cut.trimEnd() + '…', truncated: true };
+};
+
+const parseAll =(children: string[] | undefined): any[] => (children || []).map((child) => JSON.parse(child));
 
 /**
  * Os chamados de um tipo a partir da resposta do endpoint dos dois lados, do mais recente ao mais antigo.

@@ -4,7 +4,9 @@ import React, { useEffect, useState } from 'react';
 import 'primereact/resources/themes/lara-light-cyan/theme.css';
 import 'primereact/resources/primereact.min.css';
 import 'primeicons/primeicons.css';
+import { useRouter } from 'next/navigation';
 import JnAjax from '@/app/JnAjax';
+import { ModalLoginStore } from '@/presentation/auth/ModalLogin';
 import { MonthPicker, monthParameter, previousMonth } from '@/presentation/components/month-picker/MonthPicker';
 import { ViewedResumeDetails } from './ViewedResumeDetails';
 
@@ -50,6 +52,7 @@ export const ViewedResumesOfTheMonth = () => {
     const [situation, setSituation] = useState<Situation>('loading');
     const [views, setViews] = useState<ViewedResume[]>([]);
     const [expanded, setExpanded] = useState<string[]>([]);
+    const router = useRouter();
 
     const load = (chosenMonth: string) => () => {
         setSituation('loading');
@@ -63,6 +66,8 @@ export const ViewedResumesOfTheMonth = () => {
             // sem login o JnAjax chama o 401 antes de enviar, e não desliga o carregamento que já ligou
             JnAjax.setNotLoading()();
             setSituation('notLogged');
+            // fechar o modal sem entrar leva à tela inicial: aqui ficaria só uma tela vazia
+            ModalLoginStore.getState().setDismissAction(() => router.push('/'));
             JnAjax.getHandler401(load(chosenMonth))();
         };
         callbacks['onUnexpectedHttpStatus'] = () => setSituation('error');
