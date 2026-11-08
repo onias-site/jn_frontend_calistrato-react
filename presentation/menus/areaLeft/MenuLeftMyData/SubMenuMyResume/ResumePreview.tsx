@@ -63,9 +63,21 @@ export const ResumePreview = ({ opened, onClose }: { opened: boolean; onClose: (
     };
 
     return (
-        <Modal opened={opened} onClose={onClose} size="900px" title="Prévia do currículo">
-            <iframe ref={frame} title="Prévia do currículo" srcDoc={document} className="h-[72vh] w-full rounded-md border border-white-light bg-[#f3f4f6] dark:border-[#1b2e4b]" />
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        // o modal tem altura fixa na tela e não rola: a única rolagem é a do documento, dentro do iframe (até 2026-11-08
+        // eram duas barras, a do modal e a do documento)
+        <Modal
+            opened={opened}
+            onClose={onClose}
+            size="900px"
+            title="Prévia do currículo"
+            yOffset="3vh"
+            styles={{
+                content: { height: '94vh', display: 'flex', flexDirection: 'column' },
+                body: { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' },
+            }}
+        >
+            <iframe ref={frame} title="Prévia do currículo" srcDoc={document} className="min-h-0 w-full flex-1 rounded-md border border-white-light bg-[#f3f4f6] dark:border-[#1b2e4b]" />
+            <div className="mt-4 flex shrink-0 flex-wrap items-center justify-between gap-3">
                 <p className="text-sm text-white-dark">É assim que os recrutadores veem o seu currículo. Na impressão, escolha "Salvar como PDF" para guardar o arquivo.</p>
                 <div className="flex gap-2">
                     <button type="button" className="btn btn-outline-dark" onClick={onClose}>
