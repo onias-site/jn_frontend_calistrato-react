@@ -56,6 +56,12 @@ export const Tabs: React.FC<TabsProps> = ({
     shortcutButton,
 }) => {
     const [activeIndex, setActiveIndex] = useState(0);
+    // a caixa de pendências só aparece depois de o usuário tentar avançar ou salvar nesta aba: a aba não abre já em erro
+    const [attempted, setAttempted] = useState(false);
+    const goTo = (index: number) => {
+        setAttempted(false);
+        setActiveIndex(index);
+    };
     // "Voltar" e "Avançar" (até 2026-11-08 os botões levavam o nome da aba vizinha, o que confundia: "Idiomas" parecia um atalho)
     const previousLabel = activeIndex > 0 ? 'Voltar' : firstButtonLabel;
     const nextLabel = tabs[activeIndex + 1] ? 'Avançar' : lastButtonLabel;
@@ -67,12 +73,12 @@ export const Tabs: React.FC<TabsProps> = ({
             goToNextTab();
             return;
         }
-        setActiveIndex(index);
+        goTo(index);
     };
 
     const goToPrevious = () => {
         if (activeIndex) {
-            setActiveIndex(activeIndex - 1);
+            goTo(activeIndex - 1);
             return;
         }
         firstButtonClick && firstButtonClick();
@@ -94,6 +100,7 @@ export const Tabs: React.FC<TabsProps> = ({
 
     const goToNextTab = () => {
         const index = activeIndex + 1;
+        setAttempted(true);
         const hasError = tab.onMoveOnFowardTabs && tab.onMoveOnFowardTabs();
 
         // quando os campos mostram as pendências, as notificações seriam repetição
@@ -101,7 +108,7 @@ export const Tabs: React.FC<TabsProps> = ({
             return;
         }
         const hasNextTab = !!tabs[index];
-        setActiveIndex(hasNextTab ? index : activeIndex);
+        hasNextTab && goTo(index);
     };
 
     const panels = React.Children.toArray(children);
@@ -125,7 +132,7 @@ export const Tabs: React.FC<TabsProps> = ({
 
             <div className="mt-6 border-t border-white-light pt-5 dark:border-[#1b2e4b]">
                 {/* as pendências ficam numa caixa acima dos botões (até 2026-11-08 ficavam espremidas ao lado do Avançar) */}
-                {!canMoveForward && !tab.fieldsShowPendingRequirements && (
+                {attempted && !canMoveForward && !tab.fieldsShowPendingRequirements && (
                     <div role="alert" className="mb-4 rounded-md border border-danger/30 bg-danger-light px-4 py-3 text-sm text-danger dark:bg-danger-dark-light">
                         <div className="mb-1 font-semibold">Para continuar, resolva:</div>
                         <ul className="space-y-1">
@@ -150,7 +157,12 @@ export const Tabs: React.FC<TabsProps> = ({
                     <div className="hidden sm:block sm:flex-1" />
                     {isLastTab && lastButtonSiblings && <div className="flex shrink-0 gap-3">{lastButtonSiblings}</div>}
                     {!isLastTab && shortcutButton && (
-                        <button onClick={() => showErrors(shortcutButton.onClick())} type="button" className="btn btn-success shrink-0 gap-2 whitespace-nowrap">
+                        <button
+                            onClick={() => {
+                                setAttempted(true);
+                                showErrors(shortcutButton.onClick());
+                            }}
+                            type="button" className="btn btn-success shrink-0 gap-2 whitespace-nowrap">
                             {shortcutButton.icon}
                             {shortcutButton.label}
                         </button>

@@ -23,8 +23,10 @@ export interface ITabSalaryStore {
 }
 
 export const TabSalaryStore = create<ITabSalaryStore>((set, get) => ({
-    pj: 0,
-    clt: 0,
+    // CLT e PJ começam aceitos, com uma pretensão sugerida para o candidato ajustar (até 2026-11-08 começavam como
+    // "não aceito" e a aba já abria com a pendência de escolher ao menos um); bitcoin começa como "não aceito"
+    pj: 2500,
+    clt: 1500,
     btc: 0,
     negotiableClaim: true,
     setPj: (pj: number) => set({ pj }),
