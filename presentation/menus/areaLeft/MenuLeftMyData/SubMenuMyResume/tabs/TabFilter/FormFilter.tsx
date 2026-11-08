@@ -75,11 +75,8 @@ export const TabOptions: React.FC<TabOptionsProps> = ({}) => {
     }));
     return (
         <div>
-            <RegioesComponent
-                labelOutrasRegioes="Aceito trabalhar presencialmente ou de forma 'híbrida' na região de"
-                labelTodasAsRegioes="Aceito trabalhar presencialmente ou de forma 'híbrida' em qualquer estado / cidade"
-                labelHomeOffice="Aceito somente vagas homeoffice"
-            />
+            {/* a lista só aparece com o home office desmarcado, então os nomes das regiões vêm limpos, sem o prefixo "aceito trabalhar..." */}
+            <RegioesComponent labelOutrasRegioes="" labelTodasAsRegioes="Qualquer estado / cidade" labelHomeOffice="Aceito somente vagas home office" />
             {/* um checkbox por linha, como os de baixo (IntegerFieldComponent): todos os checkboxes ficam na mesma coluna,
                 e a coluna da direita fica só com os campos numéricos */}
             <CheckBoxComponent

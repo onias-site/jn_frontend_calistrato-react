@@ -1,8 +1,8 @@
 'use client';
 import { dddRegions } from '@/presentation/components/regions/dddRegions';
 import React from 'react';
-import PubSub from 'pubsub-js';
 import { create } from 'zustand';
+import { Checkbox } from '@mantine/core';
 import { SummaryMultiSelect } from '@/presentation/components/source/SummaryMultiSelect';
 
 export interface RegioesProps {
@@ -21,8 +21,13 @@ export interface IRegioesStore {
 // regiões metropolitanas da lista, sem "qualquer estado / cidade" (0) e sem home office (10)
 const totalDeRegioesMetropolitanas = 67;
 
+// id da opção "aceito trabalhar em qualquer estado / cidade" e do home office
+export const TODAS_AS_REGIOES = '0';
+export const HOME_OFFICE = '10';
+
 export const RegioesStore = create<IRegioesStore>((set, get) => ({
-    regioesSelecionadas: [],
+    // um currículo novo começa como home office (desde 2026-11-08); quem quer presencial desmarca e escolhe as regiões
+    regioesSelecionadas: [HOME_OFFICE],
     // o backend grava os ddds como números e sem o "qualquer estado / cidade", que a tela marca de novo quando todas as
     // regiões metropolitanas estão escolhidas
     loadFromSavedResume: (resume: any) => {
@@ -51,109 +56,49 @@ const RegioesComponent: React.FC<RegioesProps> = ({ labelTodasAsRegioes, labelOu
     const { regioesSelecionadas, setRegioesSelecionadas } = RegioesStore((state: IRegioesStore) => ({
         ...state,
     }));
-    const estados = [
-        { id: '0', nome: labelTodasAsRegioes },
-        { id: '10', nome: labelHomeOffice },
-        ...dddRegions.map((region) => ({ id: region.id, nome: labelOutrasRegioes + ' ' + region.nome })),
-    ];
+    const homeOffice = regioesSelecionadas.includes(HOME_OFFICE);
 
-    const todasAsRegioes = '0';
-    const homeOffice = '10';
+    // as regiões da lista (sem o home office, que virou o checkbox acima dela)
+    const regioes = [{ id: TODAS_AS_REGIOES, nome: labelTodasAsRegioes }, ...dddRegions.map((region) => ({ id: region.id, nome: (labelOutrasRegioes ? labelOutrasRegioes + ' ' : '') + region.nome }))];
+    const todasAsRegioesMetropolitanas = dddRegions.map((region) => region.id);
 
-    // Home office e regiões se excluem (o backend recusa os dois juntos). Quando a troca desfaz uma escolha anterior, a
-    // tela avisa o que foi desmarcado: até 2026-10-15 a troca acontecia em silêncio (achado 28).
-    const homeOfficeEstavaMarcado = regioesSelecionadas.includes(homeOffice);
-    const avisarQueOHomeOfficeFoiDesmarcado = () => {
-        if (!homeOfficeEstavaMarcado) {
-            return;
-        }
-        PubSub.publish('showMessage', {
-            summary: 'Home office desmarcado',
-            detail: 'Ao escolher uma região, o home office foi desmarcado: os dois não podem ficar juntos.',
-            severity: 'warn',
-        });
-    };
-    const avisarQueAsRegioesForamDesmarcadas = () => {
-        const regioesQueEstavamMarcadas = regioesSelecionadas.filter((val) => val != homeOffice && val != todasAsRegioes).length;
-        if (!regioesQueEstavamMarcadas) {
-            return;
-        }
-        const quaisRegioes = regioesQueEstavamMarcadas == 1 ? 'a região escolhida foi desmarcada' : `as ${regioesQueEstavamMarcadas} regiões escolhidas foram desmarcadas`;
-        PubSub.publish('showMessage', {
-            summary: 'Regiões desmarcadas',
-            detail: `Home office não combina com regiões: ${quaisRegioes}.`,
-            severity: 'warn',
-        });
-    };
-
-    const estaIncluindoTodasAsRegioes = () => {
-        const values = estados.map((est) => est.id).filter((val) => val != homeOffice);
-        avisarQueOHomeOfficeFoiDesmarcado();
-        setRegioesSelecionadas(values);
-    };
-
-    const estaExcluindoTodasAsRegioes = () => setRegioesSelecionadas([]);
-
-    const estaExcluindoHomeOffice = () => setRegioesSelecionadas([]);
-
-    const estaIncluindoHomeOffice = () => {
-        avisarQueAsRegioesForamDesmarcadas();
-        setRegioesSelecionadas([homeOffice]);
-    };
-
-    const estaExcluindoQualquerOutraRegiao = (novosValores: string[], regiaoClicada: string) => {
-        // também é o caminho de quem marca uma região sem completar todas (estaIncluindoQualquerOutraRegiao)
-        const estaIncluindoRegiao = novosValores.includes(regiaoClicada);
-        estaIncluindoRegiao && avisarQueOHomeOfficeFoiDesmarcado();
-        setRegioesSelecionadas(novosValores.filter((val) => val != homeOffice).filter((val) => val != todasAsRegioes));
-    };
-
-    const estaIncluindoQualquerOutraRegiao = (novosValores: string[], regiaoClicada: string) => {
-        const values = estados
-            .map((est) => est.id)
-            .filter((val) => val != homeOffice)
-            .filter((val) => val != todasAsRegioes);
-        if (values.length > novosValores.length) {
-            estaExcluindoQualquerOutraRegiao(novosValores, regiaoClicada);
-            return;
-        }
-        // todas as regiões marcadas uma a uma: o "qualquer estado / cidade" acende junto
-        values.push(todasAsRegioes);
-        avisarQueOHomeOfficeFoiDesmarcado();
-        setRegioesSelecionadas(values);
-    };
+    // Home office e regiões se excluem (o backend recusa os dois juntos): o checkbox marcado deixa só o home office;
+    // desmarcado, abre a lista de regiões vazia
+    const alternarHomeOffice = (marcado: boolean) => setRegioesSelecionadas(marcado ? [HOME_OFFICE] : []);
 
     const selecionarRegioes = (novosValores: string[], regiaoClicada: string) => {
-        const estaIncluindoRegiao = novosValores.includes(regiaoClicada);
-        if (regiaoClicada == todasAsRegioes) {
-            estaIncluindoRegiao ? estaIncluindoTodasAsRegioes() : estaExcluindoTodasAsRegioes();
+        const incluindo = novosValores.includes(regiaoClicada);
+        if (regiaoClicada == TODAS_AS_REGIOES) {
+            // "qualquer estado / cidade" marca (ou desmarca) todas as regiões de uma vez
+            setRegioesSelecionadas(incluindo ? [TODAS_AS_REGIOES, ...todasAsRegioesMetropolitanas] : []);
             return;
         }
-        if (regiaoClicada == homeOffice) {
-            estaIncluindoRegiao ? estaIncluindoHomeOffice() : estaExcluindoHomeOffice();
-            return;
-        }
-        estaIncluindoRegiao ? estaIncluindoQualquerOutraRegiao(novosValores, regiaoClicada) : estaExcluindoQualquerOutraRegiao(novosValores, regiaoClicada);
+        const regioesEscolhidas = novosValores.filter((val) => val != TODAS_AS_REGIOES);
+        // com todas as regiões marcadas uma a uma, o "qualquer estado / cidade" acende junto; ao desmarcar uma, apaga
+        const todasMarcadas = regioesEscolhidas.length == todasAsRegioesMetropolitanas.length;
+        setRegioesSelecionadas(todasMarcadas ? [TODAS_AS_REGIOES, ...regioesEscolhidas] : regioesEscolhidas);
     };
 
-    // o "qualquer estado / cidade" ('0') fica no valor só para marcar a opção: não é uma região e não entra na contagem
-    const invalid = !regioesSelecionadas.length;
+    const invalid = !homeOffice && !regioesSelecionadas.length;
     return (
         <div className="mb-5">
-            <label className="mb-1.5 block font-semibold text-dark dark:text-white-light">Onde aceito trabalhar</label>
-            <SummaryMultiSelect
-                id="regioes"
-                data={estados.map((estado) => ({ value: estado.id, label: estado.nome }))}
-                value={regioesSelecionadas}
-                onChange={selecionarRegioes}
-                placeholder="Selecione as regiões desejadas para seu novo emprego"
-                searchPlaceholder="Digite a cidade ou o estado que você procura"
-                nothingFoundMessage="Nenhuma região encontrada"
-                summaryLabel={(count) => `${count} ${count == 1 ? 'região selecionada' : 'regiões selecionadas'}`}
-                countValue={(value) => value != todasAsRegioes}
-                maxDisplayedPills={2}
-                error={invalid}
-            />
+            <label className="mb-2 block font-semibold text-dark dark:text-white-light">Onde aceito trabalhar</label>
+            <Checkbox className="mb-3" checked={homeOffice} onChange={(e) => alternarHomeOffice(e.currentTarget.checked)} label={labelHomeOffice} />
+            {!homeOffice && (
+                <SummaryMultiSelect
+                    id="regioes"
+                    data={regioes.map((regiao) => ({ value: regiao.id, label: regiao.nome }))}
+                    value={regioesSelecionadas}
+                    onChange={selecionarRegioes}
+                    placeholder="Selecione as regiões onde aceita trabalhar presencialmente ou de forma híbrida"
+                    searchPlaceholder="Digite a cidade ou o estado que você procura"
+                    nothingFoundMessage="Nenhuma região encontrada"
+                    summaryLabel={(count) => `${count} ${count == 1 ? 'região selecionada' : 'regiões selecionadas'}`}
+                    countValue={(value) => value != TODAS_AS_REGIOES}
+                    maxDisplayedPills={2}
+                    error={invalid}
+                />
+            )}
         </div>
     );
 };
