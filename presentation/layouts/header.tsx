@@ -55,6 +55,11 @@ const Header = () => {
         // os dados guardados pelas telas são do usuário que saiu
         JnAjax.clearScreenCache();
         setLogged(false);
+        setLoggedEmail('');
+        // as telas abertas largam os dados de quem saiu e o site volta à home (até 2026-11-08 o e-mail continuava no
+        // header e a tela ficava com o currículo do usuário que tinha saído)
+        PubSub.publish('logout');
+        router.push('/');
         callbacks['200'] = () => PubSub.publish('showMessage', { summary: 'Sucesso!!!', detail: `O usuário '${login.email}' encerrou o login com sucesso!` });
         callbacks['404'] = () => PubSub.publish('showMessage', { summary: 'Aviso!!!', detail: `O usuário '${login.email}' não está logado neste sistema!`, severity: 'warn' });
         JnAjax.doAnAjaxRequest(`login/${login.email}/${login.sessionToken}`, callbacks, 'DELETE', null, {}, 'http://localhost:8082');

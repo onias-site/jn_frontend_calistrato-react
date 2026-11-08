@@ -444,6 +444,14 @@ const SubMenuMyResume = () => {
     // quem entra pelo menu do header (e não pelo "faça login" da faixa) também vê o currículo carregar: quando o modal de
     // login fecha com sessão válida e a tela ainda estava como "não logado", a busca é refeita (até 2026-11-08 a faixa
     // continuava dizendo que não estava logado)
+    // ao sair do sistema, o formulário volta vazio e a faixa passa a convidar ao login
+    useEffect(() => {
+        const token = PubSub.subscribe('logout', () => {
+            clearTheForm();
+            setResumeStatus('notLogged');
+        });
+        return () => PubSub.unsubscribe(token);
+    }, []);
     const loginModalVisible = ModalLoginStore((state: IModalLoginStore) => state.visible);
     useEffect(() => {
         if (!loginModalVisible && resumeStatus === 'notLogged' && JnAjax.hasLogin()) {
