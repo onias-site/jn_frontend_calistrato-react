@@ -22,7 +22,10 @@ export default function DefaultLayout({ children }: { children: React.ReactNode 
                     <Sidebar />
                     <div className="main-content flex flex-col min-h-screen">
                         <Header />
-                        <ContentAnimation>{children}</ContentAnimation>
+                        {/* respiro no fim do conteúdo: o "Fale Conosco" flutua no canto inferior e cobria o último botão das telas */}
+                        <div className="pb-20">
+                            <ContentAnimation>{children}</ContentAnimation>
+                        </div>
                         <Footer />
                     </div>
                 </MainContainer>

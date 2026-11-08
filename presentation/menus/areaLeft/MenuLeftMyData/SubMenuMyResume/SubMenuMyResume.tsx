@@ -471,6 +471,7 @@ const SubMenuMyResume = () => {
             icon: <IconFile className="h-4 w-4" />,
             onMoveOnFowardTabs: () => loadSkillsFromBackEnd(stateResume, stateSkills, stateSubMenuMyResume),
             getPendingRequirements: stateResume.getPendingRequirements,
+            fieldsShowPendingRequirements: true,
         },
         { label: 'Idiomas', icon: <IconGlobe className="h-4 w-4" />, onMoveOnFowardTabs: stateLanguage.onMoveOnFowardTabs, getPendingRequirements: stateLanguage.getPendingRequirements },
         {

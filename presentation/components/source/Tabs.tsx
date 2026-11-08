@@ -4,6 +4,7 @@ import { Tabs as MantineTabs } from '@mantine/core';
 import { notify } from '@/presentation/components/source/notify';
 import IconInfoTriangle from '@/presentation/icons/icon-info-triangle';
 import IconArrowLeft from '@/presentation/icons/icon-arrow-left';
+import IconArrowForward from '@/presentation/icons/icon-arrow-forward';
 import IconCircleCheck from '@/presentation/icons/icon-circle-check';
 
 export interface TabsModel {
@@ -15,6 +16,8 @@ export interface TabsModel {
     onMoveOnFowardTabs?: () => string[];
     // getPendingRequirements não pode ter efeitos colaterais: é chamado a cada renderização para habilitar ou não o botão de avançar
     getPendingRequirements?: () => string[];
+    // os campos da aba já mostram cada pendência embaixo de si: o rodapé não repete a lista, só desabilita o avançar
+    fieldsShowPendingRequirements?: boolean;
 }
 
 export interface TabsProps {
@@ -54,10 +57,11 @@ export const Tabs: React.FC<TabsProps> = ({
     shortcutButton,
 }) => {
     const [activeIndex, setActiveIndex] = useState(0);
-    const previousLabel = activeIndex > 0 ? tabs[activeIndex - 1].label : firstButtonLabel;
-    const nextLabel = (tabs[activeIndex + 1] && tabs[activeIndex + 1].label) || lastButtonLabel;
-    const previousIcon = activeIndex > 0 ? tabs[activeIndex - 1].icon : firstButtonIcon;
-    const nextIcon = (tabs[activeIndex + 1] && tabs[activeIndex + 1].icon) || lastButtonIcon;
+    // "Voltar" e "Avançar" (até 2026-11-08 os botões levavam o nome da aba vizinha, o que confundia: "Idiomas" parecia um atalho)
+    const previousLabel = activeIndex > 0 ? 'Voltar' : firstButtonLabel;
+    const nextLabel = tabs[activeIndex + 1] ? 'Avançar' : lastButtonLabel;
+    const previousIcon = activeIndex > 0 ? <IconArrowLeft className="h-4 w-4" /> : firstButtonIcon;
+    const nextIcon = tabs[activeIndex + 1] ? <IconArrowForward className="h-4 w-4" /> : lastButtonIcon;
 
     const changeTab = (index: number) => {
         if (index > activeIndex) {
@@ -93,7 +97,8 @@ export const Tabs: React.FC<TabsProps> = ({
         const index = activeIndex + 1;
         const hasError = tab.onMoveOnFowardTabs && tab.onMoveOnFowardTabs();
 
-        if (showErrors(hasError)) {
+        // quando os campos mostram as pendências, as notificações seriam repetição
+        if (tab.fieldsShowPendingRequirements ? hasError && hasError.length : showErrors(hasError)) {
             return;
         }
         const hasNextTab = !!tabs[index];
@@ -123,7 +128,7 @@ export const Tabs: React.FC<TabsProps> = ({
                 {/* numa tela estreita as pendências sobem para uma linha só delas, acima dos botões */}
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     {previousLabel ? (
-                        <button onClick={goToPrevious} type="button" className="btn btn-outline-danger shrink-0 gap-2 whitespace-nowrap">
+                        <button onClick={goToPrevious} type="button" className="btn btn-outline-dark shrink-0 gap-2 whitespace-nowrap">
                             {previousIcon}
                             {previousLabel}
                         </button>
@@ -132,6 +137,7 @@ export const Tabs: React.FC<TabsProps> = ({
                     )}
                     <div className="order-first w-full min-w-0 text-sm text-danger sm:order-none sm:w-auto sm:flex-1 sm:text-right">
                         {!canMoveForward &&
+                            !tab.fieldsShowPendingRequirements &&
                             pendingRequirements.map((requirement: string) => (
                                 <div key={requirement} className="flex items-center justify-end gap-1.5">
                                     <IconInfoTriangle className="h-4 w-4 shrink-0" />
@@ -147,12 +153,12 @@ export const Tabs: React.FC<TabsProps> = ({
                         </button>
                     )}
                     {nextLabel && (
-                        <span title={canMoveForward ? undefined : 'Resolva as pendências para continuar'} className="shrink-0">
-                            <button onClick={goToNextTab} disabled={!canMoveForward} type="button" className="btn btn-primary gap-2 whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-60">
-                                {nextIcon}
-                                {nextLabel}
-                            </button>
-                        </span>
+                        // o botão fica sempre habilitado: o clique é o que destaca as pendências nos campos (até 2026-11-08 ficava
+                        // desabilitado, e numa aba com os erros nos campos nada explicava o porquê)
+                        <button onClick={goToNextTab} type="button" className="btn btn-primary shrink-0 gap-2 whitespace-nowrap">
+                            {nextIcon}
+                            {nextLabel}
+                        </button>
                     )}
                 </div>
             </div>

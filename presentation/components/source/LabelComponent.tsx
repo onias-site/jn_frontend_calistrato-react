@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { HelpButton } from '@/presentation/components/source/HelpButton';
+import IconInfoTriangle from '@/presentation/icons/icon-info-triangle';
 
 export interface LabelComponentProps {
     children: React.ReactNode;
@@ -20,6 +21,8 @@ export interface LabelComponentProps {
  */
 export const LabelComponent: React.FC<LabelComponentProps> = ({ children, labelValue, property, errors, explanation, stacked = false }) => {
     const invalid = !!errors[property];
+    // errors[property] pode ser só true (destaca o campo) ou a mensagem (destaca e explica embaixo do campo)
+    const message = typeof errors[property] == 'string' ? errors[property] : '';
     const grid = stacked ? '' : 'md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] md:items-start md:gap-4';
     const labelRow = stacked ? '' : 'md:mb-0 md:pt-2';
     return (
@@ -32,7 +35,15 @@ export const LabelComponent: React.FC<LabelComponentProps> = ({ children, labelV
                 )}
                 {explanation && <HelpButton title={labelValue || 'Ajuda'} explanation={explanation} />}
             </div>
-            <div className="min-w-0">{children}</div>
+            <div className="min-w-0">
+                {children}
+                {message && (
+                    <div role="alert" className="mt-1.5 flex items-start gap-1.5 text-sm text-danger">
+                        <IconInfoTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                        <span>{message}</span>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
