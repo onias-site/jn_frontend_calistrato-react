@@ -4,7 +4,7 @@
 
 Define como as telas do frontend Onias.Site (JobsNow) são construídas, para que qualquer pessoa ou agente que mexa no
 código mantenha a mesma aparência e o mesmo comportamento: uma biblioteca de componentes (Mantine 7), o layout do
-template Vristo (Tailwind), uma camada única de requisições (`JnAjax`) e um backend mocado para desenvolver sem as APIs.
+projeto em Tailwind (`styles/tailwind.css`), uma camada única de requisições (`JnAjax`) e um backend mocado para desenvolver sem as APIs.
 
 Esta spec consolida a limpeza de layout feita em novembro de 2026 na branch `layout-cleanup`, que removeu PrimeReact,
 Bootstrap e jQuery.
@@ -13,7 +13,7 @@ Bootstrap e jQuery.
 
 ### Requirement: Pilha de interface
 
-O frontend SHALL usar Next.js 14 (App Router), React 18, Tailwind com as classes do template Vristo para layout e
+O frontend SHALL usar Next.js 14 (App Router), React 18, Tailwind com as classes de layout do projeto e
 Mantine 7 (`@mantine/core`, `@mantine/hooks`, `@mantine/notifications`) para componentes interativos. O frontend SHALL NOT
 depender de PrimeReact, primeicons, primeflex, Bootstrap, react-bootstrap ou jQuery. O Mantine SHALL permanecer na
 versão 7 enquanto o projeto estiver no React 18 (as versões 8 e 9 exigem React 19).
@@ -33,13 +33,13 @@ versão 7 enquanto o projeto estiver no React 18 (as versões 8 e 9 exigem React
 
 Campos de texto, senha, número, selects, multi-selects, etiquetas (`TagsInput`), checkboxes, modais, popovers, abas,
 acordeões, tabelas paginadas e notificações SHALL ser componentes do Mantine. Painéis, grades, espaçamento, cores,
-tipografia e botões SHALL usar as classes do Tailwind e do Vristo (`panel`, `btn btn-primary`, `btn btn-outline-dark`,
+tipografia e botões SHALL usar as classes do Tailwind e as de layout do projeto (`panel`, `btn btn-primary`, `btn btn-outline-dark`,
 `btn btn-danger`, `btn-success`, `text-primary`, `text-danger`, `text-white-dark`).
 
 #### Scenario: Botão de ação
 
 - **WHEN** uma tela precisa de um botão
-- **THEN** usa `<button className="btn btn-primary">` (ou a variante do Vristo adequada), e não o `Button` do Mantine,
+- **THEN** usa `<button className="btn btn-primary">` (ou a variante adequada: `btn-outline-dark`, `btn-danger`, `btn-success`), e não o `Button` do Mantine,
   para que todos os botões do site tenham a mesma forma
 
 #### Scenario: Ícone dentro de botão

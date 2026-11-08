@@ -5,6 +5,8 @@
  *   npm run mock          (sobe os dois servidores)
  *
  * Login: qualquer e-mail entra com qualquer senha, menos "Errada@1", que devolve senha incorreta (427).
+ * E-mails que começam com "novo" passam pelo cadastro inteiro (primeiro acesso); os que começam com "bloqueado" têm o
+ * token bloqueado.
  * Tudo fica em memória: reiniciar o processo volta ao estado inicial.
  */
 const express = require('express');
@@ -413,15 +415,44 @@ const sessionResponse = (email) => {
 const WRONG_PASSWORD = 'Errada@1';
 const passwordAttempts = new Map();
 
-// a verificação do e-mail: 200 quer dizer que o login existe e tem senha (a tela pede a senha)
-js.head('/login/:email/token', (req, res) => res.status(200).end());
-js.post('/login/:email/token', (req, res) => res.status(200).json({}));
-js.post('/login/:email/token/language/:language', (req, res) => res.json({}));
+// Primeiro acesso: e-mails que começam com "novo" (novo@teste.com, novo2@teste.com...) passam pelo cadastro inteiro:
+// confirmar o e-mail (404) -> perguntas do pré-cadastro (201) -> criar a senha com o token (202) -> login normal (200).
+// O token aceito é qualquer texto de 8 caracteres. E-mails que começam com "bloqueado" têm o token bloqueado (403).
+const registrations = new Map(); // email -> { confirmed, answered, hasPassword }
+const isNewUser = (email) => /^novo/i.test(email);
+const isBlocked = (email) => /^bloqueado/i.test(email);
+const registrationOf = (email) => {
+    if (!registrations.has(email)) registrations.set(email, { confirmed: false, answered: false, hasPassword: false });
+    return registrations.get(email);
+};
+const emailStatus = (email) => {
+    if (isBlocked(email)) return 403;
+    if (!isNewUser(email)) return 200;
+    const registration = registrationOf(email);
+    if (!registration.confirmed) return 404;
+    if (!registration.answered) return 201;
+    if (!registration.hasPassword) return 202;
+    return 200;
+};
+
+// a verificação do e-mail: 200 tem senha (a tela pede a senha), 404 não existe (confirmar), 201 faltam as perguntas,
+// 202 falta a senha, 403 token bloqueado
+js.head('/login/:email/token', (req, res) => res.status(emailStatus(req.params.email)).end());
+js.post('/login/:email/token', (req, res) => {
+    // a confirmação do e-mail: o cadastro passa a existir
+    if (isNewUser(req.params.email)) registrationOf(req.params.email).confirmed = true;
+    res.status(emailStatus(req.params.email)).json({});
+});
+js.post('/login/:email/token/language/:language', (req, res) => (isBlocked(req.params.email) ? res.status(403).json({}) : res.json({})));
 js.post('/login/:email/token/request/unlocking', (req, res) => res.json({}));
 js.post('/login/:email/token/request/resending', (req, res) => res.json({}));
-js.post('/login/:email/pre-registration', (req, res) => res.json({}));
+js.post('/login/:email/pre-registration', (req, res) => {
+    if (isNewUser(req.params.email)) registrationOf(req.params.email).answered = true;
+    res.status(emailStatus(req.params.email)).json({});
+});
 js.post('/login/:email/password', (req, res) => {
     if (String(req.body.token || '').length !== 8) return res.status(427).json({ attempts: 1 });
+    if (isNewUser(req.params.email)) registrationOf(req.params.email).hasPassword = true;
     res.json(sessionResponse(req.params.email));
 });
 js.post('/login/:email', (req, res) => {

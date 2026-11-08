@@ -1,6 +1,6 @@
 # Frontend Onias.Site (JobsNow)
 
-Next.js 14 (App Router) sobre o template Vristo (Tailwind). Componentes interativos com **Mantine 7**. Requisições pelo
+Next.js 14 (App Router) com Tailwind e as classes de layout do projeto (`styles/tailwind.css`). Componentes interativos com **Mantine 7**. Requisições pelo
 `app/JnAjax.js` (fetch nativo). A especificação completa do padrão de interface está em `openspec/specs/frontend-ui/spec.md`:
 leia-a antes de criar ou alterar qualquer tela.
 
@@ -17,7 +17,7 @@ npm test       # jest
 - **Não reintroduzir** PrimeReact, primeicons, Bootstrap, react-bootstrap nem jQuery. Foram removidos em novembro de 2026.
 - **Não usar Mantine 8 ou 9**: exigem React 19; o projeto está no React 18 com Next 14.
 - Campos, selects, checkboxes, modais, abas, notificações e tabelas: **Mantine** (`@mantine/core`, `@mantine/notifications`).
-- Layout, espaçamento, cores e botões: **Tailwind com as classes do Vristo** (`panel`, `btn btn-primary`, `btn-outline-dark`, `btn-danger`...).
+- Layout, espaçamento, cores e botões: **Tailwind com as classes de layout do projeto** (`panel`, `btn btn-primary`, `btn-outline-dark`, `btn-danger`...).
 - Ícones: os componentes de `presentation/icons/` (SVG). Nunca classes `pi pi-*`.
 - Componentes base de `presentation/components/source/` antes de criar algo novo: `LabelComponent`, `HelpButton`,
   `ConfirmModal`, `Modal`, `SummaryMultiSelect`, `Tabs`, `LoadingButton`, `notify`.

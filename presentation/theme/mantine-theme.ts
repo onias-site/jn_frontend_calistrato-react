@@ -1,6 +1,6 @@
 import { createTheme, rem } from '@mantine/core';
 
-// as mesmas cores do tailwind.config.js (template Vristo): o primary #4361ee é a tonalidade 6 desta escala
+// as mesmas cores do tailwind.config.js (tema do projeto): o primary #4361ee é a tonalidade 6 desta escala
 const primary: [string, string, string, string, string, string, string, string, string, string] = [
     '#eef1fe',
     '#dbe1fc',
