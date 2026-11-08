@@ -148,7 +148,8 @@ export const TabResume: React.FC<TabResumeProps> = ({}) => {
     } = TabResumeStore((state: ITabResumeStore) => ({ ...state }));
 
     return (
-        <div>
+        // largura limitada: em tela cheia, um campo de uma linha com 1300px é desconfortável de ler e de preencher
+        <div className="max-w-4xl">
             <LabelComponent
                 explanation="Esta informação será útil para orientar o recrutador que visualizar o seu perfil a respeito do seu objetivo profissional."
                 labelValue="Função / papel / emprego / ocupação que estou buscando:"

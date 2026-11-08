@@ -10,16 +10,13 @@ export interface LabelComponentProps {
     labelValue: string;
     property: string;
     errors: any;
-    // rótulo acima do campo em qualquer largura (formulários estreitos, como os do modal de login); sem ele, a partir do
-    // md o rótulo fica numa coluna à esquerda do campo
+    // rótulo acima do campo (padrão desde 2026-11-08: os rótulos são longos e, ao lado, viravam um bloco de texto à
+    // esquerda); com false, a partir do md o rótulo fica numa coluna à esquerda do campo
     stacked?: boolean;
 }
 
-/**
- * Rótulo com botão de ajuda e o campo ao lado: no celular o rótulo fica acima do campo; a partir do md, rótulo numa coluna
- * de um terço e o campo nos dois terços restantes, de modo que os campos de linhas seguidas fiquem alinhados.
- */
-export const LabelComponent: React.FC<LabelComponentProps> = ({ children, labelValue, property, errors, explanation, stacked = false }) => {
+/** Rótulo com botão de ajuda acima do campo e, quando há, a mensagem de erro embaixo dele. */
+export const LabelComponent: React.FC<LabelComponentProps> = ({ children, labelValue, property, errors, explanation, stacked = true }) => {
     const invalid = !!errors[property];
     // errors[property] pode ser só true (destaca o campo) ou a mensagem (destaca e explica embaixo do campo)
     const message = typeof errors[property] == 'string' ? errors[property] : '';
