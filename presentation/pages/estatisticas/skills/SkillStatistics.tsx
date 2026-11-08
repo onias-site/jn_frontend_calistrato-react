@@ -1,6 +1,6 @@
 'use client';
 import dynamic from 'next/dynamic';
-import Link from 'next/link';
+import PageTitle from '@/presentation/layouts/page-title';
 import { useRouter } from 'next/navigation';
 import { Modal, Pagination, Select, Table } from '@mantine/core';
 import IconCaretDown from '@/presentation/icons/icon-caret-down';
@@ -555,13 +555,7 @@ export const SkillStatistics = ({ initialSeniority = 'pleno', searchOnOpening = 
 
     return (
         <div>
-            <ul className="flex space-x-2 rtl:space-x-reverse">
-                <li>
-                    <Link href="#" className="text-primary hover:underline">
-                        Grupos de vagas do telegram
-                    </Link>
-                </li>
-            </ul>
+            <PageTitle>Grupos de vagas do telegram</PageTitle>
             <div className="panel mt-6">
                 <MonthPicker
                     id="skillStatisticsMonth"

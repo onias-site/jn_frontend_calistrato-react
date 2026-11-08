@@ -1,6 +1,6 @@
 import { ResumesOfTheWeek } from '@/presentation/pages/meu-recrutamento/curriculos-da-semana/ResumesOfTheWeek';
 import { Metadata } from 'next';
-import Link from 'next/link';
+import PageTitle from '@/presentation/layouts/page-title';
 import React from 'react';
 
 export const metadata: Metadata = {
@@ -10,13 +10,7 @@ export const metadata: Metadata = {
 const CurriculosDaSemana = () => {
     return (
         <div>
-            <ul className="flex space-x-2 rtl:space-x-reverse">
-                <li>
-                    <Link href="#" className="text-primary hover:underline">
-                        Currículos da semana
-                    </Link>
-                </li>
-            </ul>
+            <PageTitle>Currículos da semana</PageTitle>
             <ResumesOfTheWeek />
         </div>
     );

@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import React from 'react';
+import PageTitle from '@/presentation/layouts/page-title';
 import SubMenuMyResume from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/SubMenuMyResume';
 
 export const metadata: Metadata = {
@@ -8,7 +9,12 @@ export const metadata: Metadata = {
 
 const SobreMim = () => {
     return (
-        <SubMenuMyResume/>
+        <div>
+            <PageTitle>Sobre mim</PageTitle>
+            <div className="mt-6">
+                <SubMenuMyResume />
+            </div>
+        </div>
     );
 };
 
