@@ -124,7 +124,20 @@ export const Tabs: React.FC<TabsProps> = ({
             {panels[activeIndex]}
 
             <div className="mt-6 border-t border-white-light pt-5 dark:border-[#1b2e4b]">
-                {/* numa tela estreita as pendências sobem para uma linha só delas, acima dos botões */}
+                {/* as pendências ficam numa caixa acima dos botões (até 2026-11-08 ficavam espremidas ao lado do Avançar) */}
+                {!canMoveForward && !tab.fieldsShowPendingRequirements && (
+                    <div role="alert" className="mb-4 rounded-md border border-danger/30 bg-danger-light px-4 py-3 text-sm text-danger dark:bg-danger-dark-light">
+                        <div className="mb-1 font-semibold">Para continuar, resolva:</div>
+                        <ul className="space-y-1">
+                            {pendingRequirements.map((requirement: string) => (
+                                <li key={requirement} className="flex items-start gap-1.5">
+                                    <IconInfoTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                                    <span>{requirement}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     {previousLabel ? (
                         <button onClick={goToPrevious} type="button" className="btn btn-outline-dark shrink-0 gap-2 whitespace-nowrap">
@@ -134,16 +147,7 @@ export const Tabs: React.FC<TabsProps> = ({
                     ) : (
                         <span />
                     )}
-                    <div className="order-first w-full min-w-0 text-sm text-danger sm:order-none sm:w-auto sm:flex-1 sm:text-right">
-                        {!canMoveForward &&
-                            !tab.fieldsShowPendingRequirements &&
-                            pendingRequirements.map((requirement: string) => (
-                                <div key={requirement} className="flex items-center justify-end gap-1.5">
-                                    <IconInfoTriangle className="h-4 w-4 shrink-0" />
-                                    <span>{requirement}</span>
-                                </div>
-                            ))}
-                    </div>
+                    <div className="hidden sm:block sm:flex-1" />
                     {isLastTab && lastButtonSiblings && <div className="flex shrink-0 gap-3">{lastButtonSiblings}</div>}
                     {!isLastTab && shortcutButton && (
                         <button onClick={() => showErrors(shortcutButton.onClick())} type="button" className="btn btn-success shrink-0 gap-2 whitespace-nowrap">

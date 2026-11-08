@@ -23,6 +23,7 @@ import { SkillsInternalListStore, TabSkillsStore } from '@/presentation/menus/ar
 import { Tabs } from '@/presentation/components/source/Tabs';
 import { removeResumeCopy, resumeCopyFromSavedResume, resumeSavedForTheSearch, resumeSkillsFrom, saveResumeCopy } from '@/presentation/components/resume-copy/resumeCopy';
 import JnAjax from '@/app/JnAjax';
+import { ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogin';
 import { useRouter } from 'next/navigation';
 import { create } from 'zustand';
 import PubSub from 'pubsub-js';
@@ -440,6 +441,15 @@ const SubMenuMyResume = () => {
 
     const { resumeStatus, setResumeStatus } = stateSubMenuMyResume;
     useEffect(() => loadResumeStatus(setResumeStatus, loadSavedResume), []);
+    // quem entra pelo menu do header (e não pelo "faça login" da faixa) também vê o currículo carregar: quando o modal de
+    // login fecha com sessão válida e a tela ainda estava como "não logado", a busca é refeita (até 2026-11-08 a faixa
+    // continuava dizendo que não estava logado)
+    const loginModalVisible = ModalLoginStore((state: IModalLoginStore) => state.visible);
+    useEffect(() => {
+        if (!loginModalVisible && resumeStatus === 'notLogged' && JnAjax.hasLogin()) {
+            loadResumeStatus(setResumeStatus, loadSavedResume);
+        }
+    }, [loginModalVisible]);
     const resumeStatusLabel = resumeStatus === 'unknown' ? null : resumeStatusLabels[resumeStatus];
 
     // edição de currículo já salvo (ativo ou inativo): salvar é atualização, uma por dia, e pede confirmação
