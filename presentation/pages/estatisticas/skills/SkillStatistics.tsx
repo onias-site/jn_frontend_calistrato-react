@@ -2,7 +2,7 @@
 import dynamic from 'next/dynamic';
 import PageTitle from '@/presentation/layouts/page-title';
 import { useRouter } from 'next/navigation';
-import { Modal, Pagination, Select, Table } from '@mantine/core';
+import { Modal, Pagination, Popover, Select, Table } from '@mantine/core';
 import IconCaretDown from '@/presentation/icons/icon-caret-down';
 import IconCircleCheck from '@/presentation/icons/icon-circle-check';
 import IconXCircle from '@/presentation/icons/icon-x-circle';
@@ -230,18 +230,13 @@ const SkillsPie = ({ skills, vacancies }: { skills: SkillTotal[]; vacancies: num
     );
 };
 
-/** O accordion dos grupos do Telegram pesquisados: cada vez que é expandido, lê os grupos do backend. */
+/** O botão dos grupos do Telegram pesquisados: abre uma lista flutuante por cima do conteúdo, lida do backend a cada abertura. */
 const TelegramGroupsAccordion = () => {
-    const [expanded, setExpanded] = useState(false);
+    const [opened, setOpened] = useState(false);
     const [situation, setSituation] = useState<Situation>('idle');
     const [telegramGroups, setTelegramGroups] = useState<string[]>([]);
 
-    const toggle = () => {
-        if (expanded) {
-            setExpanded(false);
-            return;
-        }
-        setExpanded(true);
+    const load = () => {
         setSituation('loading');
         const callbacks: any = { withoutSession: true };
         callbacks[200] = (response: any) => {
@@ -252,31 +247,43 @@ const TelegramGroupsAccordion = () => {
         JnAjax.doAPersistedRequest('statistics/skills/telegramGroups', callbacks, API, JnAjax.PERSISTED_REQUEST_ONE_YEAR);
     };
 
+    const toggle = () => {
+        if (opened) {
+            setOpened(false);
+            return;
+        }
+        setOpened(true);
+        load();
+    };
+
     return (
-        <div className="w-full max-w-[520px] rounded border border-[#d3d3d3] dark:border-[#1b2e4b] sm:w-auto sm:min-w-[260px]">
-            <button type="button" className="flex w-full items-center gap-2 px-3 py-2 font-semibold" aria-expanded={expanded} onClick={toggle}>
-                <IconCaretDown className={`h-4 w-4 transition-transform ${expanded ? '' : '-rotate-90'}`} />
-                De onde vieram essas vagas?
-            </button>
-            {expanded && (
-                <div className="max-h-72 overflow-y-auto border-t border-[#d3d3d3] p-3 dark:border-[#1b2e4b]">
+        // flutuante (até 2026-11-08 era um acordeão que empurrava o conteúdo da tela para baixo ao abrir)
+        <Popover opened={opened} onChange={setOpened} position="bottom-end" shadow="md" width={360} withArrow>
+            <Popover.Target>
+                <button type="button" className="btn btn-outline-primary gap-2 whitespace-nowrap" aria-expanded={opened} onClick={toggle}>
+                    <IconCaretDown className={`h-4 w-4 transition-transform ${opened ? '' : '-rotate-90'}`} />
+                    De onde vieram essas vagas?
+                </button>
+            </Popover.Target>
+            <Popover.Dropdown>
+                <div className="mb-2 font-semibold">Grupos do Telegram pesquisados</div>
+                <div className="max-h-72 overflow-y-auto">
                     {situation == 'loading' && <div>Carregando os grupos...</div>}
                     {situation == 'error' && <div>Não foi possível carregar os grupos agora. Tente de novo em alguns instantes.</div>}
                     {situation == 'loaded' && (
-                        <ul className="space-y-2">
-                            {telegramGroups.map((group, index) => (
+                        <ol className="list-decimal space-y-1.5 pl-5">
+                            {telegramGroups.map((group) => (
                                 <li key={group}>
-                                    {index + 1}:{' '}
                                     <a href={group} target="_blank" rel="noopener noreferrer" className="break-all text-primary hover:underline">
-                                        {group}
+                                        {group.replace(/^https?:\/\//, '')}
                                     </a>
                                 </li>
                             ))}
-                        </ul>
+                        </ol>
                     )}
                 </div>
-            )}
-        </div>
+            </Popover.Dropdown>
+        </Popover>
     );
 };
 
