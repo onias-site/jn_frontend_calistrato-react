@@ -2,7 +2,7 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Modal, Pagination, Table } from '@mantine/core';
+import { Modal, Pagination, Select, Table } from '@mantine/core';
 import IconCaretDown from '@/presentation/icons/icon-caret-down';
 import IconCircleCheck from '@/presentation/icons/icon-circle-check';
 import IconXCircle from '@/presentation/icons/icon-x-circle';
@@ -420,14 +420,15 @@ const DddChooser = ({ ddds, onChoose, onCancel }: { ddds: number[]; onChoose: (d
             <label htmlFor="compatiblePositionsDdd" className="font-semibold">
                 Região Metropolitana
             </label>
-            <select id="compatiblePositionsDdd" className="form-select mb-4 w-full" value={chosen} onChange={(event) => setChosen(event.target.value)}>
-                <option value="">Selecione</option>
-                {options.map((item) => (
-                    <option key={item.id} value={item.id}>
-                        {item.nome}
-                    </option>
-                ))}
-            </select>
+            <Select
+                id="compatiblePositionsDdd"
+                className="mb-4"
+                placeholder="Selecione"
+                value={chosen || null}
+                onChange={(value) => setChosen(value || '')}
+                data={options.map((item) => ({ value: item.id, label: item.nome }))}
+                comboboxProps={{ withinPortal: false }}
+            />
             <button type="button" className="btn btn-primary" disabled={!chosen} onClick={() => onChoose(chosen)}>
                 Pesquisar
             </button>
@@ -576,39 +577,37 @@ export const SkillStatistics = ({ initialSeniority = 'pleno', searchOnOpening = 
                         <label htmlFor="skillStatisticsSeniority" className="mb-0 font-semibold">
                             Senioridade
                         </label>
-                        <select
+                        <Select
                             id="skillStatisticsSeniority"
-                            className="form-select w-auto"
+                            className="w-40"
                             value={seniority}
-                            onChange={(event) => {
-                                setSeniority(event.target.value);
+                            onChange={(value) => {
+                                if (!value) return;
+                                setSeniority(value);
                                 hideResult();
                             }}
-                        >
-                            {seniorities.map((item) => (
-                                <option key={item.id} value={item.id}>
-                                    {item.nome}
-                                </option>
-                            ))}
-                        </select>
+                            data={seniorities.map((item) => ({ value: item.id, label: item.nome }))}
+                            allowDeselect={false}
+                            comboboxProps={{ withinPortal: false }}
+                        />
                         <label htmlFor="skillStatisticsDdd" className="mb-0 font-semibold">
                             Região Metropolitana
                         </label>
-                        <select
+                        <Select
                             id="skillStatisticsDdd"
-                            className="form-select w-auto"
+                            className="w-64"
                             value={ddd}
-                            onChange={(event) => {
-                                setDdd(event.target.value);
+                            onChange={(value) => {
+                                if (!value) return;
+                                setDdd(value);
                                 hideResult();
                             }}
-                        >
-                            {regions.map((item) => (
-                                <option key={item.id} value={item.id}>
-                                    {item.nome}
-                                </option>
-                            ))}
-                        </select>
+                            data={regions.map((item) => ({ value: item.id, label: item.nome }))}
+                            searchable
+                            nothingFoundMessage="Nenhuma região encontrada"
+                            allowDeselect={false}
+                            comboboxProps={{ withinPortal: false }}
+                        />
                         <div className="dropdown">
                             <Dropdown
                                 offset={[0, 4]}

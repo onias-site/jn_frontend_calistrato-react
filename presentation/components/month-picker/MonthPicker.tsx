@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { Select } from '@mantine/core';
 import { FIRST_MONTH, clampMonth, selectableMonthNumbers, selectableYears, splitMonth } from './months';
 
 export { FIRST_MONTH, currentMonth, isFutureMonth, monthParameter, previousMonth } from './months';
@@ -32,20 +33,25 @@ export const MonthPicker = ({ id, month, onChange, min = FIRST_MONTH, children }
             <label htmlFor={id} className="mb-0 font-semibold">
                 Mês/ano
             </label>
-            <select id={id} className="form-select w-auto" aria-label="Mês" value={monthNumber} onChange={(event) => onChange(`${year}-${event.target.value}`)}>
-                {selectableMonthNumbers(year, min).map((item) => (
-                    <option key={item} value={item}>
-                        {monthNames[item]}
-                    </option>
-                ))}
-            </select>
-            <select className="form-select w-auto" aria-label="Ano" value={year} onChange={(event) => onChange(clampMonth(`${event.target.value}-${monthNumber}`, min))}>
-                {selectableYears(min).map((item) => (
-                    <option key={item} value={item}>
-                        {item}
-                    </option>
-                ))}
-            </select>
+            <Select
+                id={id}
+                aria-label="Mês"
+                className="w-40"
+                value={monthNumber}
+                onChange={(value) => value && onChange(`${year}-${value}`)}
+                data={selectableMonthNumbers(year, min).map((item) => ({ value: item, label: monthNames[item] }))}
+                allowDeselect={false}
+                comboboxProps={{ withinPortal: false }}
+            />
+            <Select
+                aria-label="Ano"
+                className="w-28"
+                value={year}
+                onChange={(value) => value && onChange(clampMonth(`${value}-${monthNumber}`, min))}
+                data={selectableYears(min).map((item) => ({ value: String(item), label: String(item) }))}
+                allowDeselect={false}
+                comboboxProps={{ withinPortal: false }}
+            />
             {children}
         </div>
     );
