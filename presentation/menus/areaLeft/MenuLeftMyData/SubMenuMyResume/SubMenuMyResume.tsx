@@ -11,7 +11,6 @@ import IconSettings from '@/presentation/icons/icon-settings';
 import IconDollarSign from '@/presentation/icons/icon-dollar-sign';
 import IconGithub from '@/presentation/icons/icon-github';
 import IconSave from '@/presentation/icons/icon-save';
-import { ResumePreview } from './ResumePreview';
 import { RegioesStore, IRegioesStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabFilter/RegioesComponent';
 import { TabOptions, TabOptionsStore, ITabOptionsStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabFilter/FormFilter';
 import { TabLanguages, TabLanguagesStore, ITabLanguagesStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabLanguages/ChooserLanguages';
@@ -176,6 +175,16 @@ const loadSavedSkills = (savedSkills: any[]) => {
     const savedSkillsResponse = { skill, excludedSkill, discardedSkills };
     const requestSkillsToBackEnd = { excludedSkill: excludedSkill.map((item: any) => item.word), text: '' };
     putSkillsInStore(savedSkillsResponse, TabSkillStore.getState(), requestSkillsToBackEnd, SubMenuMyResumeStore.getState());
+};
+
+/**
+ * Garante que as abas tenham o currículo salvo: quem abre a prévia direto pela URL (ou recarrega) chega com as stores
+ * vazias. Com o currículo já carregado nesta sessão, não vai ao backend de novo.
+ */
+export const ensureResumeLoaded = () => {
+    const { resumeStatus, setResumeStatus } = SubMenuMyResumeStore.getState();
+    if (resumeStatus !== 'unknown') return;
+    loadResumeStatus(setResumeStatus, loadSavedResume);
 };
 
 /** Preenche as abas com o currículo gravado (o ativo ou o inativo), cada store convertendo os campos que o backend transforma. */
@@ -426,16 +435,16 @@ const saveResume = (stateSkills: any, stateResume: any, stateLanguage: any, stat
 const SubMenuMyResume = () => {
     const router = useRouter();
     // quem veio de "Vagas compatíveis comigo" sem currículo volta para a pesquisa que pediu
-    // depois de salvar: volta à primeira aba e abre a prévia do currículo (ou volta à pesquisa que pediu o currículo)
-    const [previewOpen, setPreviewOpen] = useState(false);
+    // depois de salvar: volta à primeira aba e abre a página de prévia do currículo (ou volta à pesquisa que pediu o currículo)
     const [tabsReset, setTabsReset] = useState(0);
+    const openPreview = () => router.push('/meus-dados/sobre-mim/previa');
     const returnToThePendingSearch = () => {
         if (resumeSavedForTheSearch()) {
             router.push('/estatisticas/skills');
             return;
         }
         setTabsReset((value) => value + 1);
-        setPreviewOpen(true);
+        openPreview();
     };
     const stateSkills = TabSkillStore((state: ITabSkillStore) => ({
         ...state,
@@ -553,12 +562,11 @@ const SubMenuMyResume = () => {
                 rejectLabel="Não"
                 accept={confirmTheSave}
             />
-            <ResumePreview opened={previewOpen} onClose={() => setPreviewOpen(false)} />
             {resumeStatusLabel && (
                 <div className={`${resumeStatusLabel.className} resume-status-actions`}>
                     {resumeStatus === 'notLogged' ? <NotLoggedText setResumeStatus={setResumeStatus} /> : <span>{resumeStatusLabel.text}</span>}
                     {isEditing && (
-                        <button onClick={() => setPreviewOpen(true)} type="button" className="btn btn-outline-primary gap-2 whitespace-nowrap">
+                        <button onClick={openPreview} type="button" className="btn btn-outline-primary gap-2 whitespace-nowrap">
                             <IconEye className="h-4 w-4" />
                             Ver prévia
                         </button>
