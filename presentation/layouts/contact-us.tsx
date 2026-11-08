@@ -5,7 +5,7 @@ import JnAjax from '@/app/JnAjax';
 import { ModalLoginStore } from '@/presentation/auth/ModalLogin';
 import { CONTACT_US_TYPES, DESCRIPTION_LENGTH, TITLE_LENGTH, contactUsProblem } from './contactUsTypes';
 import { getLastStackTrace, listenToUnhandledErrors } from './lastStackTrace';
-import { ConfirmDialog } from 'primereact/confirmdialog';
+import { ConfirmModal } from '@/presentation/components/source/ConfirmModal';
 import { TicketKind, getContactUsQuotaGroup, getTicketConfirmMessage, getTicketQuotaBlockMessage, recordTicketQuota } from '@/presentation/components/ticket-quota/ticketDailyQuota';
 
 /**
@@ -110,12 +110,11 @@ const ContactUs = () => {
     return (
         <div className="fixed bottom-20 z-50 ltr:right-6 rtl:left-6">
             {contactType && (
-                <ConfirmDialog
+                <ConfirmModal
                     visible={confirming}
                     onHide={() => setConfirming(false)}
                     header="Confirmar envio"
                     message={getTicketConfirmMessage(contactType as TicketKind)}
-                    icon="pi pi-exclamation-triangle"
                     acceptLabel="Sim, enviar"
                     rejectLabel="Não"
                     accept={sendConfirmed}

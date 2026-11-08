@@ -880,12 +880,11 @@ const SkillFixHierarchyModal: React.FC<SkillFixHierarchyModalProps> = ({
     // exigiria um único <ConfirmDialog /> na página, compartilhado entre todos.
     const extraActions = (close: () => void) => (
         <>
-            <ConfirmDialog
+            <ConfirmModal
                 visible={confirmingSend}
                 onHide={() => setConfirmingSend(false)}
                 header="Confirmar envio"
                 message={getTicketConfirmMessage('skillFixHierarchy')}
-                icon="pi pi-exclamation-triangle"
                 acceptLabel="Sim, enviar"
                 rejectLabel="Não"
                 accept={() => sendConfirmed(close)}
@@ -1428,12 +1427,11 @@ const SkillSuggestionModal: React.FC = () => {
 
     const extraActions = (close: () => void) => (
         <>
-            <ConfirmDialog
+            <ConfirmModal
                 visible={confirmingSend}
                 onHide={() => setConfirmingSend(false)}
                 header="Confirmar envio"
                 message={getTicketConfirmMessage('skillSuggestion')}
-                icon="pi pi-exclamation-triangle"
                 acceptLabel="Sim, enviar"
                 rejectLabel="Não"
                 accept={() => sendConfirmed(close)}

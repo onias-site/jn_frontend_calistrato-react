@@ -97,7 +97,8 @@ export default class JnAjax {
      */
     static sendHttpRequest({ url, type, headers, contentType, data, complete }) {
         const requestHeaders = { ...headers };
-        if (data != null) {
+        // sem sessão (withoutSession) o contentType vem false: sem Content-Type a requisição não exige preflight de CORS
+        if (data != null && typeof contentType == 'string') {
             requestHeaders['Content-Type'] = contentType;
         }
         // os cabeçalhos undefined (sem login não há sessionToken nem email) não podem ir: o fetch recusa valores inválidos
