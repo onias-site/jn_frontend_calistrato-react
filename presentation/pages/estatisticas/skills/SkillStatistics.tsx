@@ -2,7 +2,7 @@
 import dynamic from 'next/dynamic';
 import PageTitle from '@/presentation/layouts/page-title';
 import { useRouter } from 'next/navigation';
-import { Modal, Pagination, Popover, Select, Table } from '@mantine/core';
+import { Modal, Pagination, Popover, SegmentedControl, Select, Table } from '@mantine/core';
 import IconCaretDown from '@/presentation/icons/icon-caret-down';
 import IconCircleCheck from '@/presentation/icons/icon-circle-check';
 import IconXCircle from '@/presentation/icons/icon-x-circle';
@@ -195,13 +195,17 @@ const SkillMonthsChart = ({ months, skill, seniority, ddd }: { months: MonthTota
     );
 };
 
-/** A pizza das skills do filtro: o total por fora, a porcentagem de cada cor na fatia e na legenda, o número no tooltip. */
+/** A distribuição das skills do filtro, em pizza ou em barras horizontais (escolha no canto do painel). */
 // fica num accordion que nasce fechado, com o total de vagas e de skills dentro dele
 const SkillsPie = ({ skills, vacancies }: { skills: SkillTotal[]; vacancies: number }) => {
     const { labels, values } = pieSlices(skills);
     const total = pieTotal(values);
-    const options: any = {
-        chart: { type: 'pie' },
+    const [expanded, setExpanded] = useState(false);
+    const [chartType, setChartType] = useState<'pie' | 'bar'>('pie');
+    const fontFamily = 'var(--font-nunito), ui-sans-serif, system-ui, sans-serif';
+
+    const pieOptions: any = {
+        chart: { type: 'pie', fontFamily },
         labels,
         colors: sliceColors,
         stroke: { width: 2 },
@@ -210,7 +214,20 @@ const SkillsPie = ({ skills, vacancies }: { skills: SkillTotal[]; vacancies: num
         dataLabels: { enabled: true, formatter: (percent: number, dataLabel: any) => percentLabel(values[dataLabel.seriesIndex], total) },
         tooltip: { y: { formatter: (value: number) => `${value} vagas` } },
     };
-    const [expanded, setExpanded] = useState(false);
+
+    // nas barras, cada skill é uma barra com a sua cor da pizza e o percentual na ponta
+    const barOptions: any = {
+        chart: { type: 'bar', fontFamily, toolbar: { show: false } },
+        colors: sliceColors,
+        plotOptions: { bar: { horizontal: true, distributed: true, borderRadius: 4, barHeight: '70%' } },
+        xaxis: { categories: labels, labels: { formatter: (value: number) => `${Math.round(value)}` } },
+        yaxis: { labels: { style: { fontSize: '13px', fontWeight: 600 } } },
+        dataLabels: { enabled: true, textAnchor: 'start', offsetX: 6, style: { colors: ['#0e1726'] }, formatter: (value: number) => percentLabel(value, total) },
+        legend: { show: false },
+        grid: { borderColor: 'rgba(128, 128, 128, 0.2)', strokeDashArray: 3 },
+        tooltip: { y: { title: { formatter: () => 'Vagas:' } } },
+    };
+
     return (
         <div className="mb-6 rounded border border-[#d3d3d3] dark:border-[#1b2e4b]">
             <button type="button" className="flex w-full items-center gap-2 px-3 py-2 font-semibold" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
@@ -219,11 +236,28 @@ const SkillsPie = ({ skills, vacancies }: { skills: SkillTotal[]; vacancies: num
             </button>
             {expanded && (
                 <div className="border-t border-[#d3d3d3] p-3 dark:border-[#1b2e4b]">
-                    <h5 className="mb-2 text-lg font-semibold">
-                        {vacancies} {vacancies == 1 ? 'vaga' : 'vagas'}, {skills.length} {skills.length == 1 ? 'Habilidade diferente' : 'Habilidades diferentes'}
-                    </h5>
-                    <div className="mb-2 font-semibold">{requirementsLabel(total, vacancies)}</div>
-                    <ReactApexChart type="pie" height={340} options={options} series={values} />
+                    <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <h5 className="text-lg font-semibold">
+                                {vacancies} {vacancies == 1 ? 'vaga' : 'vagas'}, {skills.length} {skills.length == 1 ? 'Habilidade diferente' : 'Habilidades diferentes'}
+                            </h5>
+                            <div className="font-semibold">{requirementsLabel(total, vacancies)}</div>
+                        </div>
+                        <SegmentedControl
+                            size="xs"
+                            value={chartType}
+                            onChange={(value) => setChartType(value as 'pie' | 'bar')}
+                            data={[
+                                { value: 'pie', label: 'Pizza' },
+                                { value: 'bar', label: 'Barras' },
+                            ]}
+                        />
+                    </div>
+                    {chartType == 'pie' ? (
+                        <ReactApexChart type="pie" height={340} options={pieOptions} series={values} />
+                    ) : (
+                        <ReactApexChart type="bar" height={60 + labels.length * 36} options={barOptions} series={[{ name: 'Vagas', data: values }]} />
+                    )}
                 </div>
             )}
         </div>
