@@ -7,10 +7,12 @@ leia-a antes de criar ou alterar qualquer tela.
 ## Rodar local
 
 ```bash
-npm run mock   # backend mocado nas portas 8081 (currículos) e 8082 (login); qualquer e-mail e senha entram
 npm run dev    # http://localhost:3000 (ou 3001 se a 3000 estiver ocupada)
 npm test       # jest
 ```
+
+As telas chamam as APIs em `http://localhost:8081` (currículos) e `http://localhost:8082` (login e chamados); sem elas no
+ar, as telas que dependem de dados ficam vazias.
 
 ## Regras que não se quebram
 
@@ -27,8 +29,6 @@ npm test       # jest
   produção pelas variáveis `NEXT_PUBLIC_VIS_API_URL` e `NEXT_PUBLIC_LOGIN_API_URL`.
 - CSS: só o preflight do Tailwind fica em `@layer` (`styles/tailwind.css`). Não mover components ou utilities para dentro
   de uma camada: o Tailwind emite as variantes responsivas fora dela e as regras do template param de funcionar.
-- Novo endpoint no backend: acrescentar a rota correspondente em `mock/server.js`, com dados de exemplo, para a tela poder
-  ser vista sem o backend.
 
 ## Commits
 

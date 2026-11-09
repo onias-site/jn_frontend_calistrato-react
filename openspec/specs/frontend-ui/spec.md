@@ -4,7 +4,7 @@
 
 Define como as telas do frontend Onias.Site (JobsNow) são construídas, para que qualquer pessoa ou agente que mexa no
 código mantenha a mesma aparência e o mesmo comportamento: uma biblioteca de componentes (Mantine 7), o layout do
-projeto em Tailwind (`styles/tailwind.css`), uma camada única de requisições (`JnAjax`) e um backend mocado para desenvolver sem as APIs.
+projeto em Tailwind (`styles/tailwind.css`) e uma camada única de requisições (`JnAjax`).
 
 Esta spec consolida a limpeza de layout feita em novembro de 2026 na branch `layout-cleanup`, que removeu PrimeReact,
 Bootstrap e jQuery.
@@ -178,19 +178,6 @@ de produção pelas variáveis `NEXT_PUBLIC_VIS_API_URL` e `NEXT_PUBLIC_LOGIN_AP
 
 - **WHEN** a tela não informa `setLoading`/`setNotLoading`
 - **THEN** o `JnAjax` mostra a capa `#cover` (spinner em CSS, `app/loading.css`) durante a requisição
-
-### Requirement: Backend mocado
-
-O repositório SHALL manter `mock/server.js` (express) respondendo nas portas 8081 e 8082 com dados de exemplo para todos
-os endpoints que as telas usam, acionado por `npm run mock`. Qualquer e-mail SHALL entrar com qualquer senha, exceto
-`Errada@1` (senha incorreta, 427). Quem entra pela primeira vez SHALL receber um currículo de tecnologia de exemplo. Ao
-criar ou alterar um endpoint no backend real, a rota correspondente SHALL ser criada ou alterada no mock.
-
-#### Scenario: Tela nova que depende de endpoint novo
-
-- **WHEN** uma tela passa a chamar `GET /recruiter/{email}/algo`
-- **THEN** `mock/server.js` ganha `vis.get('/recruiter/:email/algo', requireSession, ...)` devolvendo dados no formato que a
-  tela espera, e a tela pode ser vista com `npm run mock` + `npm run dev`
 
 ### Requirement: Mensagens ao usuário
 
