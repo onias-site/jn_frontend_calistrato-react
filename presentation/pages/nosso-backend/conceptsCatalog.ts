@@ -15,7 +15,7 @@ export interface BackendConceptSection {
 
 export const conceptSections: BackendConceptSection[] = [
     {
-        title: 'Entidades',
+        title: 'Tipos de Entidade',
         concepts: [
             { acronym: 'AE', name: 'Async Entity', explanation: 'Entidade cujas escritas rodam de forma assíncrona.' },
             { acronym: 'AEI', name: 'Automatic Entity Id', explanation: 'O id de toda entidade é calculado a partir dos campos marcados como chave primária.' },

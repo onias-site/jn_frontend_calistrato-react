@@ -79,8 +79,39 @@ export const removeResumeCopy = () => {
     JnAjax.removeAllCachedRequests(email, RESUME_COPY);
 };
 
+/** Os filtros da tela de vagas no momento em que o usuário foi mandado ao formulário: a volta refaz a mesma pesquisa. */
+const FILTERS_OF_THE_PENDING_SEARCH = 'compatiblePositionsFiltersOfThePendingSearch';
+
+export type PendingSearchFilters = { month: string; seniority: string; ddd: string };
+
 /** Vale para a aba do navegador: quem foi mandado ao formulário volta à pesquisa depois de salvar. */
-export const waitForTheResume = () => sessionStorage.setItem(WAITING_FOR_THE_RESUME, FILL_THE_RESUME);
+export const waitForTheResume = (filters?: PendingSearchFilters) => {
+    sessionStorage.setItem(WAITING_FOR_THE_RESUME, FILL_THE_RESUME);
+    filters && sessionStorage.setItem(FILTERS_OF_THE_PENDING_SEARCH, JSON.stringify(filters));
+};
+
+/** O formulário do currículo mostra no topo que, ao terminar o cadastro, o usuário volta à tela de vagas. */
+export const isWaitingForTheResume = () => sessionStorage.getItem(WAITING_FOR_THE_RESUME) == FILL_THE_RESUME;
+
+/** Quem voltou à tela de vagas sem salvar o currículo desiste da volta: o formulário deixa de prometê-la. */
+export const stopWaitingForTheResume = () => {
+    sessionStorage.removeItem(WAITING_FOR_THE_RESUME);
+    sessionStorage.removeItem(FILTERS_OF_THE_PENDING_SEARCH);
+};
+
+/** Os filtros guardados por waitForTheResume, lidos uma vez só. */
+export const takeThePendingSearchFilters = (): PendingSearchFilters | null => {
+    const storedFilters = sessionStorage.getItem(FILTERS_OF_THE_PENDING_SEARCH);
+    sessionStorage.removeItem(FILTERS_OF_THE_PENDING_SEARCH);
+    if (!storedFilters) {
+        return null;
+    }
+    try {
+        return JSON.parse(storedFilters);
+    } catch {
+        return null;
+    }
+};
 
 /** Chamada ao salvar o currículo: diz se a tela de vagas está esperando por ele. */
 export const resumeSavedForTheSearch = () => {

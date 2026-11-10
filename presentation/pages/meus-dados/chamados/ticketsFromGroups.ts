@@ -39,7 +39,7 @@ const skillSuggestionColumns: Column[] = [
 ];
 
 export const TICKET_KINDS: TicketKind[] = [
-    ...CONTACT_US_TYPES.map((type) => ({ value: type.value, label: type.label, childName: 'js_contact_us', type: type.value, columns: contactUsColumns })),
+    ...CONTACT_US_TYPES.map((type) => ({ value: type.value, label: type.kindLabel, childName: 'js_contact_us', type: type.value, columns: contactUsColumns })),
     { value: 'hierarchyAdd', label: 'Associação de hierarquia', childName: 'vis_skill_fix_hierarchy_pending', type: 'add', columns: hierarchyColumns },
     { value: 'hierarchyRemove', label: 'Dissociação de hierarquia', childName: 'vis_skill_fix_hierarchy_pending', type: 'remove', columns: hierarchyColumns },
     { value: 'skillSuggestion', label: 'Sugestão de habilidade', childName: 'vis_skill_pending', columns: skillSuggestionColumns },

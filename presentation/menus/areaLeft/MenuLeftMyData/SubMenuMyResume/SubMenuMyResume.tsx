@@ -21,7 +21,9 @@ import { NotAllowedCompanyStore } from '@/presentation/menus/areaLeft/MenuLeftMy
 import { SkillsInternalListStore, TabSkillsStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabSkills/ChooserSkills';
 
 import { Tabs } from '@/presentation/components/source/Tabs';
-import { removeResumeCopy, resumeCopyFromSavedResume, resumeSavedForTheSearch, resumeSkillsFrom, saveResumeCopy } from '@/presentation/components/resume-copy/resumeCopy';
+import { isWaitingForTheResume, removeResumeCopy, resumeCopyFromSavedResume, resumeSavedForTheSearch, resumeSkillsFrom, saveResumeCopy } from '@/presentation/components/resume-copy/resumeCopy';
+import { Alert } from '@mantine/core';
+import IconInfoCircle from '@/presentation/icons/icon-info-circle';
 import JnAjax from '@/app/JnAjax';
 import { ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogin';
 import { useRouter } from 'next/navigation';
@@ -102,6 +104,9 @@ const loadResumeStatus = (setResumeStatus: (resumeStatus: ResumeStatus) => void,
         JnAjax.setNotLoading()();
         setResumeStatus('notLogged');
     };
+    // a leitura só leva a sessão: um 422 é o token guardado fora do formato (8 caracteres), isto é, sessão inválida.
+    // Até 2026-11-10 caía no inesperado e mostrava a mensagem crua do servidor, sem a faixa (R04-2)
+    callbacks[422] = callbacks[401];
     callbacks[200] = (response: any) => {
         const data = response || {};
         if (isFilled(data.vis_resume)) {
@@ -434,7 +439,10 @@ const saveResume = (stateSkills: any, stateResume: any, stateLanguage: any, stat
 
 const SubMenuMyResume = () => {
     const router = useRouter();
-    // quem veio de "Vagas compatíveis comigo" sem currículo volta para a pesquisa que pediu
+    // quem veio do checkbox "Ver quais dessas habilidades estão em meu currículo" sem currículo volta para a pesquisa que pediu,
+    // e a faixa do topo promete essa volta (lida depois da montagem: o sessionStorage não existe no servidor)
+    const [returnsToTheStatistics, setReturnsToTheStatistics] = useState(false);
+    useEffect(() => setReturnsToTheStatistics(isWaitingForTheResume()), []);
     // depois de salvar: volta à primeira aba e abre a página de prévia do currículo (ou volta à pesquisa que pediu o currículo)
     const [tabsReset, setTabsReset] = useState(0);
     const openPreview = () => router.push('/meus-dados/sobre-mim/previa');
@@ -553,6 +561,11 @@ const SubMenuMyResume = () => {
 
     return (
         <div>
+            {returnsToTheStatistics && (
+                <Alert className="mb-4" color="blue" icon={<IconInfoCircle className="h-5 w-5" />}>
+                    Você será redirecionado à tela de estatísticas de vagas no Telegram assim que terminar o cadastro do seu currículo, que ainda não existe em nossa base de dados.
+                </Alert>
+            )}
             <ConfirmModal
                 visible={confirmingUpdate}
                 onHide={() => setConfirmingUpdate(false)}

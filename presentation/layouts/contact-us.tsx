@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import PubSub from 'pubsub-js';
 import JnAjax from '@/app/JnAjax';
 import { ModalLoginStore } from '@/presentation/auth/ModalLogin';
@@ -33,6 +33,14 @@ const ContactUs = () => {
     const [problem, setProblem] = useState('');
     const [sending, setSending] = useState(false);
     const [confirming, setConfirming] = useState(false);
+    // quando o diálogo de confirmação fechou: o mesmo Esc que o fecha não pode fechar o painel (R06-1)
+    const confirmationClosedAt = useRef(0);
+    const confirmingRef = useRef(false);
+    confirmingRef.current = confirming;
+    const hideConfirmation = () => {
+        confirmationClosedAt.current = Date.now();
+        setConfirming(false);
+    };
 
     useEffect(listenToUnhandledErrors, []);
 
@@ -51,13 +59,20 @@ const ContactUs = () => {
         setOpen(false);
     };
 
-    // o Esc faz o mesmo que o X: limpa e fecha; com o diálogo de confirmação aberto, o Esc só fecha o diálogo
+    // o Esc faz o mesmo que o X: limpa e fecha; com o diálogo de confirmação aberto, o Esc só fecha o diálogo. Até
+    // 2026-11-10 o ouvinte saía enquanto o diálogo estava aberto e voltava antes de o mesmo Esc chegar ao window, que
+    // então fechava o painel e apagava o que foi digitado (R06-1): agora ele fica e ignora o Esc do diálogo
     useEffect(() => {
-        if (!open || confirming) return;
-        const closeOnEsc = (e: KeyboardEvent) => e.key == 'Escape' && clearAndClose();
+        if (!open) return;
+        const closeOnEsc = (e: KeyboardEvent) => {
+            if (e.key != 'Escape') return;
+            if (confirmingRef.current) return;
+            if (Date.now() - confirmationClosedAt.current < 500) return;
+            clearAndClose();
+        };
         window.addEventListener('keydown', closeOnEsc);
         return () => window.removeEventListener('keydown', closeOnEsc);
-    }, [open, confirming]);
+    }, [open]);
 
     const send = (e: React.FormEvent) => {
         e.preventDefault();
@@ -112,7 +127,7 @@ const ContactUs = () => {
             {contactType && (
                 <ConfirmModal
                     visible={confirming}
-                    onHide={() => setConfirming(false)}
+                    onHide={hideConfirmation}
                     header="Confirmar envio"
                     message={getTicketConfirmMessage(contactType as TicketKind)}
                     acceptLabel="Sim, enviar"

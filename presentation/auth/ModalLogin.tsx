@@ -29,8 +29,13 @@ export interface IModalLoginStore {
     callbacks: any;
     title: string;
     detailMessage: string;
+    reasonMessage: string;
     email: string;
     context: any;
+    // senhas/tokens já recusados nesta abertura do modal: ficam fora do context, que vai inteiro no corpo das
+    // requisições (até 2026-11-10 iam em context.attempts e o 423 devolvia a senha digitada, defeito R05-2)
+    wrongAttempts: string[];
+    addWrongAttempt: (attempt: string) => void;
     hideModal: () => void;
     dismissModal: () => void;
     setDismissAction: (dismissAction: any) => void;
@@ -44,7 +49,7 @@ export interface IModalLoginStore {
     setContextField: (key: string, value: any) => void;
     executeRetryAfterAuthentication: (response: any) => void;
     isInvalidAttempt: (fieldName: string, phrase: string) => any;
-    showModal: (selectedScreen: string, title: string, retryAfterAuthenticationCallBack: any) => void;
+    showModal: (selectedScreen: string, title: string, retryAfterAuthenticationCallBack: any, detailMessage?: string, reasonMessage?: string) => void;
 }
 
 export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
@@ -64,11 +69,10 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
     lockedToken: false,
 
     isInvalidAttempt: (fieldName: string, phrase: string) => {
-        const {context, setDetailMessage, setInvalid} = get();
+        const {context, setDetailMessage, setInvalid, wrongAttempts} = get();
         const value = context[fieldName];
-        context.attempts = context.attempts || [];
 
-        if(!context.attempts.includes(value)){
+        if(!wrongAttempts.includes(value)){
             return false;
         }
 
@@ -93,7 +97,7 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
         PubSub.publish('showMessage', { summary: 'Sucesso!!!', detail: `O usuário '${email}' foi autenticado com sucesso!` });
         hideModal();
     },
-    showModal: (selectedScreen: string, title: string, retryAfterAuthenticationCallBack: any, detailMessage: string) => {
+    showModal: (selectedScreen: string, title: string, retryAfterAuthenticationCallBack: any, detailMessage: string = '', reasonMessage: string = '') => {
         const { setDetailMessage, setLoading, email, retryAfterAuthentication, setLockedToken } = get();
         const retryAfter401 = retryAfterAuthenticationCallBack || retryAfterAuthentication;
         const callbacks = {};
@@ -107,8 +111,10 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
         set({
             title,
             detailMessage,
+            reasonMessage,
             callbacks,
             context: {},
+            wrongAttempts: [],
             visible: true,
             email: email2,
             invalid: false,
@@ -119,6 +125,8 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
         });
     },
     context: {},
+    wrongAttempts: [],
+    addWrongAttempt: (attempt: string) => set({ wrongAttempts: [...get().wrongAttempts, attempt] }),
     setContextField: (key: string, value: any) => {
         const { context } = get();
         context[key] = value;
@@ -135,9 +143,11 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
             loading: false,
             callbacks: {},
             context: {},
+            wrongAttempts: [],
             email: '',
             title: '',
             detailMessage: '',
+            reasonMessage: '',
         });
         document.getElementById('cover').style.display = 'none';
     },
@@ -154,10 +164,11 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
     title: '',
     email: '',
     detailMessage: '',
+    reasonMessage: '',
 }));
 
 export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
-    const { setLockedToken, lockedToken, invalid, title, selectedScreen, visible, dismissModal, showModal, email, loading, setDetailMessage, detailMessage } = ModalLoginStore(
+    const { setLockedToken, lockedToken, invalid, title, selectedScreen, visible, dismissModal, showModal, email, loading, setDetailMessage, detailMessage, reasonMessage } = ModalLoginStore(
         (state: IModalLoginStore) => ({
             ...state,
         })
@@ -209,9 +220,47 @@ export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
         opacity: 0.6,
         cursor: 'not-allowed',
     };
+    const executeScreenAction = () => {
+        setDetailMessage('');
+        setLockedToken(false);
+        estado.doAnAjaxRequest(screen.buttonClick);
+    };
+
+    // Enter no último campo do formulário executa o botão da tela (se estiver habilitado); nos demais campos não faz nada
+    const handleEnter = (e: React.KeyboardEvent<HTMLFormElement>) => {
+        if (e.key != 'Enter' || e.defaultPrevented) {
+            return;
+        }
+        const target = e.target as HTMLElement;
+        if (target.tagName != 'INPUT') {
+            return;
+        }
+        e.preventDefault();
+        const fields = e.currentTarget.querySelectorAll('input:not([type=hidden])');
+        const lastField = fields[fields.length - 1];
+        if (target != lastField) {
+            return;
+        }
+        if (lockedToken || invalid || loading) {
+            return;
+        }
+        executeScreenAction();
+    };
+
     return (
-        <Modal title={title || screen.headerLabel} visible={visible} size="md" setVisible={(show) => (show ? showModal(selectedScreen, title) : dismissModal())}>
-            <form onSubmit={(e) => e.preventDefault()}>
+        <Modal title={title || screen.headerLabel} visible={visible} size="md" closeOnClickOutside={false} setVisible={(show) => (show ? showModal(selectedScreen, title) : dismissModal())}>
+            <form onSubmit={(e) => e.preventDefault()} onKeyDown={handleEnter}>
+                {/* o motivo de o usuário ter sido trazido a esta tela (login aberto em outro lugar, senha bloqueada): fica
+                    à parte do detailMessage, que o envio do token e a validação dos campos reescrevem (até 2026-11-09 o
+                    aviso do login concorrente era apagado pela resposta do envio do token assim que a tela abria) */}
+                {reasonMessage && (
+                    <div role="alert" className="mb-4 flex items-start gap-2 rounded-md border border-warning/30 bg-warning-light px-3 py-2.5 text-sm leading-snug text-warning dark:bg-warning-dark-light">
+                        <span className="mt-0.5 shrink-0">
+                            <IconInfoTriangle className="h-4 w-4" />
+                        </span>
+                        <span>{reasonMessage}</span>
+                    </div>
+                )}
                 <div className="relative mb-4" style={lockedToken ? disabledDiv : {}}>
                     {screen.component}
                     {/* a mesma caixa serve para o erro (vermelha) e para as orientações, como o aviso de token enviado (azul) */}
@@ -231,11 +280,7 @@ export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
                     invalid={lockedToken || invalid}
                     label={screen.buttonLabel}
                     loading={loading}
-                    onClick={() => {
-                        setDetailMessage('');
-                        setLockedToken(false);
-                        estado.doAnAjaxRequest(screen.buttonClick);
-                    }}
+                    onClick={executeScreenAction}
                 />
             </form>
             {!lockedToken ? screen.footerComponent : <UnlockTokenLink />}

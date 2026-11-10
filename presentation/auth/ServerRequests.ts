@@ -3,12 +3,14 @@ import JnAjax from '@/app/JnAjax';
 export const supportEmail = 'onias85@gmail.com';
 
 export const serverRequests = (state: any) => {
+    // o motivo vai no reasonMessage, que nada na tela de senha reescreve; o detailMessage fica para o aviso do token
     const notifyAboutLoginConflict = () =>
         state.showModal(
             'SavePassword',
             'Desbloqueie seu login',
             null,
-            'Já há um login corrente em sua conta, pode ser que você não tenha feito a saída em seu último login, ou se trata de algum acesso concorrente em sua conta em outra estação de trabalho. De qualquer forma, preencha os campos deste formulário para desfazer o outro login corrente'
+            '',
+            'Já há um login aberto na sua conta: pode ser que você não tenha saído do sistema no seu último acesso, ou que alguém esteja acessando a sua conta em outro navegador ou dispositivo. Para entrar aqui e encerrar o outro login, crie uma nova senha preenchendo os campos abaixo com o token que enviamos ao seu e-mail.'
         );
 
     const notifyAboutLockedPassword = () =>
@@ -16,19 +18,15 @@ export const serverRequests = (state: any) => {
             'SavePassword',
             'Desbloqueie a sua senha',
             null,
-            'Devido a tentativas de acessos suspeitos, sua senha foi preventivamente bloqueada. Preencha os campos acima, para desbloqueá-la.'
+            '',
+            'Devido a tentativas de acessos suspeitos, sua senha foi preventivamente bloqueada. Preencha os campos abaixo para desbloqueá-la.'
         );
     const notifyAboutAlreadySentToken = (response: any) => {
         state.setLockedToken(false);
         state.setInvalid(false);
-        // a mensagem do token enviado prevalece sobre a que estava no modal (a da senha bloqueada, por exemplo): até
-        // 2026-10-26 as duas saíam emendadas, com ponto duplo ("...desbloqueá-la.. Seu token foi enviado...")
-        state.showModal(
-            'SavePassword',
-            state.title,
-            null,
-            `Seu token foi enviado ao e-mail '${state.email}' no dia ${response.dateItWasSaved} e expirará no dia ${response.expirationDate}.`,
-        );
+        // só o aviso do token muda: o motivo de estar nesta tela (reasonMessage) continua na sua própria caixa. Até
+        // 2026-11-09 isto era um showModal, que apagava o motivo (até 2026-10-26 os dois saíam emendados no detailMessage)
+        state.setDetailMessage(`Seu token foi enviado ao e-mail '${state.email}' no dia ${response.dateItWasSaved} e expirará no dia ${response.expirationDate}.`);
     };
 
     const requestAlreadySolved = (ticketType: any) =>
@@ -57,10 +55,8 @@ export const serverRequests = (state: any) => {
     const openModal = (selectedScreen: string) => () => state.showModal(selectedScreen, '');
     const setAttempts = (fieldName: string) => () => {
         state.setDetailMessage('');
-        state.context.attempts = state.context.attempts || [];
-        const attempt = state.context[fieldName]
-        state.context.attempts.push(attempt);
-        state.setContextField('attempts', state.context.attempts);
+        const attempt = state.context[fieldName];
+        state.addWrongAttempt(attempt);
     };
     const lockToken = () => state.setLockedToken(true);
     // O bloqueio do token fica guardado no cache de respostas do localStorage (403 da verificação do e-mail, 429 da
@@ -274,9 +270,13 @@ export const serverRequests = (state: any) => {
             },
 
             callbacks: {
-                '200': setDetailMessage(
-                    `Seu token está sendo enviado ao e-mail '${state.email}' nos próximos minutos. Por favor, verifique sua caixa de entrada e sua caixa de spam / lixo eletrônico.`
-                ),
+                // aviso de orientação, não de erro: a caixa sai azul como no 429 (até 2026-11-10 saía vermelha, defeito R03-3)
+                '200': () => {
+                    state.setInvalid(false);
+                    state.setDetailMessage(
+                        `Seu token está sendo enviado ao e-mail '${state.email}' nos próximos minutos. Por favor, verifique sua caixa de entrada e sua caixa de spam / lixo eletrônico.`
+                    );
+                },
                 '404': notifyAboutLoginNotFound,
             },
             cached: {

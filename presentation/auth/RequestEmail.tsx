@@ -55,6 +55,8 @@ export const RequestEmail: React.FC<RequestEmailProps> = ({}) => {
                 leftSection={<IconUser className="h-5 w-5" />}
                 autoComplete="email"
                 autoFocus
+                // o Modal do Mantine prende o foco e ignora o autoFocus do React: sem isto o foco ia para o X (R03-5)
+                data-autofocus
             />
         </LabelComponent>
     );

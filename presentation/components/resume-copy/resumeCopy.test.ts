@@ -13,7 +13,10 @@ import {
     saveResumeCopy,
     savedResumeFrom,
     seniorityOf,
+    isWaitingForTheResume,
+    stopWaitingForTheResume,
     takeThePendingSearch,
+    takeThePendingSearchFilters,
     waitForTheResume,
 } from './resumeCopy';
 
@@ -102,5 +105,28 @@ describe('resumeCopy', () => {
         expect(resumeSavedForTheSearch()).toBe(true);
         expect(takeThePendingSearch()).toBe(true);
         expect(takeThePendingSearch()).toBe(false);
+    });
+
+    it('o formulário promete a volta só enquanto espera, e os filtros da pesquisa são lidos uma vez', () => {
+        const filters = { month: '2026-10', seniority: 'senior', ddd: '11' };
+        expect(isWaitingForTheResume()).toBe(false);
+        expect(takeThePendingSearchFilters()).toBeNull();
+
+        waitForTheResume(filters);
+        expect(isWaitingForTheResume()).toBe(true);
+        expect(resumeSavedForTheSearch()).toBe(true);
+        expect(isWaitingForTheResume()).toBe(false);
+        expect(takeThePendingSearch()).toBe(true);
+        expect(takeThePendingSearchFilters()).toEqual(filters);
+        expect(takeThePendingSearchFilters()).toBeNull();
+    });
+
+    it('quem volta à tela de vagas sem salvar desiste da volta', () => {
+        waitForTheResume({ month: '2026-10', seniority: 'pleno', ddd: '10' });
+        stopWaitingForTheResume();
+
+        expect(isWaitingForTheResume()).toBe(false);
+        expect(resumeSavedForTheSearch()).toBe(false);
+        expect(takeThePendingSearchFilters()).toBeNull();
     });
 });

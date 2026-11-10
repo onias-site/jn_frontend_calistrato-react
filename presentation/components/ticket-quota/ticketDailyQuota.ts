@@ -121,6 +121,6 @@ export const getTicketQuotaBlockMessage = (email: string, group: TicketQuotaGrou
     if (!nextAllowedTime) {
         return null;
     }
-    const nextAllowedText = new Date(nextAllowedTime).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+    const nextAllowedText = new Date(nextAllowedTime).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(',', ''); // dd/mm/aa hh:mm (R01-4)
     return `Você já enviou ${GROUP_LABELS[group]} nas últimas 24 horas. Poderá enviar de novo a partir de ${nextAllowedText}.`;
 };

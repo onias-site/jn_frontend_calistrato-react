@@ -61,6 +61,7 @@ As telas SHALL reutilizar os componentes de `presentation/components/source/`:
 | `Tabs` | assistente em abas com Voltar/Avançar, pendências e botão de concluir |
 | `LoadingButton` | botão com ícone de carregamento enquanto a requisição dele roda |
 | `notify` | notificação no canto da tela (`summary`, `detail`, `severity`) |
+| `GridPagination` / `paginate` | paginação no navegador de um grid já carregado, 10 linhas por página, rodapé "1 a 10 de 37" com o `Pagination` do Mantine |
 
 #### Scenario: Confirmação antes de excluir
 

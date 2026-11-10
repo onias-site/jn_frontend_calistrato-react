@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import Link from 'next/link';
 import { IRootState } from '@/store';
@@ -51,7 +51,7 @@ const Header = () => {
         }
 
         const  callbacks = {};
-        sessionStorage.removeItem('login');
+        JnAjax.removeLogin();
         // os dados guardados pelas telas são do usuário que saiu
         JnAjax.clearScreenCache();
         setLogged(false);
@@ -78,6 +78,27 @@ const Header = () => {
         const login: any = JnAjax.getLogin();
         setLoggedEmail((login && login.email) || '');
     }, [visible]);
+
+    // login, logout ou troca de usuário feitos em outra aba: o header acompanha e, se o usuário desta aba saiu, as telas
+    // largam os dados dele e o site volta à home, como no logout feito aqui
+    useEffect(() => {
+        return JnAjax.onLoginChangedInAnotherTab(() => {
+            const login: any = JnAjax.getLogin();
+            const email = (login && login.sessionToken && login.email) || '';
+            const previousEmail = loggedEmailRef.current;
+            setLogged(!!email);
+            setLoggedEmail(email);
+            const previousUserLeft = previousEmail && previousEmail != email;
+            if (!previousUserLeft) {
+                return;
+            }
+            JnAjax.clearScreenCache();
+            PubSub.publish('logout');
+            router.push('/');
+        });
+    }, []);
+    const loggedEmailRef = useRef('');
+    loggedEmailRef.current = loggedEmail;
     const userName = loggedEmail;
 
     const showModalLogin = () => showModal('RequestEmail', 'Entrar no sistema', null);

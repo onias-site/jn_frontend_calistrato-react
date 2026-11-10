@@ -11,7 +11,7 @@ import { Nunito } from 'next/font/google';
 import React, { useEffect } from 'react';
 import { QueryProvider } from '@/presentation/contexts/QueryProvider';
 import PubSub from 'pubsub-js';
-import { ColorSchemeScript } from '@mantine/core';
+import { ColorSchemeScript, mantineHtmlProps } from '@mantine/core';
 import { notify } from '@/presentation/components/source/notify';
 import { ModalLogin, ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogin';
 
@@ -52,7 +52,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
     return (
         <QueryProvider>
-            <html lang="pt-BR">
+            <html lang="pt-BR" {...mantineHtmlProps}>
                 <head>
                     <ColorSchemeScript />
                 </head>

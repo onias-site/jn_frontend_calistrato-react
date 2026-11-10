@@ -2,31 +2,29 @@
 import dynamic from 'next/dynamic';
 import PageTitle from '@/presentation/layouts/page-title';
 import { useRouter } from 'next/navigation';
-import { Modal, Pagination, Popover, SegmentedControl, Select, Table } from '@mantine/core';
+import { Checkbox, Pagination, Popover, SegmentedControl, Select, Table } from '@mantine/core';
 import IconCaretDown from '@/presentation/icons/icon-caret-down';
 import IconCircleCheck from '@/presentation/icons/icon-circle-check';
 import IconXCircle from '@/presentation/icons/icon-x-circle';
 import IconInfoCircle from '@/presentation/icons/icon-info-circle';
 import IconTrendingUp from '@/presentation/icons/icon-trending-up';
 import PubSub from 'pubsub-js';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import JnAjax from '@/app/JnAjax';
 import {
     ResumeCopy,
-    hasSkillsInTheCopy,
     isTechResumeCopy,
-    readResumeCopy,
     resumeHasTheSkill,
     resumeCopyFromSavedResume,
     saveResumeCopy,
     savedResumeFrom,
-    seniorityOf,
+    stopWaitingForTheResume,
     takeThePendingSearch,
+    takeThePendingSearchFilters,
     waitForTheResume,
 } from '@/presentation/components/resume-copy/resumeCopy';
-import { MonthPicker, isFutureMonth, monthParameter, previousMonth } from '@/presentation/components/month-picker/MonthPicker';
+import { MonthPicker, currentMonth, isFutureMonth, monthParameter, previousMonth } from '@/presentation/components/month-picker/MonthPicker';
 import { dddRegions } from '@/presentation/components/regions/dddRegions';
-import Dropdown from '@/presentation/utils/dropdown';
 import {
     MonthTotal,
     SkillTotal,
@@ -83,7 +81,7 @@ const SkillMonths = ({ skill, seniority, ddd }: { skill: string; seniority: stri
             setSituation('loaded');
         };
         callbacks['onUnexpectedHttpStatus'] = () => setSituation('error');
-        JnAjax.doAPersistedRequest(`statistics/skills/${seniority}/${ddd}/months?skill=${encodeURIComponent(skill)}`, callbacks, API, JnAjax.PERSISTED_REQUEST_ONE_YEAR);
+        JnAjax.doAPersistedRequest(`statistics/skills/${seniority}/${ddd}/months?skill=${encodeURIComponent(skill)}`, callbacks, API, JnAjax.PERSISTED_REQUEST_LIFETIME);
     }, [skill, seniority, ddd]);
 
     if (situation == 'error') {
@@ -300,6 +298,14 @@ const TelegramGroupsAccordion = () => {
         JnAjax.doAPersistedRequest('statistics/skills/telegramGroups', callbacks, API, JnAjax.PERSISTED_REQUEST_ONE_YEAR);
     };
 
+    // o Esc fecha o flutuante com o foco em qualquer lugar da tela (até 2026-11-10 não fechava, R12-1)
+    useEffect(() => {
+        if (!opened) return;
+        const closeOnEsc = (e: KeyboardEvent) => e.key == 'Escape' && setOpened(false);
+        window.addEventListener('keydown', closeOnEsc);
+        return () => window.removeEventListener('keydown', closeOnEsc);
+    }, [opened]);
+
     const toggle = () => {
         if (opened) {
             setOpened(false);
@@ -350,7 +356,7 @@ const normalizeForFilter = (text: string) =>
         .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase();
 
-/** Na pesquisa "Vagas compatíveis comigo", diz ao usuário, no título de cada habilidade, se o currículo dele tem a habilidade. */
+/** Com o checkbox "Ver quais dessas habilidades estão em meu currículo" marcado, diz ao usuário, no título de cada habilidade, se o currículo dele tem a habilidade. */
 const SkillInTheResume = ({ hasTheSkill }: { hasTheSkill: boolean }) => {
     if (hasTheSkill) {
         return (
@@ -368,13 +374,26 @@ const SkillInTheResume = ({ hasTheSkill }: { hasTheSkill: boolean }) => {
     );
 };
 
+/** Ao lado do total, com o checkbox do currículo marcado: quantas skills da pesquisa o currículo tem e o percentual sobre o total. */
+const SkillsInTheResumeCount = ({ skills, resumeSkills, desiredJob }: { skills: SkillTotal[]; resumeSkills: string[]; desiredJob: string }) => {
+    const count = skills.filter((item) => resumeHasTheSkill(resumeSkills, item.skill)).length;
+    const percent = percentLabel(count, skills.length);
+    const ofTheDesiredJob = desiredJob ? ` de '${desiredJob}'` : '';
+    return (
+        <span>
+            {' '}
+            ({count} ({percent}) estão no seu currículo{ofTheDesiredJob})
+        </span>
+    );
+};
+
 /**
  * O grid paginado das skills, 50 por página, filtrado no navegador pelo nome da skill: cada linha expande o gráfico de
- * linhas com os meses da skill. Com resumeSkills (pesquisa "Vagas compatíveis comigo"), cada habilidade diz se está no currículo.
+ * linhas com os meses da skill. Com resumeSkills (checkbox do currículo marcado), cada habilidade diz se está no currículo.
  */
 const PAGE_SIZE = 50;
 
-const SkillsGrid = ({ skills, seniority, ddd, resumeSkills }: { skills: SkillTotal[]; seniority: string; ddd: string; resumeSkills: string[] | null }) => {
+const SkillsGrid = ({ skills, seniority, ddd, resumeSkills, desiredJob }: { skills: SkillTotal[]; seniority: string; ddd: string; resumeSkills: string[] | null; desiredJob: string }) => {
     const [expandedRows, setExpandedRows] = useState<{ [skill: string]: boolean }>({});
     const [filter, setFilter] = useState('');
     const [page, setPage] = useState(1);
@@ -408,6 +427,13 @@ const SkillsGrid = ({ skills, seniority, ddd, resumeSkills }: { skills: SkillTot
                 <IconInfoCircle className="h-4 w-4 shrink-0" />
                 Clique em uma habilidade para ver quantas vagas pediram por ela mês a mês.
             </p>
+            {/* o total é o da pesquisa (mês, senioridade e região); com o filtro de texto, também quantas sobraram */}
+            <div className="mb-2 font-semibold">
+                Total de ferramentas / habilidades / conceitos encontrados: {skills.length}
+                {/* com o checkbox do currículo marcado: quantas da pesquisa inteira (não só as do filtro) o currículo tem */}
+                {resumeSkills && <SkillsInTheResumeCount skills={skills} resumeSkills={resumeSkills} desiredJob={desiredJob} />}
+                {normalizedFilter && <span className="font-normal text-white-dark"> ({filteredSkills.length} com o filtro)</span>}
+            </div>
             <Table.ScrollContainer minWidth={520}>
                 <Table highlightOnHover striped withRowBorders={false} verticalSpacing="xs">
                     <Table.Thead>
@@ -471,36 +497,13 @@ const SkillsGrid = ({ skills, seniority, ddd, resumeSkills }: { skills: SkillTot
     );
 };
 
-/** O modal que obriga quem tem mais de um DDD no currículo a escolher um antes da pesquisa. */
-const DddChooser = ({ ddds, onChoose, onCancel }: { ddds: number[]; onChoose: (ddd: string) => void; onCancel: () => void }) => {
-    const [chosen, setChosen] = useState('');
-    const options = regions.filter((region) => ddds.map(String).includes(region.id));
-    return (
-        <Modal opened title="Escolha o DDD de preferência" size="sm" onClose={onCancel}>
-            <label htmlFor="compatiblePositionsDdd" className="font-semibold">
-                Região Metropolitana
-            </label>
-            <Select
-                id="compatiblePositionsDdd"
-                className="mb-4"
-                placeholder="Selecione"
-                value={chosen || null}
-                onChange={(value) => setChosen(value || '')}
-                data={options.map((item) => ({ value: item.id, label: item.nome }))}
-                comboboxProps={{ withinPortal: false }}
-            />
-            <button type="button" className="btn btn-primary" disabled={!chosen} onClick={() => onChoose(chosen)}>
-                Pesquisar
-            </button>
-        </Modal>
-    );
-};
-
 /**
- * Grupos de vagas do Telegram, calculados dos anúncios e lidos por id. O botão "Pesquisar" abre duas opções: "Todas as
- * Vagas" lê as skills do mês, da senioridade e da região, e "Vagas compatíveis comigo" faz a mesma pesquisa no mês anterior ao corrente,
- * com a senioridade e o DDD do currículo do usuário. Mudar um filtro esconde o resultado até a próxima pesquisa. A pizza
- * das skills fica acima da lista, e cada skill expande um gráfico de linhas com os seus meses. A home abre a tela já
+ * Grupos de vagas do Telegram, calculados dos anúncios e lidos por id. O botão "Pesquisar" lê as skills do mês, da
+ * senioridade e da região (até 2026-11-09 era um menu com "Todas as Vagas" e "Vagas compatíveis comigo"). Mudar um filtro
+ * esconde o resultado até a próxima pesquisa. O checkbox "Ver quais dessas habilidades estão em meu currículo" não
+ * pesquisa: lê as habilidades do currículo do usuário (pede o login, e quem não tem currículo vai cadastrá-lo e volta
+ * para cá com a mesma pesquisa e o checkbox marcado) e marca, em cada skill listada, se ela está no currículo. A pizza das
+ * skills fica acima da lista, e cada skill expande um gráfico de linhas com os seus meses. A home abre a tela já
  * pesquisada, com searchOnOpening.
  */
 export const SkillStatistics = ({ initialSeniority = 'pleno', searchOnOpening = false }: { initialSeniority?: string; searchOnOpening?: boolean }) => {
@@ -511,9 +514,10 @@ export const SkillStatistics = ({ initialSeniority = 'pleno', searchOnOpening = 
     const [situation, setSituation] = useState<Situation>('idle');
     const [total, setTotal] = useState(0);
     const [skills, setSkills] = useState<SkillTotal[]>([]);
-    const [resumeToChooseDdd, setResumeToChooseDdd] = useState<ResumeCopy | null>(null);
-    // só a pesquisa "Vagas compatíveis comigo" preenche: as demais pesquisas não comparam com o currículo
+    // preenchido enquanto o checkbox do currículo está marcado: as habilidades do currículo, para comparar com as listadas
     const [resumeSkills, setResumeSkills] = useState<string[] | null>(null);
+    // o cargo pretendido do currículo lido no último clique, que completa o rótulo do checkbox
+    const [desiredJob, setDesiredJob] = useState('');
 
     const hideResult = () => {
         setSituation('idle');
@@ -534,50 +538,35 @@ export const SkillStatistics = ({ initialSeniority = 'pleno', searchOnOpening = 
             JnAjax.doAnAjaxRequest(uri, callbacks, 'GET', null as any, {}, API);
             return;
         }
-        JnAjax.doAPersistedRequest(uri, callbacks, API, JnAjax.PERSISTED_REQUEST_ONE_YEAR);
+        // o mês corrente ainda recebe vagas: guardado por 24 h; os passados não mudam mais e ficam 1 ano (até 2026-11-10
+        // o mês corrente também ficava 1 ano e a tela mostrava a contagem do primeiro acesso, R12-2)
+        const lifetime = month == currentMonth() ? JnAjax.PERSISTED_REQUEST_LIFETIME : JnAjax.PERSISTED_REQUEST_ONE_YEAR;
+        JnAjax.doAPersistedRequest(uri, callbacks, API, lifetime);
     };
 
-    const search = () => {
-        setResumeSkills(null);
-        searchBy(month, seniority, ddd);
-    };
+    const search = () => searchBy(month, seniority, ddd);
 
-    // o resultado segue os filtros da tela: eles passam a mostrar o que foi pesquisado, e os gráficos de linhas os usam
-    const searchCompatiblePositions = (resume: ResumeCopy, chosenDdd: string) => {
-        const chosenMonth = previousMonth();
-        const chosenSeniority = seniorityOf(resume, new Date().getFullYear());
-        setResumeToChooseDdd(null);
-        setResumeSkills(resume.skills);
-        setMonth(chosenMonth);
-        setSeniority(chosenSeniority);
-        setDdd(chosenDdd);
-        searchBy(chosenMonth, chosenSeniority, chosenDdd);
-    };
-
-    const searchByTheResume = (resume: ResumeCopy) => {
+    const showTheResumeSkills = (resume: ResumeCopy) => {
         if (!isTechResumeCopy(resume)) {
             PubSub.publish('showMessage', { summary: 'Atenção', detail: 'Funcionalidade disponível apenas para currículos de tecnologia (Por enquanto)', severity: 'warn' });
             return;
         }
-        if (resume.ddd.length > 1) {
-            setResumeToChooseDdd(resume);
-            return;
-        }
-        searchCompatiblePositions(resume, String(resume.ddd[0]));
+        setResumeSkills(resume.skills);
     };
 
+    // a promessa da faixa do formulário: ao salvar o currículo, o usuário volta para cá com esta mesma pesquisa
     const fillTheResume = () => {
-        waitForTheResume();
-        PubSub.publish('showMessage', { summary: 'Preencha o seu currículo', detail: 'Ao salvar, voltamos para a pesquisa de vagas compatíveis com você.', severity: 'info' });
+        waitForTheResume({ month, seniority, ddd });
         router.push('/meus-dados/sobre-mim');
     };
 
     const loadTheResume = () => {
         const callbacks: any = {};
-        // sem login o JnAjax chama o 401 antes de enviar, e não desliga o carregamento que já ligou
+        // sem login o JnAjax chama o 401 antes de enviar, e não desliga o carregamento que já ligou; o modal de login
+        // aparece, e quem entra volta a este clique
         callbacks[401] = () => {
             JnAjax.setNotLoading()();
-            JnAjax.getHandler401(findCompatiblePositions)();
+            JnAjax.getHandler401(compareWithTheResume)();
         };
         callbacks[200] = (response: any) => {
             const savedResume = savedResumeFrom(response);
@@ -587,29 +576,59 @@ export const SkillStatistics = ({ initialSeniority = 'pleno', searchOnOpening = 
             }
             const resume = resumeCopyFromSavedResume(savedResume);
             saveResumeCopy(resume);
-            searchByTheResume(resume);
+            setDesiredJob(savedResume.desiredJob || '');
+            showTheResumeSkills(resume);
         };
         callbacks[404] = fillTheResume;
-        callbacks['onUnexpectedHttpStatus'] = () => setSituation('error');
+        callbacks['onUnexpectedHttpStatus'] = () =>
+            PubSub.publish('showMessage', { summary: 'Atenção', detail: 'Não foi possível ler o seu currículo agora. Tente de novo em alguns instantes.', severity: 'warn' });
         JnAjax.doAnAjaxRequest('resume/{email}', callbacks, 'GET', null as any, {}, API);
     };
 
-    // a cópia do navegador só vale para quem fez login: sem ele, o endpoint responde 401 e pede o login
-    const findCompatiblePositions = () => {
-        const resumeCopy = JnAjax.hasLogin() ? readResumeCopy() : null;
-        // a cópia gravada antes das habilidades entrarem nela é lida de novo do backend
-        if (resumeCopy && hasSkillsInTheCopy(resumeCopy)) {
-            searchByTheResume(resumeCopy);
+    // todo clique pergunta ao backend, que valida a sessão (401 com sessão inválida ou expirada abre o modal de login): até
+    // 2026-11-09 a cópia do currículo guardada no navegador bastava, e uma sessão vencida ainda via as habilidades
+    const compareWithTheResume = loadTheResume;
+
+    // o checkbox só mostra ou esconde a comparação: a lista de habilidades continua a da última pesquisa
+    const toggleTheResumeComparison = (checked: boolean) => {
+        if (!checked) {
+            setResumeSkills(null);
             return;
         }
-        loadTheResume();
+        compareWithTheResume();
     };
+
+    // de volta do cadastro do currículo: a pesquisa de antes, já comparada com o currículo novo
+    const searchAgainWithTheResume = () => {
+        const filters = takeThePendingSearchFilters();
+        const chosenMonth = filters ? filters.month : month;
+        const chosenSeniority = filters ? filters.seniority : seniority;
+        const chosenDdd = filters ? filters.ddd : ddd;
+        setMonth(chosenMonth);
+        setSeniority(chosenSeniority);
+        setDdd(chosenDdd);
+        searchBy(chosenMonth, chosenSeniority, chosenDdd);
+        compareWithTheResume();
+    };
+
+    // ao sair do sistema, a comparação some: as habilidades do currículo só ficam na tela de quem está logado
+    React.useEffect(() => {
+        const token = PubSub.subscribe('logout', () => {
+            setResumeSkills(null);
+            setDesiredJob('');
+        });
+        return () => {
+            PubSub.unsubscribe(token);
+        };
+    }, []);
 
     React.useEffect(() => {
         if (takeThePendingSearch()) {
-            findCompatiblePositions();
+            searchAgainWithTheResume();
             return;
         }
+        // quem foi ao formulário e voltou sem salvar desiste da volta
+        stopWaitingForTheResume();
         searchOnOpening && search();
     }, []);
 
@@ -617,6 +636,7 @@ export const SkillStatistics = ({ initialSeniority = 'pleno', searchOnOpening = 
         <div>
             <PageTitle>Grupos de vagas do telegram</PageTitle>
             <div className="panel mt-6">
+                {/* mês, senioridade, região, "Pesquisar" e o checkbox do currículo numa linha só (quebra apenas em tela estreita) */}
                 <MonthPicker
                     id="skillStatisticsMonth"
                     month={month}
@@ -625,82 +645,60 @@ export const SkillStatistics = ({ initialSeniority = 'pleno', searchOnOpening = 
                         setMonth(chosenMonth);
                         hideResult();
                     }}
-                />
-                <div className="mb-4 flex flex-wrap items-start gap-3">
-                    <div className="flex flex-wrap items-center gap-3">
-                        <label htmlFor="skillStatisticsSeniority" className="mb-0 font-semibold">
-                            Senioridade
-                        </label>
-                        <Select
-                            id="skillStatisticsSeniority"
-                            className="w-40"
-                            value={seniority}
-                            onChange={(value) => {
-                                if (!value) return;
-                                setSeniority(value);
-                                hideResult();
-                            }}
-                            data={seniorities.map((item) => ({ value: item.id, label: item.nome }))}
-                            allowDeselect={false}
-                            comboboxProps={{ withinPortal: false }}
-                        />
-                        <label htmlFor="skillStatisticsDdd" className="mb-0 font-semibold">
-                            Região Metropolitana
-                        </label>
-                        <Select
-                            id="skillStatisticsDdd"
-                            className="w-64"
-                            value={ddd}
-                            onChange={(value) => {
-                                if (!value) return;
-                                setDdd(value);
-                                hideResult();
-                            }}
-                            data={regions.map((item) => ({ value: item.id, label: item.nome }))}
-                            searchable
-                            nothingFoundMessage="Nenhuma região encontrada"
-                            allowDeselect={false}
-                            comboboxProps={{ withinPortal: false }}
-                        />
-                        <div className="dropdown">
-                            <Dropdown
-                                offset={[0, 4]}
-                                placement="bottom-start"
-                                btnClassName="btn btn-primary"
-                                button={
-                                    <>
-                                        Pesquisar
-                                        <IconCaretDown className="ml-2 h-4 w-4" />
-                                    </>
-                                }
-                            >
-                                <ul className="whitespace-nowrap">
-                                    <li>
-                                        <button type="button" onClick={search}>
-                                            Todas as Vagas
-                                        </button>
-                                    </li>
-                                    <li>
-                                        <button type="button" onClick={findCompatiblePositions}>
-                                            Vagas compatíveis comigo
-                                        </button>
-                                    </li>
-                                </ul>
-                            </Dropdown>
-                        </div>
-                    </div>
+                >
+                    <label htmlFor="skillStatisticsSeniority" className="mb-0 font-semibold">
+                        Senioridade
+                    </label>
+                    <Select
+                        id="skillStatisticsSeniority"
+                        className="w-36"
+                        value={seniority}
+                        onChange={(value) => {
+                            if (!value) return;
+                            setSeniority(value);
+                            hideResult();
+                        }}
+                        data={seniorities.map((item) => ({ value: item.id, label: item.nome }))}
+                        allowDeselect={false}
+                        comboboxProps={{ withinPortal: false }}
+                    />
+                    <label htmlFor="skillStatisticsDdd" className="mb-0 font-semibold">
+                        Região Metropolitana
+                    </label>
+                    <Select
+                        id="skillStatisticsDdd"
+                        className="w-56"
+                        value={ddd}
+                        onChange={(value) => {
+                            if (!value) return;
+                            setDdd(value);
+                            hideResult();
+                        }}
+                        data={regions.map((item) => ({ value: item.id, label: item.nome }))}
+                        searchable
+                        nothingFoundMessage="Nenhuma região encontrada"
+                        allowDeselect={false}
+                        comboboxProps={{ withinPortal: false }}
+                    />
+                    <button type="button" className="btn btn-primary" onClick={search}>
+                        Pesquisar
+                    </button>
+                    <Checkbox
+                        label={`Ver quais dessas habilidades estão em meu currículo${desiredJob ? ` de '${desiredJob}'` : ''}`}
+                        checked={resumeSkills != null}
+                        onChange={(event) => toggleTheResumeComparison(event.currentTarget.checked)}
+                    />
+                </MonthPicker>
+                <div className="mb-4">
                     <TelegramGroupsAccordion />
                 </div>
-                {resumeToChooseDdd && (
-                    <DddChooser ddds={resumeToChooseDdd.ddd} onChoose={(chosenDdd) => searchCompatiblePositions(resumeToChooseDdd, chosenDdd)} onCancel={() => setResumeToChooseDdd(null)} />
-                )}
                 {situation == 'loading' && <div>Carregando as habilidades...</div>}
                 {situation == 'error' && <div>Não foi possível carregar as estatísticas agora. Tente de novo em alguns instantes.</div>}
                 {situation == 'loaded' && skills.length == 0 && <div>Nenhuma vaga encontrada para este filtro.</div>}
                 {situation == 'loaded' && skills.length > 0 && (
                     <>
                         <SkillsPie skills={skills} vacancies={total} />
-                        <SkillsGrid skills={skills} seniority={seniority} ddd={ddd} resumeSkills={resumeSkills} />
+                        <SkillsGrid skills={skills} seniority={seniority} ddd={ddd} resumeSkills={resumeSkills} desiredJob={desiredJob} />
                     </>
                 )}
             </div>

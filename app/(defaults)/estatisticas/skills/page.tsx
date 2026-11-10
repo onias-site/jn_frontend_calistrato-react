@@ -7,7 +7,8 @@ export const metadata: Metadata = {
 };
 
 const EstatisticasSkills = () => {
-    return <SkillStatistics />;
+    // a tela abre já pesquisada com os filtros padrão (mês anterior, Pleno, Home office), como a home
+    return <SkillStatistics searchOnOpening />;
 };
 
 export default EstatisticasSkills;

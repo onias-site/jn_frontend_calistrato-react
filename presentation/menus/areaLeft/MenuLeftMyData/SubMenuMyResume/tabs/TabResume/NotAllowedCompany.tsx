@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useState } from 'react';
 import { create } from 'zustand';
 import { TagsInput } from '@mantine/core';
 import JnAjax from '@/app/JnAjax'
@@ -30,10 +30,14 @@ export const NotAllowedCompanyStore = create<INotAllowedCompanyStore>((set) => (
  */
 export const NotAllowedCompany: React.FC<NotAllowedCompanyProps> = ({ invalid, notAllowedCompany, setNotAllowedCompany }) => {
     const { filteredCompanies, setFilteredCompanies } = NotAllowedCompanyStore((state: INotAllowedCompanyStore) => ({ ...state }));
+    // o campo não deixa digitar além de 50 caracteres; ao chegar lá, o aviso diz por que o texto parou (até 2026-11-10 o
+    // nome era cortado sem aviso e entrava assim, R04-3)
+    const [reachedTheLimit, setReachedTheLimit] = useState(false);
 
     // acima do limite do servidor (o campo search aceita até 50 caracteres) não há empresa a sugerir: sem isto, a recusa
     // dele (422) aparecia ao usuário como aviso cru, em inglês; o formulário já diz que a empresa passou do tamanho
     const filtrarEmpresas = (query: string) => {
+        setReachedTheLimit(query.length >= COMPANY_SEARCH_MAX_LENGTH);
         const texto = query.trim();
         if (texto.length < COMPANY_SEARCH_MIN_LENGTH || texto.length > COMPANY_SEARCH_MAX_LENGTH) {
             setFilteredCompanies([]);
@@ -65,7 +69,7 @@ export const NotAllowedCompany: React.FC<NotAllowedCompanyProps> = ({ invalid, n
             onChange={setCompanies}
             data={filteredCompanies}
             onSearchChange={filtrarEmpresas}
-            error={invalid}
+            error={reachedTheLimit ? `Cada empresa / consultoria pode ter no máximo ${COMPANY_SEARCH_MAX_LENGTH} caracteres` : invalid}
             placeholder={notAllowedCompany && notAllowedCompany.length ? '' : 'Digite o nome e tecle Enter'}
             maxLength={COMPANY_SEARCH_MAX_LENGTH}
             acceptValueOnBlur

@@ -1,14 +1,15 @@
 /**
  * Os tipos de ticket do "Fale Conosco": o valor é o que o back end aceita (os itens de JsContactUsTypes, js) e o texto é o
- * que o usuário vê no combo.
+ * que o usuário vê no combo do formulário (uma ação: "Reportar um bug"). kindLabel é o tipo do chamado já aberto ("Bug"), usado
+ * onde se listam os chamados, para que o combo não pareça servir para abrir um.
  */
 export const CONTACT_US_TYPES = [
-    { value: 'reportBug', label: 'Reportar um bug' },
-    { value: 'makeCompliment', label: 'Fazer um elogio' },
-    { value: 'makeCriticism', label: 'Fazer uma crítica' },
-    { value: 'makeSuggestion', label: 'Fazer uma sugestão' },
-    { value: 'makeComment', label: 'Fazer um comentário' },
-    { value: 'clarifyDoubts', label: 'Esclarecer dúvidas' },
+    { value: 'reportBug', label: 'Reportar um bug', kindLabel: 'Bug' },
+    { value: 'makeCompliment', label: 'Fazer um elogio', kindLabel: 'Elogio' },
+    { value: 'makeCriticism', label: 'Fazer uma crítica', kindLabel: 'Crítica' },
+    { value: 'makeSuggestion', label: 'Fazer uma sugestão', kindLabel: 'Sugestão' },
+    { value: 'makeComment', label: 'Fazer um comentário', kindLabel: 'Comentário' },
+    { value: 'clarifyDoubts', label: 'Esclarecer dúvidas', kindLabel: 'Dúvida' },
 ];
 
 /** Os limites de tamanho que o back end valida (JsEntityContactUs). */

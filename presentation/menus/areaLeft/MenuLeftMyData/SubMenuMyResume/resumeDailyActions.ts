@@ -61,7 +61,7 @@ export const getResumeDailyActionBlockMessage = (email: string, action: ResumeDa
     if (!nextAllowedTime) {
         return null;
     }
-    const nextAllowedText = new Date(nextAllowedTime).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+    const nextAllowedText = new Date(nextAllowedTime).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(',', ''); // dd/mm/aa hh:mm (R01-4)
     return `Só é possível ${ACTION_LABELS[action]} uma única vez ao dia, e você já fez isso. Poderá fazer de novo a partir de ${nextAllowedText}.`;
 };
 

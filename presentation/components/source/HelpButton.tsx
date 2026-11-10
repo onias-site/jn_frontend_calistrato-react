@@ -21,6 +21,8 @@ export const HelpButton: React.FC<HelpButtonProps> = ({ title, explanation, tool
             </Modal>
             <Tooltip label={tooltip} position="bottom">
                 <ActionIcon
+                    // sem o type, dentro de um <form> ele vira o botão de submit implícito e o Enter num campo abria a ajuda
+                    type="button"
                     variant="subtle"
                     color="primary"
                     radius="xl"

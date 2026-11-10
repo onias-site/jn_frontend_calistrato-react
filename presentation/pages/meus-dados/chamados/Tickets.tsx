@@ -1,7 +1,10 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { Modal } from '@mantine/core';
+import { useRouter } from 'next/navigation';
 import JnAjax from '@/app/JnAjax';
+import { ModalLoginStore } from '@/presentation/auth/ModalLogin';
+import { GridPagination, paginate } from '@/presentation/components/source/GridPagination';
 import { groupParentId } from '../acessos/accessesReconciliation';
 import { TICKET_KINDS, Ticket, abbreviate, ticketsFromGroups } from './ticketsFromGroups';
 
@@ -19,12 +22,15 @@ const messages: Record<Exclude<Situation, 'loaded'>, string> = {
 /**
  * Os chamados do usuário logado de um tipo escolhido no combo (os do Fale Conosco, as associações e dissociações de
  * hierarquia e as sugestões de habilidade): em análise e encerrados, do mais recente ao mais antigo, com as colunas
- * próprias do tipo. Exige login: quem não está logado vê o modal de login, que repete a busca.
+ * próprias do tipo. Exige login: quem não está logado vê o modal de login, que repete a busca ao entrar;
+ * fechar o modal sem entrar leva à tela inicial.
  */
 export const Tickets = () => {
     const [kindValue, setKindValue] = useState('');
     const [situation, setSituation] = useState<Situation>('choosing');
     const [tickets, setTickets] = useState<Ticket[]>([]);
+    const [page, setPage] = useState(1);
+    const router = useRouter();
     // a célula comprida demais para a grade, mostrada inteira no modal
     const [fullCell, setFullCell] = useState<{ title: string; text: string } | null>(null);
 
@@ -36,6 +42,7 @@ export const Tickets = () => {
         const callbacks: any = {};
         callbacks[200] = (response: any) => {
             setTickets(ticketsFromGroups(response, kind));
+            setPage(1);
             setSituation('loaded');
         };
         // nenhum chamado desta entidade ainda (o grupo não existe em nenhum dos lados)
@@ -47,6 +54,8 @@ export const Tickets = () => {
             // sem login o JnAjax chama o 401 antes de enviar, e não desliga o carregamento que já ligou
             JnAjax.setNotLoading()();
             setSituation('notLogged');
+            // fechar o modal sem entrar leva à tela inicial: aqui ficaria só uma tela vazia
+            ModalLoginStore.getState().setDismissAction(() => router.push('/'));
             JnAjax.getHandler401(load)();
         };
         callbacks['onUnexpectedHttpStatus'] = () => setSituation('error');
@@ -57,6 +66,8 @@ export const Tickets = () => {
     };
 
     useEffect(load, [kindValue]);
+
+    const { first, pageRows } = paginate(tickets, page);
 
     return (
         <div className="panel mt-6">
@@ -93,8 +104,8 @@ export const Tickets = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {tickets.map((ticket, index) => (
-                                    <tr key={ticket.date + index}>
+                                {pageRows.map((ticket, pageIndex) => (
+                                    <tr key={ticket.date + (first + pageIndex)}>
                                         <td className="whitespace-nowrap">{ticket.date || '—'}</td>
                                         <td className="whitespace-nowrap">{ticket.situation}</td>
                                         {kind.columns.map((column) => {
@@ -119,6 +130,7 @@ export const Tickets = () => {
                             </tbody>
                         </table>
                     </div>
+                    <GridPagination total={tickets.length} page={page} onChange={setPage} />
                 </>
             )}
             {fullCell && (

@@ -5,9 +5,10 @@ export const metadata: Metadata = {
     title: 'Edita vagaId',
 };
 
-const EditarVaga = ({params}:any) => {
-
-    return <FormularioVaga vagaId={params.editaId} />;
+// no Next 15 os params da rota chegam como Promise
+const EditarVaga = async ({ params }: { params: Promise<{ editaId: string }> }) => {
+    const { editaId } = await params;
+    return <FormularioVaga vagaId={editaId} />;
   };
 
   export default EditarVaga;

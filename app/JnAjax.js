@@ -418,7 +418,7 @@ export default class JnAjax {
             dateItWasSaved: response.dateItWasSaved || recoveredLogin.dateItWasSaved,
             };
 
-        sessionStorage.setItem('login', JSON.stringify(loginToSessionStorage));
+        localStorage.setItem(JnAjax.LOGIN_KEY, JSON.stringify(loginToSessionStorage));
 
         JnAjax.lastLoginTime = new Date().getTime();
 
@@ -435,8 +435,46 @@ export default class JnAjax {
         return loginToSessionStorage;
     }
 
+    // a sessão fica no localStorage, que todas as abas do site enxergam: o login feito numa aba vale nas outras (até
+    // 2026-11-09 ficava no sessionStorage, que é de uma aba só, e cada aba nova pedia o login de novo)
+    static LOGIN_KEY = 'login';
+
+    static readStoredLogin() {
+        try {
+            const stored = localStorage.getItem(JnAjax.LOGIN_KEY);
+            if (stored) {
+                return stored;
+            }
+            // a aba que já estava logada pelo sessionStorage passa o login para o localStorage
+            const fromThisTab = sessionStorage.getItem(JnAjax.LOGIN_KEY);
+            if (!fromThisTab) {
+                return null;
+            }
+            localStorage.setItem(JnAjax.LOGIN_KEY, fromThisTab);
+            sessionStorage.removeItem(JnAjax.LOGIN_KEY);
+            return fromThisTab;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    static removeLogin() {
+        try {
+            localStorage.removeItem(JnAjax.LOGIN_KEY);
+            sessionStorage.removeItem(JnAjax.LOGIN_KEY);
+        } catch (error) {}
+    }
+
+    // avisa quando outra aba entra, sai ou troca de usuário (o evento storage só chega às outras abas, nunca à que
+    // gravou; key null é o localStorage.clear()); devolve a função que para de escutar
+    static onLoginChangedInAnotherTab(listener) {
+        const handler = (event) => (event.key == JnAjax.LOGIN_KEY || event.key == null) && listener();
+        window.addEventListener('storage', handler);
+        return () => window.removeEventListener('storage', handler);
+    }
+
     static getLogin() {
-        const sessao = sessionStorage.getItem('login');
+        const sessao = JnAjax.readStoredLogin();
         let login = {};
         try {
             const sessaoObj = JSON.parse(sessao);

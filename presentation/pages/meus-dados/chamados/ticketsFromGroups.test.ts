@@ -3,6 +3,22 @@ import { contactUsProblem } from '@/presentation/layouts/contactUsTypes';
 
 const kind = (value: string) => TICKET_KINDS.find((k) => k.value == value)!;
 
+describe('rótulos do combo de tipo de chamado', () => {
+    it('nomeiam o tipo do chamado já aberto, e não a ação de abrir um', () => {
+        expect(TICKET_KINDS.map((k) => k.label)).toEqual([
+            'Bug',
+            'Elogio',
+            'Crítica',
+            'Sugestão',
+            'Comentário',
+            'Dúvida',
+            'Associação de hierarquia',
+            'Dissociação de hierarquia',
+            'Sugestão de habilidade',
+        ]);
+    });
+});
+
 describe('ticketsFromGroups', () => {
     it('junta os dois lados, do mais recente ao mais antigo, com a situação de cada um', () => {
         const response = {
