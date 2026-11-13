@@ -231,14 +231,9 @@ const getSkillsContext = (context: any, groups: any[], accordionList: any[]) => 
 
 // A habilidade sugerida precisa constar no texto do currículo exatamente como foi escrita: a frase inteira, sem ser
 // pedaço de outra palavra (maiúsculas e espaços repetidos não contam). Devolve true (e avisa o candidato) quando não consta.
-// Currículo de tecnologia já salvo e nenhum texto colado: não há como conferir aqui (o texto não é gravado), e quem
-// confere é o suporte ao avaliar a sugestão.
+// O modal só abre com o texto colado no memo da aba Currículo (RESUME_TEXT_MISSING).
 const isSkillOutOfTheResume = (word: string) => {
-    const { resumeText: typedResumeText, savedTechResume } = TabResumeStore.getState();
-    const resumeText = typedResumeText || '';
-    if (!resumeText.trim() && savedTechResume) {
-        return false;
-    }
+    const resumeText = TabResumeStore.getState().resumeText || '';
     const normalizedResume = resumeText.toUpperCase().replace(/\s+/g, ' ');
     const escapedWord = word.toUpperCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/ /g, '\\s');
     const wholePhrase = new RegExp(`(?<![\\p{L}\\p{N}])${escapedWord}(?![\\p{L}\\p{N}])`, 'u');
@@ -624,13 +619,10 @@ const PendingSuggestionHint: React.FC = () => (
 
 // O texto do currículo não é gravado (LGPD): depois de recarregar a página ele vem vazio, e sem ele não há como conferir
 // que a habilidade consta no currículo. Até 2026-10-15 o modal deixava digitar e recusava toda habilidade como "fora do
-// currículo", culpando a palavra quando faltava o texto (achado 26).
-const ResumeTextMissingHint: React.FC = () => (
-    <p className="m-0 mb-3 text-left" style={{ fontSize: '12px', color: '#b45309' }}>
-        Para sugerir uma habilidade, cole o texto do seu currículo na aba Currículo: só por ele dá para conferir que a
-        habilidade consta no currículo. O texto não fica gravado, então é preciso colá-lo de novo depois de recarregar a página.
-    </p>
-);
+// currículo", culpando a palavra quando faltava o texto (achado 26). Desde 2026-11-12, sem o texto no memo o modal fica
+// todo desabilitado (o link não abre), mesmo com currículo de tecnologia já salvo, e a dica do link diz o que fazer.
+const RESUME_TEXT_MISSING =
+    'Para sugerir uma habilidade, cole o texto do seu currículo na aba Currículo: só por ele dá para conferir que a habilidade consta no currículo. O texto não fica gravado, então é preciso colá-lo de novo depois de recarregar a página.';
 
 // Cada sugestão manda um e-mail ao candidato e abre um chamado ao suporte, por isso o backend aceita um chamado a cada 24
 // horas, contadas do envio anterior, somando sugestão de habilidade, ajuste de hierarquia e fale conosco (429 a partir do
@@ -1247,11 +1239,9 @@ const SkillSuggestionModal: React.FC = () => {
     const { context, groups, accordionList } = TabSkillStore((state: ITabSkillStore) => ({
         ...state,
     }));
-    // sem o texto do currículo e sem currículo de tecnologia salvo não dá para sugerir: o campo da habilidade fica
-    // bloqueado e o modal diz o que fazer. Com o currículo de tecnologia salvo o modal fica liberado mesmo sem texto.
+    // sem o texto do currículo no memo não dá para sugerir: o link não abre o modal e a dica dele diz o que fazer
     const resumeText = TabResumeStore((state) => state.resumeText) || '';
-    const savedTechResume = TabResumeStore((state) => state.savedTechResume);
-    const resumeTextMissing = !resumeText.trim() && !savedTechResume;
+    const resumeTextMissing = !resumeText.trim();
     const [skill, setSkill] = useState('');
     const [synonyms, setSynonyms] = useState<string[]>([]);
     const [reason, setReason] = useState('');
@@ -1451,22 +1441,22 @@ const SkillSuggestionModal: React.FC = () => {
             onSave={hasSuggestion ? startNewSuggestion : save}
             saveButtonLabel={hasSuggestion ? 'Nova sugestão' : 'Enviar'}
             saveLoading={loadingRequest === 'load' || loadingRequest === 'save'}
-            saveDisabled={busy || (!hasSuggestion && (!skillValid || resumeTextMissing))}
+            saveDisabled={busy || (!hasSuggestion && !skillValid)}
             extraActions={extraActions}
             onOpen={startNewSuggestion}
+            disabledReason={resumeTextMissing ? RESUME_TEXT_MISSING : ''}
             fieldsHaveOwnHelp
             headerModal="Descreva a habilidade técnica que CONSTA no texto do seu currículo e que deixamos de listar aqui"
             labelText=""
             linkText="Deixamos de listar alguma habilidade?"
         >
             <div className="flex w-full flex-col items-stretch">
-                {resumeTextMissing && <ResumeTextMissingHint />}
                 <LabelComponent explanation={SKILL_SUGGESTION_SKILL_HELP} labelValue="Habilidade" property="skillSuggestionSkill" errors={{}} stacked>
                     <TextInput
                         id="skillSuggestionSkill"
                         placeholder="Habilidade que consta no seu currículo (ex.: REACT NATIVE)"
                         value={skill}
-                        disabled={hasSuggestion || resumeTextMissing}
+                        disabled={hasSuggestion}
                         maxLength={SKILL_MAX_LENGTH}
                         onChange={(e) => {
                             setSkill(e.currentTarget.value.toUpperCase());
@@ -1526,10 +1516,14 @@ interface LinkModalProps {
     icon?: React.ReactNode;
     // os campos trazem o próprio botão de ajuda (um LabelComponent por campo): o modal não põe o botão único do topo
     fieldsHaveOwnHelp?: boolean;
+    // preenchido, o link fica desabilitado (o modal não abre) e o texto vira a dica do link
+    disabledReason?: string;
 }
-const LinkModal: React.FC<LinkModalProps> = ({ onSave, onOpen, saveButtonLabel = 'Enviar', saveLoading = false, saveDisabled = false, extraActions, labelText, linkText, headerModal, icon, fieldsHaveOwnHelp = false, children }) => {
+const LinkModal: React.FC<LinkModalProps> = ({ onSave, onOpen, saveButtonLabel = 'Enviar', saveLoading = false, saveDisabled = false, extraActions, labelText, linkText, headerModal, icon, fieldsHaveOwnHelp = false, disabledReason = '', children }) => {
     const [visible, setVisible] = useState(false);
+    const disabled = !!disabledReason;
     const open = () => {
+        if (disabled) return;
         setVisible(true);
         onOpen && onOpen();
     };
@@ -1543,9 +1537,16 @@ const LinkModal: React.FC<LinkModalProps> = ({ onSave, onOpen, saveButtonLabel =
                     </ActionIcon>
                 </Tooltip>
             ) : (
-                <button type="button" className="text-sm text-primary hover:underline" onClick={open}>
-                    {linkText}
-                </button>
+                <Tooltip label={disabledReason} disabled={!disabled} position="bottom" multiline w={320}>
+                    <button
+                        type="button"
+                        className={disabled ? 'cursor-not-allowed text-sm text-white-dark' : 'text-sm text-primary hover:underline'}
+                        aria-disabled={disabled}
+                        onClick={open}
+                    >
+                        {linkText}
+                    </button>
+                </Tooltip>
             )}
             <Modal size="lg" title={headerModal} opened={visible} onClose={() => visible && setVisible(false)}>
                 {fieldsHaveOwnHelp ? (

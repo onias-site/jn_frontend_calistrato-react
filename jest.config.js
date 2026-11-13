@@ -8,8 +8,9 @@ module.exports = {
     coverageDirectory: 'coverage',
     testEnvironment: 'node',
     transform: {
-       // .js também: o JnAjax (app/JnAjax.js) é testado
-       '^.+\\.[tj]sx?$': 'ts-jest',
+       // .js também: o JnAjax (app/JnAjax.js) é testado; o tsconfig.jest.json troca o jsx "preserve" do Next por
+       // "react-jsx", para que as stores dentro de .tsx (FormResume) possam ser testadas
+       '^.+\\.[tj]sx?$': ['ts-jest', { tsconfig: 'tsconfig.jest.json' }],
     },
     testMatch: [
       '**/__tests__/**/*.ts?(x)',

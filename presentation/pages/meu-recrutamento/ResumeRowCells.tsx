@@ -52,8 +52,11 @@ export const ResumeRowHeaders = () => (
     </>
 );
 
-/** As colunas de um currículo como o e-mail de currículos o mostra (VisBusinessBuildResumeRow). */
-export const ResumeRowCells = ({ resume }: { resume: any }) => (
+/**
+ * As colunas de um currículo como o e-mail de currículos o mostra (VisBusinessBuildResumeRow). Com {@code linkedin}
+ * (só nos detalhes de um currículo já visualizado), o LinkedIn fecha a coluna "Outras Informações".
+ */
+export const ResumeRowCells = ({ resume, linkedin }: { resume: any; linkedin?: string }) => (
     <>
         <td className="align-top">
             <Lines lines={resume.whatMatters} />
@@ -67,6 +70,13 @@ export const ResumeRowCells = ({ resume }: { resume: any }) => (
         </td>
         <td className="align-top">
             <Lines lines={resume.otherInformation} />
+            {linkedin && (
+                <div>
+                    <a href={linkedin} target="_blank" rel="noopener noreferrer" className="break-all text-primary hover:underline">
+                        {linkedin}
+                    </a>
+                </div>
+            )}
         </td>
     </>
 );

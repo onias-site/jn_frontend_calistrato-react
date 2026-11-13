@@ -21,6 +21,10 @@ export interface ITabResumeStore {
     savedTechResume: boolean;
     // já existe currículo gravado (de qualquer tipo): o memo vem vazio e o placeholder explica por quê
     savedResume: boolean;
+    // o último endereço do linkedin que o candidato abriu pelo botão "Testar link" (ou o já gravado, conferido quando foi
+    // salvo): só avança ou salva se o endereço do campo for este (desde 2026-11-11, um perfil digitado errado dava 404 ao
+    // recrutador)
+    testedLinkedinAddress: string;
 
     loadFromSavedResume: (resume: any) => void;
     onMoveOnFowardTabs: () => string[];
@@ -31,6 +35,7 @@ export interface ITabResumeStore {
     setResumeText: (resumeText: string) => void;
     setDesiredJob: (desiredJob: string) => void;
     setLinkedinAddress: (linkedinAddress: string) => void;
+    testLinkedinAddress: () => void;
     setNotAllowedCompany: (notAllowedCompany: string[]) => void;
 }
 const resumeTypes = [
@@ -50,6 +55,7 @@ export const TabResumeStore = create<ITabResumeStore>((set, get) => ({
     lastJob: '',
     savedTechResume: false,
     savedResume: false,
+    testedLinkedinAddress: '',
     // o texto do currículo não é gravado (LGPD): volta vazio
     loadFromSavedResume: (resume: any) => {
         const resumeType = resumeTypes.filter((type) => type.id == resume.resumeType)[0] || resumeTypes[0];
@@ -62,6 +68,8 @@ export const TabResumeStore = create<ITabResumeStore>((set, get) => ({
             resumeText: '',
             savedTechResume: resumeType.id == 1,
             savedResume: true,
+            // o endereço gravado já foi conferido quando foi salvo: só um endereço trocado pede o teste
+            testedLinkedinAddress: resume.linkedinAddress || '',
             fieldErrors: {},
         });
     },
@@ -71,6 +79,13 @@ export const TabResumeStore = create<ITabResumeStore>((set, get) => ({
     setResumeText: (resumeText: string) => set({ resumeText }),
     setResumeType: (resumeType: any) => set({ resumeType }),
     setLinkedinAddress: (linkedinAddress: string) => set({ linkedinAddress }),
+    // abre o perfil numa aba nova, para o candidato ver se é o dele, e dá o endereço por testado (o erro do campo some)
+    testLinkedinAddress: () => {
+        const { linkedinAddress, fieldErrors } = get();
+        window.open(linkedinAddress, '_blank', 'noopener,noreferrer');
+        const { linkedinAddress: removedError, ...otherFieldErrors } = fieldErrors;
+        set({ testedLinkedinAddress: linkedinAddress, fieldErrors: otherFieldErrors });
+    },
     setNotAllowedCompany: (notAllowedCompany: string[]) => set({ notAllowedCompany }),
 
     getPendingRequirements: () => {
@@ -89,11 +104,17 @@ export const TabResumeStore = create<ITabResumeStore>((set, get) => ({
 // o perfil não termina em hífen: é o endereço cortado na quebra de linha do PDF (desde 2026-10-14)
 const linkedinAddressRegex = /^https:\/\/(www\.)?linkedin\.com\/in\/[a-zA-Z0-9-_%]*[a-zA-Z0-9_%]\/?$/;
 const isOutOfLength = (text: string, minLength: number, maxLength: number) => text.length < minLength || text.length > maxLength;
+// cada empresa / consultoria é um domínio (consultoria.com.br), a mesma regex de notAllowedCompany no backend (desde 2026-11-11)
+export const notAllowedCompanyRegex = /^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$/;
+export const isValidNotAllowedCompany = (company: string) => !isOutOfLength(company, 4, 50) && notAllowedCompanyRegex.test(company);
 
 // sem efeitos colaterais: serve tanto para destacar os campos ao avançar quanto para desabilitar o botão de avançar.
 // fieldErrors guarda a mensagem de cada campo, mostrada embaixo dele (até 2026-11-08 era só true, e as mensagens
 // apareciam juntas no rodapé da aba)
-const validateResume = ({ resumeType, desiredJob, lastJob, linkedinAddress, notAllowedCompany, resumeText, savedTechResume }: ITabResumeStore) => {
+const isValidLinkedinAddress = (linkedinAddress: string) => linkedinAddressRegex.test(linkedinAddress);
+const untestedLinkedinMessage = 'Clique em "Testar link" e confira se o perfil aberto é o seu antes de continuar';
+
+const validateResume = ({ resumeType, desiredJob, lastJob, linkedinAddress, testedLinkedinAddress, notAllowedCompany, resumeText, savedTechResume }: ITabResumeStore) => {
     const errors: string[] = [];
     const fieldErrors: any = {};
     const fail = (field: string, message: string) => {
@@ -104,9 +125,12 @@ const validateResume = ({ resumeType, desiredJob, lastJob, linkedinAddress, notA
     desiredJob && isOutOfLength(desiredJob, 2, 50) && fail('desiredJob', 'A função desejada deve ter de 2 a 50 caracteres');
     lastJob && isOutOfLength(lastJob, 2, 50) && fail('lastJob', 'A última função deve ter de 2 a 50 caracteres');
     !linkedinAddress && fail('linkedinAddress', 'Deve-se informar o endereço (URL do linkedin)');
-    linkedinAddress && !linkedinAddressRegex.test(linkedinAddress) && fail('linkedinAddress', 'O endereço do linkedin deve ter o formato https://www.linkedin.com/in/seu-perfil');
-    const companiesOutOfLength = notAllowedCompany.filter((company: string) => isOutOfLength(company, 2, 50));
-    companiesOutOfLength.length && fail('notAllowedCompany', 'Cada empresa / consultoria deve ter de 2 a 50 caracteres');
+    linkedinAddress && !isValidLinkedinAddress(linkedinAddress) && fail('linkedinAddress', 'O endereço do linkedin deve ter o formato https://www.linkedin.com/in/seu-perfil');
+    // o formato certo não garante que o perfil exista: o candidato precisa abri-lo pelo "Testar link"
+    isValidLinkedinAddress(linkedinAddress) && linkedinAddress !== testedLinkedinAddress && fail('linkedinAddress', untestedLinkedinMessage);
+    const invalidCompanies = notAllowedCompany.filter((company: string) => !isValidNotAllowedCompany(company));
+    invalidCompanies.length &&
+        fail('notAllowedCompany', `Informe o domínio de cada empresa / consultoria (ex.: consultoria.com.br), de 4 a 50 caracteres. Corrija: ${invalidCompanies.join(', ')}`);
     (!resumeType || !resumeType.id) && fail('resumeType', 'Por favor escolha o tipo do currículo');
     // o currículo de tecnologia já salvo dispensa o texto: as habilidades gravadas continuam valendo até que se cole um texto novo
     resumeType && resumeType.id == 1 && !resumeText && !savedTechResume && fail('resumeText', 'Deve-se informar o texto contido no currículo');
@@ -142,10 +166,12 @@ export const TabResume: React.FC<TabResumeProps> = ({}) => {
         setDesiredJob,
         setNotAllowedCompany,
         setLinkedinAddress,
+        testLinkedinAddress,
         setResumeType,
         savedResume,
         savedTechResume,
     } = TabResumeStore((state: ITabResumeStore) => ({ ...state }));
+    const linkedinAddressReadyToTest = isValidLinkedinAddress(linkedinAddress);
 
     return (
         // largura limitada: em tela cheia, um campo de uma linha com 1300px é desconfortável de ler e de preencher
@@ -167,18 +193,30 @@ export const TabResume: React.FC<TabResumeProps> = ({}) => {
                 <TextInput error={!!fieldErrors.lastJob} id="lastJob" maxLength={50} value={lastJob} onChange={(e) => setLastJob(e.currentTarget.value)} />
             </LabelComponent>
             <LabelComponent
-                explanation="Para nos resguardar da LGPD (Lei Geral de Proteção de Dados), não guardamos o seu currículo e nem nada sobre ele (como texto, por exemplo) em nossa base de dados, sendo assim, você precisa informar o endereço do seu perfil no linkedin (no formato https://www.linkedin.com/in/seu-perfil). É por ele que o recrutador vai te contactar, então mantenha no seu linkedin um meio de contato (e-mail, telefone, etc). Somente endereços do linkedin são aceitos neste campo."
+                explanation="Para nos resguardar da LGPD (Lei Geral de Proteção de Dados), não guardamos o seu currículo e nem nada sobre ele (como texto, por exemplo) em nossa base de dados, sendo assim, você precisa informar o endereço do seu perfil no linkedin (no formato https://www.linkedin.com/in/seu-perfil). É por ele que o recrutador vai te contactar, então mantenha no seu linkedin um meio de contato (e-mail, telefone, etc). Somente endereços do linkedin são aceitos neste campo. Depois de digitar o endereço, clique em 'Testar link' e confira se o perfil aberto é o seu: sem esse teste não é possível avançar nem salvar."
                 labelValue="Endereço (URL) para encontrar o meu linkedin:"
                 property="linkedinAddress"
                 errors={fieldErrors}
             >
-                <TextInput
-                    id="linkedinAddress"
-                    error={!!fieldErrors.linkedinAddress}
-                    placeholder="https://www.linkedin.com/in/seu-perfil"
-                    value={linkedinAddress}
-                    onChange={(e) => setLinkedinAddress(e.currentTarget.value)}
-                />
+                <div className="flex gap-2">
+                    <TextInput
+                        id="linkedinAddress"
+                        className="flex-1"
+                        error={!!fieldErrors.linkedinAddress}
+                        placeholder="https://www.linkedin.com/in/seu-perfil"
+                        value={linkedinAddress}
+                        onChange={(e) => setLinkedinAddress(e.currentTarget.value)}
+                    />
+                    <button
+                        type="button"
+                        className="btn btn-outline-primary whitespace-nowrap"
+                        disabled={!linkedinAddressReadyToTest}
+                        title="Abre o endereço numa nova aba: confira se é o seu perfil"
+                        onClick={testLinkedinAddress}
+                    >
+                        Testar link
+                    </button>
+                </div>
             </LabelComponent>
             <LabelComponent
                 explanation="Recrutadores cujo os domínios de e-mail das empresas / consultorias mencionados aqui neste campo não poderão ver o seu endereço de linkedin / contato. Cabe ressaltar que se o recrutador estiver logado por outro e-mail com um domínio que não estiver mencionado aqui neste campo ou se ele estiver usando e-mails pessoais (gmail, outlook e afins), este recrutador poderá ter acesso ao seu link de linkedin / contato."

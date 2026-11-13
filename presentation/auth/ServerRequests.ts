@@ -100,16 +100,12 @@ export const serverRequests = (state: any) => {
                 invalidEmail: 400,
                 tokenBlocked: 403,
                 emailMissing: 404,
-                currentLogin: 409,
                 passwordBlocked: 423,
                 passwordRecentlyBlocked: 423,
             },
-            // o conflito de sessão muda a qualquer momento (a outra sessão pode ter saído): o 409 nunca é guardado, o
-            // servidor é perguntado toda vez. Até 2026-10-15 ele ficava em cached e o modal pedia o token por e-mail sem
-            // necessidade depois que a outra sessão já tinha saído (R05-3)
-            callbacks: {
-                '409': notifyAboutLoginConflict,
-            },
+            // o conflito de login só aparece na tentativa de senha (requestPassword): até 2026-11-12 a verificação do
+            // e-mail já respondia 409 e o modal pedia uma nova senha antes de o usuário digitar a dele
+            callbacks: {},
             cached: {
                 '200': openModal('RequestPassword'),
                 '201': openModal('RequestAnswers'),
@@ -132,14 +128,11 @@ export const serverRequests = (state: any) => {
                 passwordMissing: 202,
                 invalidEmail: 400,
                 tokenBlocked: 403,
-                currentLogin: 409,
                 passwordBlocked: 423,
                 passwordRecentlyBlocked: 423,
             },
-            // o 409 não é guardado: ver checkEmail
-            callbacks: {
-                '409': notifyAboutLoginConflict,
-            },
+            // sem 409: ver checkEmail
+            callbacks: {},
             cached: {
                 '200': openModal('RequestPassword'),
                 '201': openModal('RequestAnswers'),
@@ -167,7 +160,9 @@ export const serverRequests = (state: any) => {
                 tokenRecentlyBlocked: 403,
             },
 
-            // o 409 não é guardado: ver checkEmail
+            // o conflito de sessão muda a qualquer momento (a outra sessão pode ter saído): o 409 nunca é guardado, o
+            // servidor é perguntado toda vez. Até 2026-10-15 ele ficava em cached e o modal pedia o token por e-mail sem
+            // necessidade depois que a outra sessão já tinha saído (R05-3)
             callbacks: {
                 '200': executeRetryAfterAuthentication,
                 '429': notifyAboutLockedPassword,
@@ -200,15 +195,12 @@ export const serverRequests = (state: any) => {
                 invalidEmail: 400,
                 tokenBlocked: 403,
                 emailMissing: 404,
-                currentLogin: 409,
                 passwordBlocked: 423,
                 nothingIsMissing: 999,
                 answersMissing: 999,
             },
-            // o 409 não é guardado: ver checkEmail
             callbacks: {
                 '200': openModal('RequestPassword'),
-                '409': notifyAboutLoginConflict,
             },
             cached: {
                 '423': notifyAboutLockedPassword,

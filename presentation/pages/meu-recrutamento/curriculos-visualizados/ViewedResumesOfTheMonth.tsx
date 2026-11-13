@@ -4,12 +4,13 @@ import { useRouter } from 'next/navigation';
 import JnAjax from '@/app/JnAjax';
 import IconCaretDown from '@/presentation/icons/icon-caret-down';
 import { ModalLoginStore } from '@/presentation/auth/ModalLogin';
-import { MonthPicker, monthParameter, previousMonth } from '@/presentation/components/month-picker/MonthPicker';
+import { MonthPicker, currentMonth, monthParameter } from '@/presentation/components/month-picker/MonthPicker';
 import { ViewedResumeDetails } from './ViewedResumeDetails';
 
 type Situation = 'loading' | 'loaded' | 'notLogged' | 'error';
 
-type ViewedResume = { linkedin: string; alias: string; date: string };
+// o LinkedIn não vem na lista: o hash dele é a chave dos detalhes, que só o devolvem se o candidato ainda permite a empresa
+type ViewedResume = { linkedinHash: string; alias: string; date: string };
 
 const messages: Record<Exclude<Situation, 'loaded'>, string> = {
     loading: 'Carregando os currículos visualizados...',
@@ -24,7 +25,7 @@ const sortableDate = (date: string) => {
     return `${yyyy}${mm}${dd}${(time || '').replace(/:/g, '')}`;
 };
 
-/** Cada item da lista vem como texto JSON (linkedin, alias e date); um item ilegível é descartado. */
+/** Cada item da lista vem como texto JSON (linkedinHash, alias e date); um item ilegível é descartado. */
 const parseViews = (texts: string[]): ViewedResume[] =>
     (texts || [])
         .map((text) => {
@@ -38,14 +39,14 @@ const parseViews = (texts: string[]): ViewedResume[] =>
         .sort((a, b) => sortableDate(b.date).localeCompare(sortableDate(a.date)));
 
 /**
- * Os currículos que o recrutador logado visualizou num mês: um por currículo, com o apelido, o LinkedIn e a data da
- * última visualização no mês. O mês é escolhido na tela e começa no mês anterior ao corrente. A lista é gravada a cada abertura de
+ * Os currículos que o recrutador logado visualizou num mês: um por currículo, com o apelido e a data da última
+ * visualização no mês; o LinkedIn fica nos detalhes. O mês é escolhido na tela e começa no mês corrente (até 2026-11-11, no anterior). A lista é gravada a cada abertura de
  * currículo (e a cada apelido dado) e lida pelo id do grupo do recrutador no mês; por isso exige login, e quem não está
  * logado vê o modal de login, que repete a busca ao entrar. "ver detalhes" expande a linha com o currículo como o
  * e-mail de currículos o mostra; várias linhas podem ficar expandidas ao mesmo tempo.
  */
 export const ViewedResumesOfTheMonth = () => {
-    const [month, setMonth] = useState(previousMonth());
+    const [month, setMonth] = useState(currentMonth());
     const [situation, setSituation] = useState<Situation>('loading');
     const [views, setViews] = useState<ViewedResume[]>([]);
     const [expanded, setExpanded] = useState<string[]>([]);
@@ -74,8 +75,8 @@ export const ViewedResumesOfTheMonth = () => {
 
     useEffect(load(month), [month]);
 
-    const toggle = (linkedin: string) =>
-        setExpanded((current) => (current.includes(linkedin) ? current.filter((item) => item != linkedin) : [...current, linkedin]));
+    const toggle = (linkedinHash: string) =>
+        setExpanded((current) => (current.includes(linkedinHash) ? current.filter((item) => item != linkedinHash) : [...current, linkedinHash]));
 
     return (
         <div className="panel mt-6">
@@ -94,26 +95,20 @@ export const ViewedResumesOfTheMonth = () => {
                             <thead>
                                 <tr>
                                     <th>Apelido</th>
-                                    <th>LinkedIn</th>
                                     <th>Última visualização</th>
                                     <th></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {views.map((view) => {
-                                    const open = expanded.includes(view.linkedin);
+                                    const open = expanded.includes(view.linkedinHash);
                                     return (
-                                        <React.Fragment key={view.linkedin}>
+                                        <React.Fragment key={view.linkedinHash}>
                                             <tr>
                                                 <td>{view.alias}</td>
-                                                <td>
-                                                    <a href={view.linkedin} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                                                        {view.linkedin}
-                                                    </a>
-                                                </td>
                                                 <td>{view.date}</td>
                                                 <td>
-                                                    <button type="button" className="flex items-center gap-1 whitespace-nowrap text-primary hover:underline" aria-expanded={open} onClick={() => toggle(view.linkedin)}>
+                                                    <button type="button" className="flex items-center gap-1 whitespace-nowrap text-primary hover:underline" aria-expanded={open} onClick={() => toggle(view.linkedinHash)}>
                                                         <IconCaretDown className={`inline h-4 w-4 transition-transform ${open ? '' : '-rotate-90'}`} />
                                                         ver detalhes
                                                     </button>
@@ -121,8 +116,8 @@ export const ViewedResumesOfTheMonth = () => {
                                             </tr>
                                             {open && (
                                                 <tr>
-                                                    <td colSpan={4} className="bg-gray-50 dark:bg-dark-dark-light">
-                                                        <ViewedResumeDetails month={month} linkedin={view.linkedin} />
+                                                    <td colSpan={3} className="bg-gray-50 dark:bg-dark-dark-light">
+                                                        <ViewedResumeDetails month={month} linkedinHash={view.linkedinHash} />
                                                     </td>
                                                 </tr>
                                             )}

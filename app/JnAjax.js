@@ -473,6 +473,96 @@ export default class JnAjax {
         return () => window.removeEventListener('storage', handler);
     }
 
+    // fechar a última aba do site (ou o navegador) encerra a sessão, sem diálogo de confirmação: cada aba aberta se anota
+    // no localStorage e renova a anotação de tempos em tempos (aba em segundo plano tem o timer atrasado para até 1 minuto
+    // pelo navegador, daí a folga de 150 segundos); ao sair, a aba que não vê nenhuma outra viva faz o logout
+    static OPEN_TABS_KEY = 'openTabs';
+    static OPEN_TAB_HEARTBEAT = 20000;
+    static OPEN_TAB_STALE_AFTER = 150000;
+    static tabId = `${new Date().getTime()}-${Math.random()}`;
+
+    static readOpenTabs() {
+        try {
+            return JSON.parse(localStorage.getItem(JnAjax.OPEN_TABS_KEY)) || {};
+        } catch (error) {
+            return {};
+        }
+    }
+
+    static writeOpenTabs(openTabs) {
+        try {
+            localStorage.setItem(JnAjax.OPEN_TABS_KEY, JSON.stringify(openTabs));
+        } catch (error) {}
+    }
+
+    // anota esta aba (ou a tira, com alive false) e descarta as anotações vencidas das abas que fecharam sem avisar
+    static markThisTab(alive) {
+        const now = new Date().getTime();
+        const openTabs = JnAjax.readOpenTabs();
+        for (const [tabId, lastSeen] of Object.entries(openTabs)) {
+            if (now - lastSeen > JnAjax.OPEN_TAB_STALE_AFTER) delete openTabs[tabId];
+        }
+        delete openTabs[JnAjax.tabId];
+        if (alive) openTabs[JnAjax.tabId] = now;
+        JnAjax.writeOpenTabs(openTabs);
+        return openTabs;
+    }
+
+    // o logout de quem fecha a página: o fetch com keepalive termina mesmo depois de a aba fechar, e as telas não precisam
+    // saber de nada (não há tela para limpar)
+    static logoutOnClose() {
+        const login = JnAjax.getLogin();
+        if (!login.email || !login.sessionToken) return;
+        JnAjax.removeLogin();
+        const { email, sessionToken } = login;
+        const url = `${JnAjax.getUrlBackEnd('http://localhost:8082')}/login/${email}/${sessionToken}`;
+        try {
+            fetch(url, { method: 'DELETE', headers: { email, sessionToken }, keepalive: true }).catch(() => {});
+        } catch (error) {}
+    }
+
+    /**
+     * Liga o logout ao fechar a última aba. Recarregar a página (F5, Ctrl+R, ou o botão quando o navegador tem a Navigation
+     * API) não é fechar: a sessão continua. A página que vai para o cache de voltar/avançar (persisted) também não sai.
+     * Devolve a função que desliga tudo.
+     */
+    static logoutWhenTheLastTabCloses() {
+        let reloading = false;
+        const heartbeat = () => JnAjax.markThisTab(true);
+        heartbeat();
+        const interval = setInterval(heartbeat, JnAjax.OPEN_TAB_HEARTBEAT);
+        const onKeyDown = (event) => {
+            const reloadShortcut = event.key == 'F5' || ((event.ctrlKey || event.metaKey) && (event.key == 'r' || event.key == 'R'));
+            if (reloadShortcut) reloading = true;
+        };
+        const onNavigate = (event) => {
+            if (event.navigationType == 'reload') reloading = true;
+        };
+        const onPageShow = () => {
+            reloading = false;
+            heartbeat();
+        };
+        const onPageHide = (event) => {
+            const openTabs = JnAjax.markThisTab(false);
+            if (event.persisted || reloading) return;
+            if (Object.keys(openTabs).length > 0) return;
+            JnAjax.logoutOnClose();
+        };
+        const navigation = window.navigation;
+        window.addEventListener('keydown', onKeyDown);
+        window.addEventListener('pageshow', onPageShow);
+        window.addEventListener('pagehide', onPageHide);
+        if (navigation) navigation.addEventListener('navigate', onNavigate);
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('keydown', onKeyDown);
+            window.removeEventListener('pageshow', onPageShow);
+            window.removeEventListener('pagehide', onPageHide);
+            if (navigation) navigation.removeEventListener('navigate', onNavigate);
+            JnAjax.markThisTab(false);
+        };
+    }
+
     static getLogin() {
         const sessao = JnAjax.readStoredLogin();
         let login = {};

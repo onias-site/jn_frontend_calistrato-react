@@ -7,10 +7,14 @@ import JnAjax from '@/app/JnAjax';
 const ALIAS_MIN_LENGTH = 5;
 const ALIAS_MAX_LENGTH = 200;
 
-type Situation = 'confirming' | 'opening' | 'opened' | 'saved' | 'canceled' | 'invalidLink' | 'notFound' | 'error';
+type Situation = 'confirming' | 'opening' | 'opened' | 'saved' | 'canceled' | 'invalidLink' | 'notFound' | 'invalidLinkedin' | 'error';
+
+// a denúncia de LinkedIn inválido: confirmando, enviando, aceita ou falha
+type Report = 'none' | 'confirming' | 'sending' | 'sent' | 'error';
 
 const messages: Record<Exclude<Situation, 'confirming' | 'opened'>, string> = {
     opening: 'Abrindo o currículo...',
+    invalidLinkedin: 'Este perfil foi confirmado com endereço de LinkedIn inacessível. Pedimos desculpas.',
     saved: 'Visualização salva. Nos próximos e-mails este currículo aparecerá com o apelido que você deu.',
     canceled: 'O currículo não foi aberto. Para abri-lo, clique de novo no link do e-mail.',
     invalidLink: 'Este link não é válido. Abra o currículo pelo link do e-mail que você recebeu.',
@@ -34,6 +38,7 @@ export const ViewResumeFromEmail = () => {
     const [situation, setSituation] = useState<Situation>('confirming');
     const [alias, setAlias] = useState('');
     const [link, setLink] = useState({ email: '', resumeId: '', token: '' });
+    const [report, setReport] = useState<Report>('none');
 
     useEffect(() => setLink(getLinkParameters()), []);
 
@@ -57,6 +62,7 @@ export const ViewResumeFromEmail = () => {
         };
         callbacks[401] = failWith(newTab, 'invalidLink');
         callbacks[404] = failWith(newTab, 'notFound');
+        callbacks[410] = failWith(newTab, 'invalidLinkedin');
         callbacks[422] = failWith(newTab, 'invalidLink');
         callbacks['onUnexpectedHttpStatus'] = failWith(newTab, 'error');
         JnAjax.doAnAjaxRequest('recruiter-email-link/view-resume', callbacks, 'POST', link, {}, 'http://localhost:8081');
@@ -74,6 +80,20 @@ export const ViewResumeFromEmail = () => {
         const body = { ...link, alias: alias.trim() };
         JnAjax.doAnAjaxRequest('recruiter-email-link/alias', callbacks, 'POST', body, {}, 'http://localhost:8081');
     };
+
+    // abre um chamado ao suporte, que confirma se o LinkedIn do currículo de fato não abre
+    const reportTheLinkedin = () => {
+        setReport('sending');
+        const callbacks: any = {};
+        callbacks[200] = () => setReport('sent');
+        callbacks[401] = () => setSituation('invalidLink');
+        callbacks[404] = () => setSituation('notFound');
+        callbacks[410] = () => setSituation('invalidLinkedin');
+        callbacks['onUnexpectedHttpStatus'] = () => setReport('error');
+        JnAjax.doAnAjaxRequest('recruiter-email-link/report-invalid-linkedin', callbacks, 'POST', link, {}, 'http://localhost:8081');
+    };
+
+    const canReport = situation == 'opened' || situation == 'saved';
 
     return (
         <div className="panel mx-auto mt-6 max-w-2xl">
@@ -101,6 +121,24 @@ export const ViewResumeFromEmail = () => {
                 </div>
             )}
             {situation != 'opened' && situation != 'confirming' && <p>{messages[situation]}</p>}
+            <ConfirmModal
+                visible={canReport && report == 'confirming'}
+                onHide={() => setReport((current) => (current == 'confirming' ? 'none' : current))}
+                header="Reportar Linkedin Inválido"
+                message="Confirma que o endereço de LinkedIn deste currículo não abre? Nosso time de suporte vai conferir."
+                acceptLabel="Sim, reportar"
+                rejectLabel="Não"
+                accept={reportTheLinkedin}
+                reject={() => setReport('none')}
+            />
+            {canReport && (report == 'none' || report == 'confirming') && (
+                <button type="button" className="btn btn-outline-danger mt-6" onClick={() => setReport('confirming')}>
+                    Reportar Linkedin Inválido
+                </button>
+            )}
+            {canReport && report == 'sending' && <p className="mt-6">Enviando...</p>}
+            {canReport && report == 'sent' && <p className="mt-6">Obrigado! Nosso time de suporte vai conferir o endereço de LinkedIn deste currículo.</p>}
+            {canReport && report == 'error' && <p className="mt-6">{messages.error}</p>}
         </div>
     );
 };

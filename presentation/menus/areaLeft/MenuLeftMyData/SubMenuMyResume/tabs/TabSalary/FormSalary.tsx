@@ -49,12 +49,14 @@ export const TabSalaryStore = create<ITabSalaryStore>((set, get) => ({
     },
 }));
 
-// mesmas regras de btc, clt e pj em JnJsonCommonsFields no backend; 0 quer dizer "não aceito" e não é enviado
+// mesmas regras de btc, clt e pj em JnJsonCommonsFields no backend; o número 0 (o checkbox marcado) quer dizer "não
+// aceito" e não é enviado; o campo apagado ('') ou com 0 digitado ('0') está fora da faixa
 const minSalary = 1000;
 const maxSalary = 100000;
 const isOutOfSalaryRange = (value: any) => {
+    if (value === 0) return false;
     const salary = Number(value);
-    return salary != 0 && (salary < minSalary || salary > maxSalary);
+    return value === '' || salary < minSalary || salary > maxSalary;
 };
 
 export const TabSalary: React.FC<TabSalaryProps> = ({}) => {

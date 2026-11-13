@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import JnAjax from '@/app/JnAjax';
 import { ModalLoginStore } from '@/presentation/auth/ModalLogin';
-import { MonthPicker, monthParameter, previousMonth } from '@/presentation/components/month-picker/MonthPicker';
+import { MonthPicker, currentMonth, monthParameter } from '@/presentation/components/month-picker/MonthPicker';
 
 type Situation = 'loading' | 'loaded' | 'notLogged' | 'error';
 
@@ -18,11 +18,11 @@ const messages: Record<Exclude<Situation, 'loaded'>, string> = {
 /**
  * Quem viu o currículo do candidato logado num mês: o domínio do e-mail de cada recrutador que abriu o currículo pela
  * primeira vez naquele mês ("Nome da consultoria") e quantos recrutadores do domínio o fizeram ("Visualizações"), do
- * mais visto ao menos. O mês é escolhido na tela e começa no mês anterior ao corrente. A contagem é lida pelo id do currículo no mês;
+ * mais visto ao menos. O mês é escolhido na tela e começa no mês corrente (até 2026-11-11, no anterior). A contagem é lida pelo id do currículo no mês;
  * por isso exige login, e quem não está logado vê o modal de login, que repete a busca ao entrar.
  */
 export const ResumeViewersOfTheMonth = () => {
-    const [month, setMonth] = useState(previousMonth());
+    const [month, setMonth] = useState(currentMonth());
     const [situation, setSituation] = useState<Situation>('loading');
     const [viewers, setViewers] = useState<Viewer[]>([]);
     const router = useRouter();

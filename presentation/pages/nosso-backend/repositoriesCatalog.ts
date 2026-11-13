@@ -28,6 +28,7 @@ export const repositorySections: BackendRepositorySection[] = [
             { name: 'ccp_email_sendgrid', description: 'Envio de e-mail via SendGrid.' },
             { name: 'ccp_file-bucket_gcp', description: 'Armazenamento de arquivos no GCP.' },
             { name: 'ccp_http_apache-mime', description: 'Cliente HTTP via Apache MIME.' },
+            { name: 'ccp_http-request-log_gcp-logging', description: 'Leitura, via Cloud Logging, do log das requisições atendidas por um serviço do Cloud Run.' },
             { name: 'ccp_instant-messenger_telegram', description: 'Mensagens pelo Telegram.' },
             { name: 'ccp_json_gson', description: 'Serialização de JSON via Gson.' },
             { name: 'ccp_main-authentication_gcp-oauth', description: 'Autenticação via GCP OAuth.' },

@@ -26,8 +26,9 @@ export const TODAS_AS_REGIOES = '0';
 export const HOME_OFFICE = '10';
 
 export const RegioesStore = create<IRegioesStore>((set, get) => ({
-    // um currículo novo começa como home office (desde 2026-11-08); quem quer presencial desmarca e escolhe as regiões
-    regioesSelecionadas: [HOME_OFFICE],
+    // um currículo novo começa com o "aceito somente home office" desmarcado e a lista de regiões aberta (de 2026-11-08 a
+    // 2026-11-11 começava marcado)
+    regioesSelecionadas: [],
     // o backend grava os ddds como números e sem o "qualquer estado / cidade", que a tela marca de novo quando todas as
     // regiões metropolitanas estão escolhidas
     loadFromSavedResume: (resume: any) => {
@@ -85,12 +86,18 @@ const RegioesComponent: React.FC<RegioesProps> = ({ labelTodasAsRegioes, labelOu
             <label className="mb-2 block font-semibold text-dark dark:text-white-light">Onde aceito trabalhar</label>
             <Checkbox className="mb-3" checked={homeOffice} onChange={(e) => alternarHomeOffice(e.currentTarget.checked)} label={labelHomeOffice} />
             {!homeOffice && (
+                // os candidatos achavam que só podiam escolher uma região (2026-11-12): o aviso deixa claro que são várias
+                <p className="mb-2 text-sm text-white-dark">
+                    Você pode escolher <strong>mais de uma</strong> região metropolitana: marque todas onde aceita trabalhar.
+                </p>
+            )}
+            {!homeOffice && (
                 <SummaryMultiSelect
                     id="regioes"
                     data={regioes.map((regiao) => ({ value: regiao.id, label: regiao.nome }))}
                     value={regioesSelecionadas}
                     onChange={selecionarRegioes}
-                    placeholder="Selecione as regiões onde aceita trabalhar presencialmente ou de forma híbrida"
+                    placeholder="Selecione uma ou mais regiões onde aceita trabalhar presencialmente ou de forma híbrida"
                     searchPlaceholder="Digite a cidade ou o estado que você procura"
                     nothingFoundMessage="Nenhuma região encontrada"
                     summaryLabel={(count) => `${count} ${count == 1 ? 'região selecionada' : 'regiões selecionadas'}`}

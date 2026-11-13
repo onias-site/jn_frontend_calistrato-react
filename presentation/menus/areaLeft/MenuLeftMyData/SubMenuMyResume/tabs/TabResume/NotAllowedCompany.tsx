@@ -25,8 +25,10 @@ export const NotAllowedCompanyStore = create<INotAllowedCompanyStore>((set) => (
 }));
 
 /**
- * As empresas que não podem receber o linkedin, como etiquetas: ao digitar, as sugestões vêm do backend; Enter (ou sair do
- * campo) adiciona o texto digitado, esteja ou não entre as sugestões.
+ * As empresas que não podem receber o linkedin, como etiquetas: ao digitar, as sugestões (os domínios dos recrutadores) vêm
+ * do backend; Enter (ou sair do campo) adiciona o texto digitado, esteja ou não entre as sugestões. Desde 2026-11-11 cada
+ * etiqueta precisa ser um domínio (consultoria.com.br): enquanto houver uma que não seja, o formulário acusa o erro embaixo
+ * do campo e não deixa avançar (validateResume, em FormResume.tsx).
  */
 export const NotAllowedCompany: React.FC<NotAllowedCompanyProps> = ({ invalid, notAllowedCompany, setNotAllowedCompany }) => {
     const { filteredCompanies, setFilteredCompanies } = NotAllowedCompanyStore((state: INotAllowedCompanyStore) => ({ ...state }));
@@ -43,7 +45,7 @@ export const NotAllowedCompany: React.FC<NotAllowedCompanyProps> = ({ invalid, n
             setFilteredCompanies([]);
             return;
         }
-        const httpResponses = {};
+        const httpResponses: any = {};
         httpResponses[200] = (response: any) => setFilteredCompanies(response.companies || []);
         // a busca de sugestões não mostra a capa de carregamento: ela roda a cada tecla
         httpResponses['setLoading'] = () => {};
@@ -70,7 +72,7 @@ export const NotAllowedCompany: React.FC<NotAllowedCompanyProps> = ({ invalid, n
             data={filteredCompanies}
             onSearchChange={filtrarEmpresas}
             error={reachedTheLimit ? `Cada empresa / consultoria pode ter no máximo ${COMPANY_SEARCH_MAX_LENGTH} caracteres` : invalid}
-            placeholder={notAllowedCompany && notAllowedCompany.length ? '' : 'Digite o nome e tecle Enter'}
+            placeholder={notAllowedCompany && notAllowedCompany.length ? '' : 'Digite o domínio (ex.: consultoria.com.br) e tecle Enter'}
             maxLength={COMPANY_SEARCH_MAX_LENGTH}
             acceptValueOnBlur
             clearable

@@ -25,6 +25,7 @@ import { isWaitingForTheResume, removeResumeCopy, resumeCopyFromSavedResume, res
 import { Alert } from '@mantine/core';
 import IconInfoCircle from '@/presentation/icons/icon-info-circle';
 import JnAjax from '@/app/JnAjax';
+import { getTranslation } from '@/i18n';
 import { ModalLoginStore, IModalLoginStore } from '@/presentation/auth/ModalLogin';
 import { useRouter } from 'next/navigation';
 import { create } from 'zustand';
@@ -54,6 +55,10 @@ export interface ISubMenuMyResumeStore {
     // texto novo sem que as habilidades dele tenham sido buscadas
     skillsLoadedFromText: string;
     setSkillsLoadedFromText: (skillsLoadedFromText: string) => void;
+    // aviso do topo quando o suporte confirmou que o endereço de LinkedIn do currículo não abre (desde 2026-11-12)
+    invalidLinkedinMessage: string;
+    // o que o dono precisa corrigir antes de o currículo voltar aos recrutadores (vis_resume_restriction, desde 2026-11-12)
+    restrictionMessages: string[];
 }
 
 export const SubMenuMyResumeStore = create<ISubMenuMyResumeStore>((set) => ({
@@ -64,7 +69,16 @@ export const SubMenuMyResumeStore = create<ISubMenuMyResumeStore>((set) => ({
     formVersion: 0,
     skillsLoadedFromText: '',
     setSkillsLoadedFromText: (skillsLoadedFromText: string) => set({ skillsLoadedFromText }),
+    invalidLinkedinMessage: '',
+    restrictionMessages: [],
 }));
+
+// idioma do front -> JnLanguage do back end; o aviso do LinkedIn inválido só tem texto em português e inglês
+const getBackendLanguage = () => {
+    const { i18n } = getTranslation();
+    const language = i18n.language || 'br';
+    return language === 'br' ? 'portuguese' : 'english';
+};
 
 // as stores das abas como estavam ao abrir a tela, antes de qualquer preenchimento
 const storesOfTheTabs: any[] = [TabResumeStore, NotAllowedCompanyStore, TabLanguagesStore, TabOptionsStore, RegioesStore, TabSalaryStore, TabSkillStore, TabSkillsStore, SkillsInternalListStore];
@@ -79,7 +93,23 @@ const clearTheForm = () => {
     removeResumeCopy();
     storesOfTheTabs.forEach((store, index) => store.setState(initialStatesOfTheTabs[index], true));
     const { formVersion } = SubMenuMyResumeStore.getState();
-    SubMenuMyResumeStore.setState({ hasTabSkills: false, resumeStatus: 'none', formVersion: formVersion + 1, skillsLoadedFromText: '' });
+    SubMenuMyResumeStore.setState({ hasTabSkills: false, resumeStatus: 'none', formVersion: formVersion + 1, skillsLoadedFromText: '', invalidLinkedinMessage: '', restrictionMessages: [] });
+};
+
+/**
+ * Ao sair do sistema, o formulário volta vazio e a faixa passa a convidar ao login. A assinatura fica no módulo das
+ * stores, e não no componente: as stores guardam o currículo mesmo com a tela fechada, e a limpeza não pode depender de a
+ * tela estar montada quando o aviso chega (até 2026-11-11 quem saía e voltava à tela via o próprio currículo).
+ */
+PubSub.subscribe('logout', () => {
+    clearTheForm();
+    SubMenuMyResumeStore.setState({ resumeStatus: 'notLogged' });
+});
+
+/** Um currículo gravado está nas abas: o do usuário que estava logado quando a tela o carregou. */
+const hasASavedResumeLoaded = () => {
+    const { resumeStatus } = SubMenuMyResumeStore.getState();
+    return resumeStatus === 'active' || resumeStatus === 'inactive';
 };
 
 const resumeStatusLabels: Record<Exclude<ResumeStatus, 'unknown'>, { text: string; className: string }> = {
@@ -102,6 +132,9 @@ const loadResumeStatus = (setResumeStatus: (resumeStatus: ResumeStatus) => void,
     callbacks[401] = () => {
         // sem login o JnAjax chama o 401 antes de enviar, e não desliga o carregamento que já ligou
         JnAjax.setNotLoading()();
+        // a sessão acabou com o currículo de alguém nas abas (logout em que o aviso se perdeu, sessão expirada): ele sai
+        // da tela; o rascunho de quem nunca logou fica
+        hasASavedResumeLoaded() && clearTheForm();
         setResumeStatus('notLogged');
     };
     // a leitura só leva a sessão: um 422 é o token guardado fora do formato (8 caracteres), isto é, sessão inválida.
@@ -109,6 +142,8 @@ const loadResumeStatus = (setResumeStatus: (resumeStatus: ResumeStatus) => void,
     callbacks[422] = callbacks[401];
     callbacks[200] = (response: any) => {
         const data = response || {};
+        const record = data.vis_resume || data.vis_inactive_resume || {};
+        SubMenuMyResumeStore.setState({ invalidLinkedinMessage: record.invalidLinkedinAddressMessage || '', restrictionMessages: record.restrictionMessages || [] });
         if (isFilled(data.vis_resume)) {
             setResumeStatus('active');
             onResumeFound(data.vis_resume);
@@ -128,7 +163,8 @@ const loadResumeStatus = (setResumeStatus: (resumeStatus: ResumeStatus) => void,
     };
     callbacks['onUnexpectedHttpStatus'] = () => setResumeStatus('unknown');
     // GET sem corpo: com {} o jQuery poria "?{}" na URL
-    JnAjax.doAnAjaxRequest('resume/{email}', callbacks, 'GET', null as any, {}, 'http://localhost:8081');
+    const language = getBackendLanguage();
+    JnAjax.doAnAjaxRequest(`resume/{email}?language=${language}`, callbacks, 'GET', null as any, {}, 'http://localhost:8081');
 };
 
 /**
@@ -472,14 +508,6 @@ const SubMenuMyResume = () => {
     // quem entra pelo menu do header (e não pelo "faça login" da faixa) também vê o currículo carregar: quando o modal de
     // login fecha com sessão válida e a tela ainda estava como "não logado", a busca é refeita (até 2026-11-08 a faixa
     // continuava dizendo que não estava logado)
-    // ao sair do sistema, o formulário volta vazio e a faixa passa a convidar ao login
-    useEffect(() => {
-        const token = PubSub.subscribe('logout', () => {
-            clearTheForm();
-            setResumeStatus('notLogged');
-        });
-        return () => PubSub.unsubscribe(token);
-    }, []);
     const loginModalVisible = ModalLoginStore((state: IModalLoginStore) => state.visible);
     useEffect(() => {
         if (!loginModalVisible && resumeStatus === 'notLogged' && JnAjax.hasLogin()) {
@@ -487,6 +515,8 @@ const SubMenuMyResume = () => {
         }
     }, [loginModalVisible]);
     const resumeStatusLabel = resumeStatus === 'unknown' ? null : resumeStatusLabels[resumeStatus];
+    const invalidLinkedinMessage = SubMenuMyResumeStore((state) => state.invalidLinkedinMessage);
+    const restrictionMessages = SubMenuMyResumeStore((state) => state.restrictionMessages);
 
     // edição de currículo já salvo (ativo ou inativo): salvar é atualização, uma por dia, e pede confirmação
     const isEditing = resumeStatus === 'active' || resumeStatus === 'inactive';
@@ -561,6 +591,16 @@ const SubMenuMyResume = () => {
 
     return (
         <div>
+            {restrictionMessages.map((restrictionMessage, index) => (
+                <Alert key={index} className="mb-4" color="red" icon={<IconInfoCircle className="h-5 w-5" />}>
+                    {restrictionMessage}
+                </Alert>
+            ))}
+            {invalidLinkedinMessage && (
+                <Alert className="mb-4" color="red" icon={<IconInfoCircle className="h-5 w-5" />}>
+                    {invalidLinkedinMessage}
+                </Alert>
+            )}
             {returnsToTheStatistics && (
                 <Alert className="mb-4" color="blue" icon={<IconInfoCircle className="h-5 w-5" />}>
                     Você será redirecionado à tela de estatísticas de vagas no Telegram assim que terminar o cadastro do seu currículo, que ainda não existe em nossa base de dados.

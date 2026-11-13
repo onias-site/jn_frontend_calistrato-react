@@ -2,31 +2,26 @@
 import React, { useEffect, useRef, useState } from 'react';
 import PubSub from 'pubsub-js';
 import JnAjax from '@/app/JnAjax';
-import { ModalLoginStore } from '@/presentation/auth/ModalLogin';
 import { CONTACT_US_TYPES, DESCRIPTION_LENGTH, TITLE_LENGTH, contactUsProblem } from './contactUsTypes';
 import { getLastStackTrace, listenToUnhandledErrors } from './lastStackTrace';
 import { ConfirmModal } from '@/presentation/components/source/ConfirmModal';
 import { TicketKind, getContactUsQuotaGroup, getTicketConfirmMessage, getTicketQuotaBlockMessage, recordTicketQuota } from '@/presentation/components/ticket-quota/ticketDailyQuota';
 
-/**
- * O e-mail de quem escreve: o do login, senão o que o modal de login tem digitado. O "Fale Conosco" não exige sessão
- * (o defeito pode ser justamente na tela de login), então sem nenhum dos dois o usuário digita o e-mail no formulário.
- */
-const knownEmail = (): string => {
+/** O e-mail do login; vazio sem sessão. Desde 2026-11-11 nenhum ticket, de nenhum tipo, é aberto sem login. */
+const loggedEmail = (): string => {
     const login: any = JnAjax.getLogin() || {};
-    return login.email || ModalLoginStore.getState().email || '';
+    return login.sessionToken && login.email ? login.email : '';
 };
 
 /**
  * O "Fale Conosco": painel flutuante presente em todas as páginas do layout padrão, no canto inferior direito, logo acima
- * do botão de voltar ao topo. O botão abre o formulário (tipo, título e mensagem); o X, o Cancelar e a tecla Esc o limpam
- * e fecham. O Enviar grava o ticket (POST /contact-us/{email}, API js) com o último stack trace de JavaScript da aba; o
- * usuário recebe um e-mail e o suporte, o ticket no bot.
+ * do botão de voltar ao topo. Sem login, o botão abre o modal de login e, depois dele, o formulário (tipo, título e
+ * mensagem); o X, o Cancelar e a tecla Esc o limpam e fecham. O Enviar grava o ticket (POST /contact-us/{email}, API js,
+ * com a sessão) com o último stack trace de JavaScript da aba; o usuário recebe um e-mail e o suporte, o ticket no bot.
  */
 const ContactUs = () => {
     const [open, setOpen] = useState(false);
     const [email, setEmail] = useState('');
-    const [emailIsKnown, setEmailIsKnown] = useState(false);
     const [contactType, setContactType] = useState('');
     const [subject, setSubject] = useState('');
     const [text, setText] = useState('');
@@ -45,9 +40,10 @@ const ContactUs = () => {
     useEffect(listenToUnhandledErrors, []);
 
     const openTheForm = () => {
-        const email = knownEmail();
+        const email = loggedEmail();
+        // sem sessão: pede o login e, quando ele termina, abre o formulário
+        if (!email) return PubSub.publish('httpStatus401', openTheForm);
         setEmail(email);
-        setEmailIsKnown(!!email);
         setOpen(true);
     };
 
@@ -94,8 +90,8 @@ const ContactUs = () => {
         const callbacks: any = {};
         callbacks['setLoading'] = () => setSending(true);
         callbacks['setNotLoading'] = () => setSending(false);
-        // sem sessão: o e-mail vai no caminho, e não há 401 a tratar
-        callbacks['getLogin'] = () => ({});
+        // a sessão vence enquanto o formulário está aberto: depois do novo login, o mesmo envio é refeito
+        callbacks['retryAfterAuthentication'] = sendConfirmed;
         callbacks[200] = () => {
             if (quotaGroup) recordTicketQuota(email, quotaGroup);
             PubSub.publish('showMessage', { summary: 'Mensagem enviada!', detail: `Enviamos para ${email.trim()} um e-mail com os detalhes; o ticket está em análise.` });
@@ -117,9 +113,8 @@ const ContactUs = () => {
         const body: any = { type: contactType, title: subject.trim(), description: text.trim() };
         const stackTrace = getLastStackTrace();
         if (stackTrace) body.stackTrace = stackTrace;
-        // o e-mail vai cru, como o JnAjax põe o {email}: o filtro do back end lê o caminho sem decodificar o %40
-        const path = `contact-us/${email.trim()}`;
-        JnAjax.doAnAjaxRequest(path, callbacks, 'POST', body, {}, 'http://localhost:8082');
+        // o JnAjax põe no {email} o e-mail da sessão, cru: o filtro do back end lê o caminho sem decodificar o %40
+        JnAjax.doAnAjaxRequest('contact-us/{email}', callbacks, 'POST', body, {}, 'http://localhost:8082');
     };
 
     return (
@@ -146,11 +141,7 @@ const ContactUs = () => {
                         </button>
                     </div>
                     <form className="space-y-3" onSubmit={send}>
-                        {emailIsKnown ? (
-                            <div className="text-xs text-white-dark">Responderemos para {email}</div>
-                        ) : (
-                            <input type="email" className="form-input" placeholder="Seu e-mail" value={email} onChange={(e) => setEmail(e.target.value)} />
-                        )}
+                        <div className="text-xs text-white-dark">Responderemos para {email}</div>
                         <select className="form-select" value={contactType} onChange={(e) => setContactType(e.target.value)}>
                             {/* sem opção escolhida: a vazia não aparece na lista */}
                             <option value="" disabled hidden></option>

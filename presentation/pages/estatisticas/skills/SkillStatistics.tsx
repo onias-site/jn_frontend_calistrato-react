@@ -498,7 +498,7 @@ const SkillsGrid = ({ skills, seniority, ddd, resumeSkills, desiredJob }: { skil
 };
 
 /**
- * Grupos de vagas do Telegram, calculados dos anúncios e lidos por id. O botão "Pesquisar" lê as skills do mês, da
+ * Vagas no Telegram, calculadas dos anúncios e lidas por id. O botão "Pesquisar" lê as skills do mês, da
  * senioridade e da região (até 2026-11-09 era um menu com "Todas as Vagas" e "Vagas compatíveis comigo"). Mudar um filtro
  * esconde o resultado até a próxima pesquisa. O checkbox "Ver quais dessas habilidades estão em meu currículo" não
  * pesquisa: lê as habilidades do currículo do usuário (pede o login, e quem não tem currículo vai cadastrá-lo e volta
@@ -634,7 +634,7 @@ export const SkillStatistics = ({ initialSeniority = 'pleno', searchOnOpening = 
 
     return (
         <div>
-            <PageTitle>Grupos de vagas do telegram</PageTitle>
+            <PageTitle>Vagas no Telegram</PageTitle>
             <div className="panel mt-6">
                 {/* mês, senioridade, região, "Pesquisar" e o checkbox do currículo numa linha só (quebra apenas em tela estreita) */}
                 <MonthPicker

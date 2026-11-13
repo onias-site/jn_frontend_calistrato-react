@@ -25,11 +25,13 @@ export interface ITabOptionsStore {
     getPendingRequirements: () => string[];
 }
 
-// mesmas regras de VisEntityResume.Fields no backend: inteiros sem sinal, com o 0 marcado pelo checkbox
+// mesmas regras de VisEntityResume.Fields no backend: inteiros sem sinal, com o 0 marcado pelo checkbox; o campo apagado
+// ('') ou com 0 digitado ('0') está fora da faixa (IntegerFieldComponent)
 const maxExperience = 70;
 const maxDisponibility = 30;
 const maxTemporallyJobTime = 12;
 const isOutOfRange = (value: any, maxValue: number) => {
+    if (value === '' || value === '0') return true;
     const number = Number(value);
     return !Number.isInteger(number) || number < 0 || number > maxValue;
 };

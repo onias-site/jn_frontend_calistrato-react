@@ -18,13 +18,21 @@ export interface IntegerFieldProps {
 
 /**
  * Um checkbox que, desmarcado, mostra um campo numérico logo abaixo, recuado na linha do texto do checkbox (até 2026-11-08
- * o campo ficava à direita, numa segunda coluna, e parecia de outra pergunta). Marcado, o valor é 0 ("não se aplica");
- * desmarcado, volta ao valor padrão.
+ * o campo ficava à direita, numa segunda coluna, e parecia de outra pergunta). Marcado, o valor é o número 0 ("não se
+ * aplica"); desmarcado, volta ao valor padrão. Só o checkbox põe o número 0: o campo apagado vale '' e o 0 digitado vale
+ * '0', e os dois mantêm o campo na tela com o erro (até 2026-11-11 apagar o campo ou digitar 0 marcava o checkbox e o
+ * campo sumia).
  */
 export const IntegerFieldComponent: React.FC<IntegerFieldProps> = ({ explanation, setValue, defaultValue, minValue, textFieldLabel, checkBoxLabel, value, maxValue }) => {
     const min = minValue ?? defaultValue;
-    const isInvalid = () => value < min || value > maxValue;
-    const checked = value == 0;
+    const number = Number(value);
+    const isInvalid = () => value === '' || number < min || number > maxValue;
+    const checked = value === 0;
+    const typedValue = (newValue: string | number) => {
+        if (newValue === '') return '';
+        const typedNumber = Number(newValue);
+        return typedNumber === 0 ? '0' : typedNumber;
+    };
 
     return (
         <div className="mb-4">
@@ -45,7 +53,7 @@ export const IntegerFieldComponent: React.FC<IntegerFieldProps> = ({ explanation
                         allowDecimal={false}
                         allowNegative={false}
                         error={isInvalid() ? `Informe um valor entre ${min} e ${maxValue}` : undefined}
-                        onChange={(newValue) => setValue(newValue === '' ? '' : Number(newValue))}
+                        onChange={(newValue) => setValue(typedValue(newValue))}
                         classNames={{ root: 'max-w-xs', label: 'font-semibold text-dark dark:text-white-light' }}
                     />
                 </div>

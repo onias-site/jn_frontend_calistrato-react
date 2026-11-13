@@ -15,19 +15,22 @@ const messages: Record<Exclude<Situation, 'loaded'>, string> = {
 
 /**
  * Os detalhes de um currículo visualizado no mês, na linha expandida da lista: o currículo como o e-mail de currículos
- * o mostra (o que importa e regiões, idiomas e habilidades, função e outras informações), achado pelo LinkedIn da
- * visualização. As datas de inserção e de última alteração não aparecem: só o histórico do currículo as tem, e ele não
+ * o mostra (o que importa e regiões, idiomas e habilidades, função e outras informações, esta terminada pelo LinkedIn),
+ * achado pelo hash do LinkedIn da visualização. Se o candidato bloqueou a empresa do recrutador, o back end não devolve o
+ * currículo nem o LinkedIn. As datas de inserção e de última alteração não aparecem: só o histórico do currículo as tem, e ele não
  * é consultado numa requisição online.
  */
-export const ViewedResumeDetails = ({ month, linkedin }: { month: string; linkedin: string }) => {
+export const ViewedResumeDetails = ({ month, linkedinHash }: { month: string; linkedinHash: string }) => {
     const [situation, setSituation] = useState<Situation>('loading');
     const [resumes, setResumes] = useState<any[]>([]);
+    const [linkedin, setLinkedin] = useState<string>('');
 
     const load = () => {
         setSituation('loading');
         const callbacks: any = {};
         callbacks[200] = (response: any) => {
             setResumes(response.resumes || []);
+            setLinkedin(response.linkedin || '');
             setSituation('loaded');
         };
         callbacks[404] = () => setSituation('notViewed');
@@ -38,10 +41,10 @@ export const ViewedResumeDetails = ({ month, linkedin }: { month: string; linked
             JnAjax.getHandler401(load)();
         };
         callbacks['onUnexpectedHttpStatus'] = () => setSituation('error');
-        JnAjax.doACachedRequest(`recruiter/{email}/viewed-resumes/${monthParameter(month)}/details`, callbacks, 'POST', { linkedin }, {}, 'http://localhost:8081');
+        JnAjax.doACachedRequest(`recruiter/{email}/viewed-resumes/${monthParameter(month)}/details`, callbacks, 'POST', { linkedinHash }, {}, 'http://localhost:8081');
     };
 
-    useEffect(load, [month, linkedin]);
+    useEffect(load, [month, linkedinHash]);
 
     if (situation != 'loaded') {
         return <div>{messages[situation]}</div>;
@@ -62,7 +65,7 @@ export const ViewedResumeDetails = ({ month, linkedin }: { month: string; linked
                 <tbody>
                     {resumes.map((resume) => (
                         <tr key={resume.resumeId}>
-                            <ResumeRowCells resume={resume} />
+                            <ResumeRowCells resume={resume} linkedin={linkedin} />
                         </tr>
                     ))}
                 </tbody>

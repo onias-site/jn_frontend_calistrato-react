@@ -57,8 +57,10 @@ const Header = () => {
         setLogged(false);
         setLoggedEmail('');
         // as telas abertas largam os dados de quem saiu e o site volta à home (até 2026-11-08 o e-mail continuava no
-        // header e a tela ficava com o currículo do usuário que tinha saído)
-        PubSub.publish('logout');
+        // header e a tela ficava com o currículo do usuário que tinha saído). Síncrono: o publish do pubsub-js entrega
+        // num setTimeout, e no build de produção a navegação para a home desmontava o formulário antes, que assim não
+        // se limpava (bug de 2026-11-11)
+        PubSub.publishSync('logout');
         router.push('/');
         callbacks['200'] = () => PubSub.publish('showMessage', { summary: 'Sucesso!!!', detail: `O usuário '${login.email}' encerrou o login com sucesso!` });
         callbacks['404'] = () => PubSub.publish('showMessage', { summary: 'Aviso!!!', detail: `O usuário '${login.email}' não está logado neste sistema!`, severity: 'warn' });
@@ -93,10 +95,12 @@ const Header = () => {
                 return;
             }
             JnAjax.clearScreenCache();
-            PubSub.publish('logout');
+            PubSub.publishSync('logout');
             router.push('/');
         });
     }, []);
+    // fechar a última aba do site (ou o navegador) faz o logout, sem diálogo de confirmação
+    useEffect(() => JnAjax.logoutWhenTheLastTabCloses(), []);
     const loggedEmailRef = useRef('');
     loggedEmailRef.current = loggedEmail;
     const userName = loggedEmail;
