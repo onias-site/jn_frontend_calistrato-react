@@ -4,7 +4,6 @@ import { SegmentedControl, Table } from '@mantine/core';
 import React, { useState } from 'react';
 import JnAjax from '@/app/JnAjax';
 import IconCaretDown from '@/presentation/icons/icon-caret-down';
-import IconFile from '@/presentation/icons/icon-file';
 import IconFolderPlus from '@/presentation/icons/icon-folder-plus';
 import IconFolderMinus from '@/presentation/icons/icon-folder-minus';
 import { percentLabel, pieTotal } from '../skills/skillStatisticsData';
@@ -32,7 +31,7 @@ const statisticsOf = (statistics: Statistics, source: Source) => statistics[sour
  * Um gráfico: os botões CVs, CVs vistos e Vagas trocam a fonte só deste gráfico (CVs é o padrão; Vagas ainda desligado);
  * pizza e, quando há "Outras", também barras.
  */
-const ChartPanel = ({ chart, statistics }: { chart: string; statistics: Statistics }) => {
+const ChartPanel = ({ title, chart, statistics }: { title: string; chart: string; statistics: Statistics }) => {
     const [sourceId, setSourceId] = useState(sources[0].id);
     const [chartType, setChartType] = useState<'pie' | 'bar'>('pie');
     const source = sources.find((item) => item.id == sourceId) || sources[0];
@@ -75,8 +74,9 @@ const ChartPanel = ({ chart, statistics }: { chart: string; statistics: Statisti
     };
 
     return (
-        <div>
-            <div className="mb-2 flex flex-wrap items-start gap-3">
+        <div className="rounded border border-[#e0e6ed] p-3 dark:border-[#1b2e4b]">
+            <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
+                <h5 className="text-lg font-semibold">{title}</h5>
                 <div className="flex flex-wrap gap-2">
                     <SegmentedControl
                         size="xs"
@@ -179,64 +179,42 @@ type TreeNode = { value: string; label: string; children?: TreeNode[] };
 
 const indent = (level: number) => ({ paddingLeft: `${level * 24 + 8}px` });
 
-/** A linha de uma pasta ou de um arquivo da árvore: o recuo diz o nível, a seta e o ícone dizem se está aberta. */
-const TreeRow = ({ level, open, folder, label, detail, onToggle }: { level: number; open: boolean; folder: boolean; label: string; detail?: string; onToggle: () => void }) => (
+/** A linha de uma pasta da árvore: o recuo diz o nível, a seta e o ícone dizem se está aberta. */
+const TreeRow = ({ level, open, label, detail, onToggle }: { level: number; open: boolean; label: string; detail?: string; onToggle: () => void }) => (
     <button type="button" aria-expanded={open} onClick={onToggle} style={indent(level)} className="flex w-full items-center gap-2 rounded py-1.5 pr-2 text-left hover:bg-primary/10">
         <IconCaretDown className={`h-4 w-4 shrink-0 transition-transform ${open ? '' : '-rotate-90'}`} />
-        {folder && open && <IconFolderMinus className="h-5 w-5 shrink-0 text-warning" />}
-        {folder && !open && <IconFolderPlus className="h-5 w-5 shrink-0 text-warning" />}
-        {!folder && <IconFile className="h-5 w-5 shrink-0 text-primary" />}
-        <span className={folder ? 'font-semibold' : ''}>{label}</span>
+        {open && <IconFolderMinus className="h-5 w-5 shrink-0 text-warning" />}
+        {!open && <IconFolderPlus className="h-5 w-5 shrink-0 text-warning" />}
+        <span className="font-semibold">{label}</span>
         {detail && <span className="text-sm text-white-dark">{detail}</span>}
     </button>
 );
 
-/** O conteúdo de um arquivo aberto, recuado sob a sua linha, com toda a largura que sobra. */
-const FileContent = ({ level, children }: { level: number; children: React.ReactNode }) => (
-    <div style={{ marginLeft: `${level * 24 + 32}px` }} className="mb-3 mt-1 rounded border border-[#e0e6ed] p-3 dark:border-[#1b2e4b]">
-        {children}
+/**
+ * O conteúdo de uma região aberta, recuado sob a sua pasta e na largura que sobra: os totais e as médias e, abaixo, um
+ * gráfico por linha.
+ */
+const RegionContent = ({ ddd, level, statistics }: { ddd: string; level: number; statistics: Statistics }) => (
+    <div style={{ marginLeft: `${level * 24 + 8}px` }} className="mb-4 mt-1 space-y-4">
+        <div className="rounded border border-[#e0e6ed] p-3 dark:border-[#1b2e4b]">
+            <h5 className="mb-1 text-lg font-semibold">Totais e médias</h5>
+            <div className="mb-3 text-xl font-bold">{totalsLabel(statistics)}</div>
+            <AveragesTable statistics={statistics} />
+            <p className="mt-2 text-sm text-white-dark">
+                As médias contam só quem informou a pretensão ou o início da experiência. Visualizações trazem o currículo como estava quando o recrutador
+                o viu. Vagas: em breve.
+            </p>
+        </div>
+        {charts.map((chart) => (
+            <ChartPanel key={`${ddd}-${chart.id}`} title={chart.title} chart={chart.id} statistics={statistics} />
+        ))}
     </div>
 );
 
-const AVERAGES_FILE = 'averages';
-
-/** Os arquivos de uma região: os totais e as médias, e um arquivo por gráfico. */
-const RegionFiles = ({ ddd, level, statistics, opened, toggle }: { ddd: string; level: number; statistics: Statistics; opened: Set<string>; toggle: (id: string) => void }) => {
-    const files = [{ id: AVERAGES_FILE, title: 'Totais e médias' }, ...charts];
-    return (
-        <>
-            {files.map((file) => {
-                const id = `${ddd}/${file.id}`;
-                const open = opened.has(id);
-                return (
-                    <div key={id}>
-                        <TreeRow level={level} open={open} folder={false} label={file.title} onToggle={() => toggle(id)} />
-                        {open && file.id == AVERAGES_FILE && (
-                            <FileContent level={level}>
-                                <div className="mb-3 text-xl font-bold">{totalsLabel(statistics)}</div>
-                                <AveragesTable statistics={statistics} />
-                                <p className="mt-2 text-sm text-white-dark">
-                                    As médias contam só quem informou a pretensão ou o início da experiência. Visualizações trazem o currículo como estava quando o
-                                    recrutador o viu. Vagas: em breve.
-                                </p>
-                            </FileContent>
-                        )}
-                        {open && file.id != AVERAGES_FILE && (
-                            <FileContent level={level}>
-                                <ChartPanel chart={file.id} statistics={statistics} />
-                            </FileContent>
-                        )}
-                    </div>
-                );
-            })}
-        </>
-    );
-};
-
 /**
  * As estatísticas por região como uma árvore de pastas na largura toda da página: o home office e os estados são pastas,
- * cada região é uma pasta e, aberta, mostra os seus arquivos (os totais e as médias e um gráfico por arquivo); cada arquivo
- * abre o conteúdo logo abaixo dele. A região é lida do backend na primeira vez que a sua pasta abre.
+ * cada região é uma pasta e, aberta, mostra logo abaixo os totais e as médias e todos os gráficos. A região é lida do
+ * backend na primeira vez que a sua pasta abre.
  */
 export const SupplyAndDemand = () => {
     const [opened, setOpened] = useState<Set<string>>(new Set());
@@ -277,7 +255,7 @@ export const SupplyAndDemand = () => {
         const statistics = region?.statistics;
         return (
             <div key={node.value}>
-                <TreeRow level={level} open={open} folder label={node.label} detail={statistics && totalsLabel(statistics)} onToggle={() => toggleRegion(node.value)} />
+                <TreeRow level={level} open={open} label={node.label} detail={statistics && totalsLabel(statistics)} onToggle={() => toggleRegion(node.value)} />
                 {open && region?.situation == 'loading' && (
                     <p style={indent(level + 1)} className="py-1 text-white-dark">
                         Carregando...
@@ -288,7 +266,7 @@ export const SupplyAndDemand = () => {
                         Não foi possível carregar as estatísticas de {regionName(node.value)}.
                     </p>
                 )}
-                {open && statistics && <RegionFiles ddd={node.value} level={level + 1} statistics={statistics} opened={opened} toggle={toggle} />}
+                {open && statistics && <RegionContent ddd={node.value} level={level + 1} statistics={statistics} />}
             </div>
         );
     };
@@ -303,7 +281,7 @@ export const SupplyAndDemand = () => {
                 const regionsLabel = `${node.children.length} ${node.children.length == 1 ? 'região' : 'regiões'}`;
                 return (
                     <div key={node.value}>
-                        <TreeRow level={0} open={open} folder label={node.label} detail={regionsLabel} onToggle={() => toggle(node.value)} />
+                        <TreeRow level={0} open={open} label={node.label} detail={regionsLabel} onToggle={() => toggle(node.value)} />
                         {open && node.children.map((child) => renderRegion(child, 1))}
                     </div>
                 );
