@@ -284,7 +284,8 @@ const RegionContent = ({ ddd, level, statistics }: { ddd: string; level: number;
  * As estatísticas por região como uma árvore de pastas na largura toda da página: o home office e os estados são pastas,
  * cada região é uma pasta e, aberta, mostra logo abaixo os totais e as médias e todos os gráficos. Ao entrar na página,
  * os totais de todas as regiões (GET statistics/resumes/totals) vão para os títulos das pastas; a região é lida do backend
- * na primeira vez que a sua pasta abre.
+ * na primeira vez que a sua pasta abre. As duas respostas ficam no localStorage por 1 hora (JnAjax.doAPersistedRequest):
+ * nesse prazo, recarregar a página ou abrir a pasta de novo não volta ao backend.
  */
 export const SupplyAndDemand = () => {
     const [opened, setOpened] = useState<Set<string>>(new Set());
@@ -297,7 +298,7 @@ export const SupplyAndDemand = () => {
         callbacks[200] = (response: Totals) => setTotals(response);
         // sem os totais, as pastas ficam só com o nome
         callbacks['onUnexpectedHttpStatus'] = () => setTotals(null);
-        JnAjax.doAnAjaxRequest('statistics/resumes/totals', callbacks, 'GET', null as any, {}, API);
+        JnAjax.doAPersistedRequest('statistics/resumes/totals', callbacks, API, JnAjax.PERSISTED_REQUEST_ONE_HOUR);
     }, []);
 
     const totalsOf = (ddds: string[]) => (totals?.byRegion ? folderTotals(totals.byRegion, ddds) : undefined);
@@ -320,7 +321,7 @@ export const SupplyAndDemand = () => {
         const callbacks: any = { withoutSession: true };
         callbacks[200] = (response: Statistics) => setRegion(ddd, { situation: 'loaded', statistics: response });
         callbacks['onUnexpectedHttpStatus'] = () => setRegion(ddd, { situation: 'error' });
-        JnAjax.doAnAjaxRequest(`statistics/resumes/${ddd}`, callbacks, 'GET', null as any, {}, API);
+        JnAjax.doAPersistedRequest(`statistics/resumes/${ddd}`, callbacks, API, JnAjax.PERSISTED_REQUEST_ONE_HOUR);
     };
 
     const toggleRegion = (ddd: string) => {

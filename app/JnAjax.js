@@ -171,6 +171,7 @@ export default class JnAjax {
     static PERSISTED_REQUEST_PREFIX = 'persistedRequest ';
     static PERSISTED_REQUEST_LIFETIME = 24 * 60 * 60 * 1000;
     static PERSISTED_REQUEST_ONE_YEAR = 365 * JnAjax.PERSISTED_REQUEST_LIFETIME;
+    static PERSISTED_REQUEST_ONE_HOUR = 60 * 60 * 1000;
 
     static clearPersistedRequests() {
         try {
