@@ -4,6 +4,7 @@ describe('supplyAndDemandData', () => {
     it('rotula as fatias a partir dos códigos do backend', () => {
         expect(sliceLabel('spokenLanguage', 'Inglês|2')).toBe('Inglês fluente');
         expect(sliceLabel('spokenLanguage', 'Inglês|1')).toBe('Inglês intermediário');
+        expect(sliceLabel('spokenLanguage', 'none')).toBe('Nenhum');
         expect(sliceLabel('pcd', 'notInformed')).toBe('Não informado');
         expect(money(8000)).toBe('R$ 8.000');
         expect(sliceLabel('disponibility', 'immediate')).toBe('Imediata');

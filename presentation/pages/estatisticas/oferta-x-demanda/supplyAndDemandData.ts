@@ -118,6 +118,9 @@ const fixedLabels: Record<string, Record<string, string>> = {
 
 const NOT_INFORMED = 'notInformed';
 
+/** A fatia dos currículos que não falam nenhum idioma. */
+const NO_LANGUAGE = 'none';
+
 /** O que sobra das fatias vai para "Outras": acima de 8 cores não dá para distinguir as fatias. */
 const PIE_SLICES = 7;
 
@@ -133,6 +136,9 @@ export const yearsLabel = (years: number) => `${years.toLocaleString('pt-BR', { 
 export const sliceLabel = (chart: string, key: string): string => {
     if (key == NOT_INFORMED) {
         return 'Não informado';
+    }
+    if (chart == 'spokenLanguage' && key == NO_LANGUAGE) {
+        return 'Nenhum';
     }
     if (chart == 'spokenLanguage') {
         const [name, level] = key.split('|');
