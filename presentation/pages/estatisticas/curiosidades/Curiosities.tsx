@@ -6,7 +6,7 @@ import JnAjax from '@/app/JnAjax';
 import { HelpButton } from '@/presentation/components/source/HelpButton';
 import { percentLabel, pieTotal } from '../skills/skillStatisticsData';
 import { daysOfTheMonth, lastMonths, monthTitle } from '../oferta-x-demanda/supplyAndDemandData';
-import { Curiosities as CuriositiesData, newUsersSeries, pies, slicesOf } from './curiositiesData';
+import { Curiosities as CuriositiesData, newUsersSeries, pies, slicesOf, totalLabel } from './curiositiesData';
 
 const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
@@ -58,7 +58,7 @@ const NewUsersPanel = ({ curiosities }: { curiosities: CuriositiesData }) => {
     );
 };
 
-/** Uma pizza, com o "?" ao lado do título quando há explicação. */
+/** Uma pizza, com o "?" ao lado do título quando há explicação e o total geral das fatias. */
 const PiePanel = ({ title, help, counts, labels }: { title: string; help?: string; counts?: Record<string, number>; labels?: Record<string, string> }) => {
     const slices = slicesOf(counts, labels);
     const values = slices.map((slice) => slice.total);
@@ -80,6 +80,7 @@ const PiePanel = ({ title, help, counts, labels }: { title: string; help?: strin
             <div className="mb-2 flex items-center gap-1">
                 <h5 className="text-lg font-semibold">{title}</h5>
                 {help && <HelpButton title={title} explanation={help} tooltip="Clique aqui para entender este gráfico" />}
+                {slices.length > 0 && <span className="ml-2 text-sm font-semibold text-white-dark">{totalLabel(total)}</span>}
             </div>
             {slices.length == 0 && <p className="text-white-dark">Ainda sem dados.</p>}
             {slices.length > 0 && <ReactApexChart type="pie" height={340} options={options} series={values} />}

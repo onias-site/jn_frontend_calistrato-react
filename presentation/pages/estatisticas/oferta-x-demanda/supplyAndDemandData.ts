@@ -98,7 +98,7 @@ export const seniorities = [
     { id: 'especialista', nome: 'Especialista' },
 ];
 
-const resumeTypes: Record<string, string> = {
+export const resumeTypes: Record<string, string> = {
     '1': 'Tecnologia da Informação',
     '2': 'Recrutamento e seleção',
     '3': 'Nível Superior',

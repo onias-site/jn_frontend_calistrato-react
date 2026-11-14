@@ -7,6 +7,7 @@ import IconCaretDown from '@/presentation/icons/icon-caret-down';
 import IconFolderPlus from '@/presentation/icons/icon-folder-plus';
 import IconFolderMinus from '@/presentation/icons/icon-folder-minus';
 import { percentLabel, pieTotal } from '../skills/skillStatisticsData';
+import { totalLabel } from '../curiosidades/curiositiesData';
 import {
     OTHERS,
     Slice,
@@ -96,7 +97,10 @@ const ChartPanel = ({ title, chart, statistics }: { title: string; chart: string
     return (
         <div className="rounded border border-[#e0e6ed] p-3 dark:border-[#1b2e4b]">
             <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
-                <h5 className="text-lg font-semibold">{title}</h5>
+                <h5 className="text-lg font-semibold">
+                    {title}
+                    {slices.length > 0 && <span className="ml-2 text-sm font-semibold text-white-dark">{totalLabel(total)}</span>}
+                </h5>
                 <div className="flex flex-wrap gap-2">
                     <SegmentedControl
                         size="xs"

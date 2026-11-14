@@ -1,5 +1,5 @@
 import { CONTACT_US_TYPES } from '@/presentation/layouts/contactUsTypes';
-import { Period } from '../oferta-x-demanda/supplyAndDemandData';
+import { Period, resumeTypes } from '../oferta-x-demanda/supplyAndDemandData';
 
 /** A resposta de GET statistics/curiosities: um mapa {chave: total} por gráfico. */
 export type Curiosities = Record<string, Record<string, number>>;
@@ -22,11 +22,13 @@ const channels: Record<string, string> = {
 
 const situations: Record<string, string> = { active: 'Ativo', inactive: 'Inativo' };
 
+const viewerDomains: Record<string, string> = { freelancer: 'Recrutadores com e-mail pessoal' };
+
 const contactUsTypes: Record<string, string> = Object.fromEntries(CONTACT_US_TYPES.map((type) => [type.value, type.label]));
 
 type Pie = { id: string; title: string; labels?: Record<string, string>; help?: string };
 
-/** As 6 pizzas da tela, na ordem pedida; os rótulos dos combos de onde os valores vieram e o texto do "?". */
+/** As 8 pizzas da tela, na ordem pedida; os rótulos dos combos de onde os valores vieram e o texto do "?". */
 export const pies: Pie[] = [
     {
         id: 'notAllowedCompanies',
@@ -38,9 +40,11 @@ export const pies: Pie[] = [
         title: 'Skills Evitadas',
         help: 'Habilidades / Conceitos / Ferramentas que os donos dos currículos mais cadastram para não trabalharem com elas.',
     },
+    { id: 'resumeTypes', title: 'Áreas dos currículos', labels: resumeTypes },
+    { id: 'viewerDomains', title: 'Empresas que mais veem currículos', labels: viewerDomains },
     { id: 'goals', title: 'Objetivos dos usuários', labels: goals },
     { id: 'channels', title: 'Origem do usuário', labels: channels },
-    { id: 'resumeSituation', title: 'Situação do usuário', labels: situations },
+    { id: 'resumeSituation', title: 'Situação do Currículo', labels: situations },
     { id: 'contactUsTypes', title: 'Chamados abertos por tipo', labels: contactUsTypes },
 ];
 
@@ -58,6 +62,9 @@ export const slicesOf = (counts: Record<string, number> = {}, labels: Record<str
     const rest = slices.slice(MAX_SLICES - 1).reduce((sum, slice) => sum + slice.total, 0);
     return [...kept, { key: OTHERS, label: OTHERS, total: rest }];
 };
+
+/** O total geral de uma pizza, ao lado do título: "Total: 1.234". */
+export const totalLabel = (total: number) => `Total: ${total.toLocaleString('pt-BR')}`;
 
 /** A linha dos novos usuários: o total de cada período, 0 quando o contador não tem a chave. */
 export const newUsersSeries = (counts: Record<string, number> = {}, periods: Period[]) => [
