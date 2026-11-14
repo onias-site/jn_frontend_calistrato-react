@@ -21,7 +21,7 @@ const messages: Record<Exclude<Situation, 'loaded'>, string> = {
 
 /**
  * Os chamados do usuário logado de um tipo escolhido no combo (os do Fale Conosco, as associações e dissociações de
- * hierarquia e as sugestões de habilidade): em análise e encerrados, do mais recente ao mais antigo, com as colunas
+ * hierarquia, as sugestões de habilidade e os LinkedIns inválidos reportados pelo recrutador): em análise e encerrados, do mais recente ao mais antigo, com as colunas
  * próprias do tipo. Exige login: quem não está logado vê o modal de login, que repete a busca ao entrar;
  * fechar o modal sem entrar leva à tela inicial.
  */

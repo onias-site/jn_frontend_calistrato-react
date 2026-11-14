@@ -15,6 +15,7 @@ describe('rótulos do combo de tipo de chamado', () => {
             'Associação de hierarquia',
             'Dissociação de hierarquia',
             'Sugestão de habilidade',
+            'LinkedIn inválido',
         ]);
     });
 });
@@ -48,6 +49,17 @@ describe('ticketsFromGroups', () => {
         const response = { jn_inactive_grouper: { child: [JSON.stringify({ skill: 'KTOR', status: 'vis_skill_rejected' })] } };
 
         expect(ticketsFromGroups(response, kind('skillSuggestion'))[0].situation).toBe('Rejeitada');
+    });
+
+    it('o LinkedIn inválido reportado mostra o endereço e, respondido, a resposta do suporte', () => {
+        const response = {
+            jn_inactive_grouper: { child: [JSON.stringify({ linkedinAddress: 'https://www.linkedin.com/in/fulano', status: 'vis_invalid_linkedin_report_solved', supportResponse: 'O perfil existe' })] },
+        };
+
+        const tickets = ticketsFromGroups(response, kind('invalidLinkedin'));
+
+        expect(tickets[0].situation).toBe('Respondido');
+        expect(kind('invalidLinkedin').columns.map((column) => column.value(tickets[0].json))).toEqual(['https://www.linkedin.com/in/fulano', 'O perfil existe']);
     });
 
     it('sem grupo em nenhum dos lados não há chamados', () => {

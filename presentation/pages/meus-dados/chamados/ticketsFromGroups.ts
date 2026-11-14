@@ -31,6 +31,11 @@ const hierarchyColumns: Column[] = [
     { title: 'Resposta do suporte', value: text('explanation') },
 ];
 
+const invalidLinkedinColumns: Column[] = [
+    { title: 'LinkedIn', value: text('linkedinAddress') },
+    { title: 'Resposta do suporte', value: text('supportResponse') },
+];
+
 const skillSuggestionColumns: Column[] = [
     { title: 'Habilidade', value: text('skill') },
     { title: 'Sinônimos', value: list('synonym') },
@@ -43,6 +48,8 @@ export const TICKET_KINDS: TicketKind[] = [
     { value: 'hierarchyAdd', label: 'Associação de hierarquia', childName: 'vis_skill_fix_hierarchy_pending', type: 'add', columns: hierarchyColumns },
     { value: 'hierarchyRemove', label: 'Dissociação de hierarquia', childName: 'vis_skill_fix_hierarchy_pending', type: 'remove', columns: hierarchyColumns },
     { value: 'skillSuggestion', label: 'Sugestão de habilidade', childName: 'vis_skill_pending', columns: skillSuggestionColumns },
+    // os endereços de LinkedIn que o recrutador reportou como inválidos na página do currículo
+    { value: 'invalidLinkedin', label: 'LinkedIn inválido', childName: 'vis_invalid_linkedin_report', columns: invalidLinkedinColumns },
 ];
 
 /** A situação de um chamado encerrado, pela entidade para onde ele foi. */
@@ -51,6 +58,7 @@ const CLOSED_SITUATIONS: Record<string, string> = {
     vis_skill_fix_hierarchy_fulfiled: 'Concluído',
     vis_skill_approved: 'Aprovada',
     vis_skill_rejected: 'Rejeitada',
+    vis_invalid_linkedin_report_solved: 'Respondido',
 };
 
 export const IN_ANALYSIS = 'Em análise';

@@ -7,7 +7,7 @@ import JnAjax from '@/app/JnAjax';
 const ALIAS_MIN_LENGTH = 5;
 const ALIAS_MAX_LENGTH = 200;
 
-type Situation = 'confirming' | 'opening' | 'opened' | 'saved' | 'canceled' | 'invalidLink' | 'notFound' | 'invalidLinkedin' | 'error';
+type Situation = 'confirming' | 'opening' | 'opened' | 'saved' | 'canceled' | 'invalidLink' | 'notFound' | 'invalidLinkedin' | 'inactiveView' | 'error';
 
 // a denúncia de LinkedIn inválido: confirmando, enviando, aceita ou falha
 type Report = 'none' | 'confirming' | 'sending' | 'sent' | 'error';
@@ -19,6 +19,7 @@ const messages: Record<Exclude<Situation, 'confirming' | 'opened'>, string> = {
     canceled: 'O currículo não foi aberto. Para abri-lo, clique de novo no link do e-mail.',
     invalidLink: 'Este link não é válido. Abra o currículo pelo link do e-mail que você recebeu.',
     notFound: 'Este currículo não está mais ativo.',
+    inactiveView: 'Você reportou o LinkedIn deste currículo, por isso esta visualização não pode mais ser salva.',
     error: 'Não foi possível concluir agora. Tente de novo em alguns instantes.',
 };
 
@@ -32,13 +33,16 @@ export const getLinkParameters = () => {
  * A página aberta pelo link "Ver currículo" (ou pelo apelido) do e-mail de currículos. Antes de tudo pede a confirmação
  * de quem clicou: os robôs dos provedores de e-mail clicam em todos os links, e a visualização só conta quando uma
  * pessoa confirma. Confirmada, abre o LinkedIn do currículo numa aba nova (aberta ainda no clique, para o navegador não
- * bloquear) e grava a visualização; esta página fica com o apelido do currículo, que o recrutador pode trocar.
+ * bloquear) e grava a visualização; esta página fica com o apelido do currículo, que o recrutador pode trocar. Depois
+ * que o recrutador reporta o LinkedIn, a visualização fica entre as inativas e o botão de salvá-la fica desabilitado.
  */
 export const ViewResumeFromEmail = () => {
     const [situation, setSituation] = useState<Situation>('confirming');
     const [alias, setAlias] = useState('');
     const [link, setLink] = useState({ email: '', resumeId: '', token: '' });
     const [report, setReport] = useState<Report>('none');
+    // a visualização está entre as inativas (o recrutador reportou o LinkedIn): o back end não a salva mais
+    const [inactiveView, setInactiveView] = useState(false);
 
     useEffect(() => setLink(getLinkParameters()), []);
 
@@ -58,6 +62,7 @@ export const ViewResumeFromEmail = () => {
                 newTab.location.href = response.linkedinAddress;
             }
             setAlias(response.alias || '');
+            setInactiveView(response.inactiveView == true);
             setSituation('opened');
         };
         callbacks[401] = failWith(newTab, 'invalidLink');
@@ -76,6 +81,7 @@ export const ViewResumeFromEmail = () => {
         callbacks[200] = () => setSituation('saved');
         callbacks[401] = () => setSituation('invalidLink');
         callbacks[404] = () => setSituation('notFound');
+        callbacks[409] = () => setInactiveView(true);
         callbacks['onUnexpectedHttpStatus'] = () => setSituation('error');
         const body = { ...link, alias: alias.trim() };
         JnAjax.doAnAjaxRequest('recruiter-email-link/alias', callbacks, 'POST', body, {}, 'http://localhost:8081');
@@ -85,7 +91,11 @@ export const ViewResumeFromEmail = () => {
     const reportTheLinkedin = () => {
         setReport('sending');
         const callbacks: any = {};
-        callbacks[200] = () => setReport('sent');
+        callbacks[200] = () => {
+            // o reporte leva a visualização na hora para as inativas
+            setInactiveView(true);
+            setReport('sent');
+        };
         callbacks[401] = () => setSituation('invalidLink');
         callbacks[404] = () => setSituation('notFound');
         callbacks[410] = () => setSituation('invalidLinkedin');
@@ -115,9 +125,10 @@ export const ViewResumeFromEmail = () => {
                     <p className="text-xs text-white-dark">
                         De {ALIAS_MIN_LENGTH} a {ALIAS_MAX_LENGTH} caracteres ({aliasLength} usados).
                     </p>
-                    <button type="button" className="btn btn-primary" disabled={!validAlias} onClick={saveTheView}>
+                    <button type="button" className="btn btn-primary" disabled={!validAlias || inactiveView} onClick={saveTheView}>
                         Salvar visualização
                     </button>
+                    {inactiveView && <p className="text-sm text-white-dark">{messages.inactiveView}</p>}
                 </div>
             )}
             {situation != 'opened' && situation != 'confirming' && <p>{messages[situation]}</p>}
