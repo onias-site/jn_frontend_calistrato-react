@@ -193,6 +193,9 @@ const Sidebar = () => {
                                         <li>
                                             <Link href="/estatisticas/ofertaXdemanda">{t('Supply X Demand')}</Link>
                                         </li>
+                                        <li>
+                                            <Link href="/estatisticas/curiosidades">{t('Curiosities')}</Link>
+                                        </li>
                                     </ul>
                                 </AnimateHeight>
                             </li>
