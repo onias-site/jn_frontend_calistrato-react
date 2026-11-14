@@ -1,9 +1,10 @@
 'use client';
 import dynamic from 'next/dynamic';
-import { SegmentedControl, Table, Tree, TreeNodeData } from '@mantine/core';
+import { SegmentedControl, Table } from '@mantine/core';
 import React, { useState } from 'react';
 import JnAjax from '@/app/JnAjax';
-import IconFolder from '@/presentation/icons/icon-folder';
+import IconCaretDown from '@/presentation/icons/icon-caret-down';
+import IconFile from '@/presentation/icons/icon-file';
 import IconFolderPlus from '@/presentation/icons/icon-folder-plus';
 import IconFolderMinus from '@/presentation/icons/icon-folder-minus';
 import { percentLabel, pieTotal } from '../skills/skillStatisticsData';
@@ -31,7 +32,7 @@ const statisticsOf = (statistics: Statistics, source: Source) => statistics[sour
  * Um gráfico: os botões CVs, CVs vistos e Vagas trocam a fonte só deste gráfico (CVs é o padrão; Vagas ainda desligado);
  * pizza e, quando há "Outras", também barras.
  */
-const ChartPanel = ({ title, chart, statistics }: { title: string; chart: string; statistics: Statistics }) => {
+const ChartPanel = ({ chart, statistics }: { chart: string; statistics: Statistics }) => {
     const [sourceId, setSourceId] = useState(sources[0].id);
     const [chartType, setChartType] = useState<'pie' | 'bar'>('pie');
     const source = sources.find((item) => item.id == sourceId) || sources[0];
@@ -74,9 +75,8 @@ const ChartPanel = ({ title, chart, statistics }: { title: string; chart: string
     };
 
     return (
-        <div className="panel">
-            <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
-                <h5 className="text-lg font-semibold">{title}</h5>
+        <div>
+            <div className="mb-2 flex flex-wrap items-start gap-3">
                 <div className="flex flex-wrap gap-2">
                     <SegmentedControl
                         size="xs"
@@ -152,7 +152,7 @@ const AveragesTable = ({ statistics }: { statistics: Statistics }) => {
                                 sources.map((source) => {
                                     const average = statisticsOf(statistics, source)?.averages?.[row.id];
                                     return (
-                                        <Table.Td key={`${column.title}-${source.id}`} className="text-right">
+                                        <Table.Td key={`${column.title}-${source.id}`} className="whitespace-nowrap text-right">
                                             {source.ready ? column.value(average || {}) : '—'}
                                         </Table.Td>
                                     );
@@ -173,74 +173,141 @@ const totalsLabel = (statistics: Statistics) =>
         .map((source) => countLabel(source, statisticsOf(statistics, source)?.total || 0))
         .join(' · ');
 
-const isState = (value: string) => value.startsWith('uf-');
+type RegionData = { situation: Situation; statistics?: Statistics };
 
-/** As estatísticas dos currículos de uma região: as pastas à esquerda, os totais, as médias e os gráficos à direita. */
+type TreeNode = { value: string; label: string; children?: TreeNode[] };
+
+const indent = (level: number) => ({ paddingLeft: `${level * 24 + 8}px` });
+
+/** A linha de uma pasta ou de um arquivo da árvore: o recuo diz o nível, a seta e o ícone dizem se está aberta. */
+const TreeRow = ({ level, open, folder, label, detail, onToggle }: { level: number; open: boolean; folder: boolean; label: string; detail?: string; onToggle: () => void }) => (
+    <button type="button" aria-expanded={open} onClick={onToggle} style={indent(level)} className="flex w-full items-center gap-2 rounded py-1.5 pr-2 text-left hover:bg-primary/10">
+        <IconCaretDown className={`h-4 w-4 shrink-0 transition-transform ${open ? '' : '-rotate-90'}`} />
+        {folder && open && <IconFolderMinus className="h-5 w-5 shrink-0 text-warning" />}
+        {folder && !open && <IconFolderPlus className="h-5 w-5 shrink-0 text-warning" />}
+        {!folder && <IconFile className="h-5 w-5 shrink-0 text-primary" />}
+        <span className={folder ? 'font-semibold' : ''}>{label}</span>
+        {detail && <span className="text-sm text-white-dark">{detail}</span>}
+    </button>
+);
+
+/** O conteúdo de um arquivo aberto, recuado sob a sua linha, com toda a largura que sobra. */
+const FileContent = ({ level, children }: { level: number; children: React.ReactNode }) => (
+    <div style={{ marginLeft: `${level * 24 + 32}px` }} className="mb-3 mt-1 rounded border border-[#e0e6ed] p-3 dark:border-[#1b2e4b]">
+        {children}
+    </div>
+);
+
+const AVERAGES_FILE = 'averages';
+
+/** Os arquivos de uma região: os totais e as médias, e um arquivo por gráfico. */
+const RegionFiles = ({ ddd, level, statistics, opened, toggle }: { ddd: string; level: number; statistics: Statistics; opened: Set<string>; toggle: (id: string) => void }) => {
+    const files = [{ id: AVERAGES_FILE, title: 'Totais e médias' }, ...charts];
+    return (
+        <>
+            {files.map((file) => {
+                const id = `${ddd}/${file.id}`;
+                const open = opened.has(id);
+                return (
+                    <div key={id}>
+                        <TreeRow level={level} open={open} folder={false} label={file.title} onToggle={() => toggle(id)} />
+                        {open && file.id == AVERAGES_FILE && (
+                            <FileContent level={level}>
+                                <div className="mb-3 text-xl font-bold">{totalsLabel(statistics)}</div>
+                                <AveragesTable statistics={statistics} />
+                                <p className="mt-2 text-sm text-white-dark">
+                                    As médias contam só quem informou a pretensão ou o início da experiência. Visualizações trazem o currículo como estava quando o
+                                    recrutador o viu. Vagas: em breve.
+                                </p>
+                            </FileContent>
+                        )}
+                        {open && file.id != AVERAGES_FILE && (
+                            <FileContent level={level}>
+                                <ChartPanel chart={file.id} statistics={statistics} />
+                            </FileContent>
+                        )}
+                    </div>
+                );
+            })}
+        </>
+    );
+};
+
+/**
+ * As estatísticas por região como uma árvore de pastas na largura toda da página: o home office e os estados são pastas,
+ * cada região é uma pasta e, aberta, mostra os seus arquivos (os totais e as médias e um gráfico por arquivo); cada arquivo
+ * abre o conteúdo logo abaixo dele. A região é lida do backend na primeira vez que a sua pasta abre.
+ */
 export const SupplyAndDemand = () => {
-    const [ddd, setDdd] = useState('');
-    const [situation, setSituation] = useState<Situation>('idle');
-    const [statistics, setStatistics] = useState<Statistics | null>(null);
-    const [treeData] = useState<TreeNodeData[]>(regionTree);
+    const [opened, setOpened] = useState<Set<string>>(new Set());
+    const [regions, setRegions] = useState<Record<string, RegionData>>({});
+    const [tree] = useState<TreeNode[]>(regionTree);
 
-    const load = (region: string) => {
-        setDdd(region);
-        setSituation('loading');
+    const toggle = (id: string) =>
+        setOpened((current) => {
+            const next = new Set(current);
+            if (next.has(id)) {
+                next.delete(id);
+                return next;
+            }
+            next.add(id);
+            return next;
+        });
+
+    const setRegion = (ddd: string, data: RegionData) => setRegions((current) => ({ ...current, [ddd]: data }));
+
+    const load = (ddd: string) => {
+        setRegion(ddd, { situation: 'loading' });
         const callbacks: any = { withoutSession: true };
-        callbacks[200] = (response: Statistics) => {
-            setStatistics(response);
-            setSituation('loaded');
-        };
-        callbacks['onUnexpectedHttpStatus'] = () => setSituation('error');
-        JnAjax.doAnAjaxRequest(`statistics/resumes/${region}`, callbacks, 'GET', null as any, {}, API);
+        callbacks[200] = (response: Statistics) => setRegion(ddd, { situation: 'loaded', statistics: response });
+        callbacks['onUnexpectedHttpStatus'] = () => setRegion(ddd, { situation: 'error' });
+        JnAjax.doAnAjaxRequest(`statistics/resumes/${ddd}`, callbacks, 'GET', null as any, {}, API);
+    };
+
+    const toggleRegion = (ddd: string) => {
+        toggle(ddd);
+        const situation = regions[ddd]?.situation;
+        if (situation == 'loaded' || situation == 'loading') return;
+        load(ddd);
+    };
+
+    const renderRegion = (node: TreeNode, level: number) => {
+        const open = opened.has(node.value);
+        const region = regions[node.value];
+        const statistics = region?.statistics;
+        return (
+            <div key={node.value}>
+                <TreeRow level={level} open={open} folder label={node.label} detail={statistics && totalsLabel(statistics)} onToggle={() => toggleRegion(node.value)} />
+                {open && region?.situation == 'loading' && (
+                    <p style={indent(level + 1)} className="py-1 text-white-dark">
+                        Carregando...
+                    </p>
+                )}
+                {open && region?.situation == 'error' && (
+                    <p style={indent(level + 1)} className="py-1 text-danger">
+                        Não foi possível carregar as estatísticas de {regionName(node.value)}.
+                    </p>
+                )}
+                {open && statistics && <RegionFiles ddd={node.value} level={level + 1} statistics={statistics} opened={opened} toggle={toggle} />}
+            </div>
+        );
     };
 
     return (
-        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[300px_1fr]">
-            <div className="panel max-h-[80vh] overflow-y-auto">
-                <h5 className="mb-3 text-lg font-semibold">Regiões metropolitanas</h5>
-                <Tree
-                    data={treeData}
-                    levelOffset={20}
-                    renderNode={({ node, expanded, hasChildren, elementProps }) => (
-                        <div
-                            {...elementProps}
-                            onClick={(event) => {
-                                elementProps.onClick(event);
-                                if (!isState(node.value)) load(node.value);
-                            }}
-                            className={`${elementProps.className} flex cursor-pointer items-center gap-2 rounded px-1 py-1 ${node.value == ddd ? 'bg-primary/10 font-semibold text-primary' : ''}`}
-                        >
-                            {hasChildren && expanded && <IconFolderMinus className="h-4 w-4 shrink-0" />}
-                            {hasChildren && !expanded && <IconFolderPlus className="h-4 w-4 shrink-0" />}
-                            {!hasChildren && <IconFolder className="h-4 w-4 shrink-0" />}
-                            <span>{node.label}</span>
-                        </div>
-                    )}
-                />
-            </div>
-            <div>
-                {situation == 'idle' && <div className="panel">Escolha uma região metropolitana para ver o que os currículos dela oferecem.</div>}
-                {situation == 'loading' && <div className="panel">Carregando {regionName(ddd)}...</div>}
-                {situation == 'error' && <div className="panel text-danger">Não foi possível carregar as estatísticas de {regionName(ddd)}.</div>}
-                {situation == 'loaded' && statistics && (
-                    <>
-                        <div className="panel mb-6">
-                            <h5 className="mb-1 text-lg font-semibold">{regionName(ddd)}</h5>
-                            <div className="mb-3 text-2xl font-bold">{totalsLabel(statistics)}</div>
-                            <AveragesTable statistics={statistics} />
-                            <p className="mt-2 text-sm text-white-dark">
-                                As médias contam só quem informou a pretensão ou o início da experiência. Visualizações trazem o currículo como estava quando o
-                                recrutador o viu. Vagas: em breve.
-                            </p>
-                        </div>
-                        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-                            {charts.map((chart) => (
-                                <ChartPanel key={`${ddd}-${chart.id}`} title={chart.title} chart={chart.id} statistics={statistics} />
-                            ))}
-                        </div>
-                    </>
-                )}
-            </div>
+        <div className="panel mt-6">
+            <h5 className="mb-1 text-lg font-semibold">Regiões metropolitanas</h5>
+            <p className="mb-3 text-sm text-white-dark">Abra uma pasta para ver o que os currículos da região oferecem.</p>
+            {tree.map((node) => {
+                if (!node.children) return renderRegion(node, 0);
+                const open = opened.has(node.value);
+                const regionsLabel = `${node.children.length} ${node.children.length == 1 ? 'região' : 'regiões'}`;
+                return (
+                    <div key={node.value}>
+                        <TreeRow level={0} open={open} folder label={node.label} detail={regionsLabel} onToggle={() => toggle(node.value)} />
+                        {open && node.children.map((child) => renderRegion(child, 1))}
+                    </div>
+                );
+            })}
         </div>
     );
 };
