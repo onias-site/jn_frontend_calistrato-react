@@ -1,4 +1,4 @@
-import { HOME_OFFICE, OTHERS, money, regionName, regionTree, sliceLabel, slicesOf, yearsLabel, sources, countLabel } from './supplyAndDemandData';
+import { HOME_OFFICE, OTHERS, money, regionName, regionTree, sliceLabel, slicesOf, yearsLabel, sources, countLabel, folderTotals } from './supplyAndDemandData';
 
 describe('supplyAndDemandData', () => {
     it('rotula as fatias a partir dos códigos do backend', () => {
@@ -24,6 +24,14 @@ describe('supplyAndDemandData', () => {
         expect(skills.map((slice) => slice.label)).toEqual(['Até 5', 'De 16 a 30', 'Mais de 50']);
         const contracts = slicesOf('contractType', { both: 106, onlyPj: 3, onlyClt: 7 });
         expect(contracts.map((slice) => slice.label)).toEqual(['Aceita apenas CLT', 'Aceita apenas PJ', 'Aceita ambos']);
+    });
+
+    it('soma os totais dos ddds de uma pasta em cada fonte', () => {
+        const totals = { resumes: { '11': 15, '12': 2 }, viewedResumes: { '11': 22 } };
+        expect(folderTotals(totals, ['11'])).toBe('15 currículos · 22 visualizações');
+        expect(folderTotals(totals, ['11', '12', '13'])).toBe('17 currículos · 22 visualizações');
+        expect(folderTotals(totals, ['99'])).toBe('0 currículos · 0 visualizações');
+        expect(folderTotals({}, ['11'])).toBe('0 currículos · 0 visualizações');
     });
 
     it('escreve a média de experiência em anos', () => {

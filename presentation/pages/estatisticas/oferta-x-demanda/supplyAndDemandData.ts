@@ -38,6 +38,19 @@ export type Source = (typeof sources)[number];
 /** 1 vira "1 currículo"; 7 vira "7 visualizações". */
 export const countLabel = (source: Source, total: number) => `${total} ${total == 1 ? source.one : source.many}`;
 
+/** Os totais por ddd de cada fonte (GET statistics/resumes/totals): { resumes: { "11": 15 }, viewedResumes: {...} }. */
+export type TotalsByRegion = Record<string, Record<string, number>>;
+
+/**
+ * O texto dos totais de uma pasta: a soma dos ddds dela em cada fonte que já tem dados ("15 currículos · 22
+ * visualizações"). Um currículo com dois ddds do mesmo estado conta nos dois.
+ */
+export const folderTotals = (totals: TotalsByRegion, ddds: string[]) =>
+    sources
+        .filter((source) => source.ready)
+        .map((source) => countLabel(source, ddds.reduce((sum, ddd) => sum + (totals[source.id]?.[ddd] || 0), 0)))
+        .join(' · ');
+
 /** As senioridades do backend (VisSeniorityType, sem a indefinida), na ordem da tabela de médias. */
 export const seniorities = [
     { id: 'estag', nome: 'Estágio' },

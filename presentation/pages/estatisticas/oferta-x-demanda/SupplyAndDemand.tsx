@@ -1,13 +1,28 @@
 'use client';
 import dynamic from 'next/dynamic';
 import { SegmentedControl, Table } from '@mantine/core';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import JnAjax from '@/app/JnAjax';
 import IconCaretDown from '@/presentation/icons/icon-caret-down';
 import IconFolderPlus from '@/presentation/icons/icon-folder-plus';
 import IconFolderMinus from '@/presentation/icons/icon-folder-minus';
 import { percentLabel, pieTotal } from '../skills/skillStatisticsData';
-import { OTHERS, Slice, Source, charts, countLabel, money, regionName, regionTree, seniorities, slicesOf, sources, yearsLabel } from './supplyAndDemandData';
+import {
+    OTHERS,
+    Slice,
+    Source,
+    TotalsByRegion,
+    charts,
+    countLabel,
+    folderTotals,
+    money,
+    regionName,
+    regionTree,
+    seniorities,
+    slicesOf,
+    sources,
+    yearsLabel,
+} from './supplyAndDemandData';
 
 const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
@@ -215,13 +230,25 @@ const RegionContent = ({ ddd, level, statistics }: { ddd: string; level: number;
 
 /**
  * As estatísticas por região como uma árvore de pastas na largura toda da página: o home office e os estados são pastas,
- * cada região é uma pasta e, aberta, mostra logo abaixo os totais e as médias e todos os gráficos. A região é lida do
- * backend na primeira vez que a sua pasta abre.
+ * cada região é uma pasta e, aberta, mostra logo abaixo os totais e as médias e todos os gráficos. Ao entrar na página,
+ * os totais de todas as regiões (GET statistics/resumes/totals) vão para os títulos das pastas; a região é lida do backend
+ * na primeira vez que a sua pasta abre.
  */
 export const SupplyAndDemand = () => {
     const [opened, setOpened] = useState<Set<string>>(new Set());
     const [regions, setRegions] = useState<Record<string, RegionData>>({});
     const [tree] = useState<TreeNode[]>(regionTree);
+    const [totals, setTotals] = useState<TotalsByRegion | null>(null);
+
+    useEffect(() => {
+        const callbacks: any = { withoutSession: true };
+        callbacks[200] = (response: TotalsByRegion) => setTotals(response);
+        // sem os totais, as pastas ficam só com o nome
+        callbacks['onUnexpectedHttpStatus'] = () => setTotals(null);
+        JnAjax.doAnAjaxRequest('statistics/resumes/totals', callbacks, 'GET', null as any, {}, API);
+    }, []);
+
+    const totalsOf = (ddds: string[]) => (totals ? folderTotals(totals, ddds) : undefined);
 
     const toggle = (id: string) =>
         setOpened((current) => {
@@ -257,7 +284,7 @@ export const SupplyAndDemand = () => {
         const statistics = region?.statistics;
         return (
             <div key={node.value}>
-                <TreeRow level={level} open={open} label={node.label} detail={statistics && totalsLabel(statistics)} onToggle={() => toggleRegion(node.value)} />
+                <TreeRow level={level} open={open} label={node.label} detail={totalsOf([node.value])} onToggle={() => toggleRegion(node.value)} />
                 {open && region?.situation == 'loading' && (
                     <p style={indent(level + 1)} className="py-1 text-white-dark">
                         Carregando...
@@ -281,9 +308,11 @@ export const SupplyAndDemand = () => {
                 if (!node.children) return renderRegion(node, 0);
                 const open = opened.has(node.value);
                 const regionsLabel = `${node.children.length} ${node.children.length == 1 ? 'região' : 'regiões'}`;
+                const stateTotals = totalsOf(node.children.map((child) => child.value));
+                const detail = stateTotals ? `${regionsLabel} · ${stateTotals}` : regionsLabel;
                 return (
                     <div key={node.value}>
-                        <TreeRow level={0} open={open} label={node.label} detail={regionsLabel} onToggle={() => toggle(node.value)} />
+                        <TreeRow level={0} open={open} label={node.label} detail={detail} onToggle={() => toggle(node.value)} />
                         {open && node.children.map((child) => renderRegion(child, 1))}
                     </div>
                 );
