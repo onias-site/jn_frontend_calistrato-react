@@ -1,4 +1,4 @@
-import { HOME_OFFICE, OTHERS, money, regionName, regionTree, sliceLabel, slicesOf, yearsLabel, sources, countLabel, folderTotals, monthTitle, daysOfTheMonth, lastMonths, insertionSeries } from './supplyAndDemandData';
+import { HOME_OFFICE, OTHERS, money, regionName, regionTree, sliceLabel, slicesOf, yearsLabel, sources, countLabel, folderTotals, monthTitle, daysOfTheMonth, lastMonths, insertionSeries, sortFolders } from './supplyAndDemandData';
 
 describe('supplyAndDemandData', () => {
     it('rotula as fatias a partir dos códigos do backend', () => {
@@ -65,6 +65,22 @@ describe('supplyAndDemandData', () => {
         expect(slices[0]).toEqual({ key: 'skill10', label: 'skill10', total: 10 });
         expect(slices[7]).toEqual({ key: OTHERS, label: OTHERS, total: 1 + 2 + 3 });
         expect(slicesOf('pcd', { true: 1, false: 3 }).map((slice) => slice.label)).toEqual(['Não', 'Sim']);
+    });
+
+    it('ordena as pastas por visualizações, currículos e nome', () => {
+        const nodes = [
+            { value: HOME_OFFICE, label: 'Home office' },
+            { value: 'uf-RJ', label: 'RJ', children: [{ value: '21', label: 'Rio' }, { value: '22', label: 'Campos' }] },
+            { value: 'uf-SP', label: 'SP', children: [{ value: '11', label: 'São Paulo' }, { value: '12', label: 'Vale' }] },
+            { value: 'uf-AC', label: 'AC', children: [{ value: '68', label: 'Rio Branco' }] },
+            { value: 'uf-AL', label: 'AL', children: [{ value: '82', label: 'Maceió' }] },
+        ];
+        const totals = { viewedResumes: { '10': 5, '11': 3, '12': 4, '21': 7 }, resumes: { '68': 2, '22': 1, '21': 1 } };
+        const sorted = sortFolders(nodes, totals);
+        expect(sorted.map((node) => node.value)).toEqual(['uf-RJ', 'uf-SP', HOME_OFFICE, 'uf-AC', 'uf-AL']);
+        expect(sorted[1].children?.map((node) => node.value)).toEqual(['12', '11']);
+        expect(sorted[0].children?.map((node) => node.value)).toEqual(['21', '22']);
+        expect(sortFolders(nodes).map((node) => node.value)).toEqual(['uf-AC', 'uf-AL', HOME_OFFICE, 'uf-RJ', 'uf-SP']);
     });
 
     it('monta as pastas com o home office e as regiões agrupadas por estado', () => {

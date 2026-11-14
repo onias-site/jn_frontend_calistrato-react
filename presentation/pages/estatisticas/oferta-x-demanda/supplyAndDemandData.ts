@@ -177,5 +177,30 @@ export const regionTree = () => {
     ];
 };
 
+export type FolderNode = { value: string; label: string; children?: FolderNode[] };
+
+/** A ordem das pastas: mais visualizações, depois mais vagas (quando houver), depois mais currículos, por fim o nome. */
+const folderSortSources = ['viewedResumes', 'vacancies', 'resumes'];
+
+const dddsOf = (node: FolderNode) => (node.children ? node.children.map((child) => child.value) : [node.value]);
+
+const folderTotal = (totals: TotalsByRegion, node: FolderNode, sourceId: string) =>
+    dddsOf(node).reduce((sum, ddd) => sum + (totals[sourceId]?.[ddd] || 0), 0);
+
+/**
+ * As pastas ordenadas pelos totais de cada fonte, na ordem de folderSortSources, e no empate pelo nome; o mesmo critério
+ * vale para as regiões dentro de cada estado. Sem os totais, só pelo nome.
+ */
+export const sortFolders = (nodes: FolderNode[], totals: TotalsByRegion = {}): FolderNode[] =>
+    nodes
+        .map((node) => (node.children ? { ...node, children: sortFolders(node.children, totals) } : node))
+        .sort((a, b) => {
+            for (const sourceId of folderSortSources) {
+                const difference = folderTotal(totals, b, sourceId) - folderTotal(totals, a, sourceId);
+                if (difference != 0) return difference;
+            }
+            return a.label.localeCompare(b.label);
+        });
+
 /** O nome da região de um ddd. */
 export const regionName = (ddd: string) => (ddd == HOME_OFFICE ? 'Home office' : dddRegions.find((region) => region.id == ddd)?.nome || ddd);

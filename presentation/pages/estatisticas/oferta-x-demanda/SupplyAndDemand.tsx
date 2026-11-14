@@ -22,6 +22,7 @@ import {
     money,
     regionName,
     regionTree,
+    sortFolders,
     seniorities,
     slicesOf,
     sources,
@@ -356,7 +357,7 @@ export const SupplyAndDemand = () => {
             {totals && <InsertionsPanel totals={totals} />}
             <h5 className="mb-1 text-lg font-semibold">Regiões metropolitanas</h5>
             <p className="mb-3 text-sm text-white-dark">Abra uma pasta para ver o que os currículos da região oferecem.</p>
-            {tree.map((node) => {
+            {sortFolders(tree, totals?.byRegion).map((node) => {
                 if (!node.children) return renderRegion(node, 0);
                 const open = opened.has(node.value);
                 const regionsLabel = `${node.children.length} ${node.children.length == 1 ? 'região' : 'regiões'}`;
