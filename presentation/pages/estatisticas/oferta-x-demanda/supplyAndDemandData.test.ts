@@ -1,4 +1,4 @@
-import { HOME_OFFICE, OTHERS, money, regionName, regionTree, sliceLabel, slicesOf } from './supplyAndDemandData';
+import { HOME_OFFICE, OTHERS, money, regionName, regionTree, sliceLabel, slicesOf, yearsLabel } from './supplyAndDemandData';
 
 describe('supplyAndDemandData', () => {
     it('rotula as fatias a partir dos códigos do backend', () => {
@@ -10,6 +10,12 @@ describe('supplyAndDemandData', () => {
         expect(sliceLabel('temporallyJob', 'doesNotAccept')).toBe('Não aceita');
         expect(sliceLabel('resumeType', '1')).toBe('Tecnologia da Informação');
         expect(sliceLabel('skill', 'Java')).toBe('Java');
+    });
+
+    it('escreve a média de experiência em anos', () => {
+        expect(yearsLabel(4.5)).toBe('4,5 anos');
+        expect(yearsLabel(1)).toBe('1 ano');
+        expect(yearsLabel(0)).toBe('0 anos');
     });
 
     it('ordena as faixas salariais em ordem crescente, com o não informado por último e sem "Outras"', () => {

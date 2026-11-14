@@ -52,6 +52,9 @@ export const OTHERS = 'Outras';
 /** 8000 vira "R$ 8.000". */
 export const money = (value: number) => `R$ ${Math.round(value).toLocaleString('pt-BR')}`;
 
+/** 4.5 vira "4,5 anos"; 1 vira "1 ano". */
+export const yearsLabel = (years: number) => `${years.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} ${years == 1 ? 'ano' : 'anos'}`;
+
 /** O rótulo de uma fatia: o backend manda códigos; idioma vem como "<nome>|<nível>" (2 fluente, 1 intermediário). */
 export const sliceLabel = (chart: string, key: string): string => {
     if (key == NOT_INFORMED) {

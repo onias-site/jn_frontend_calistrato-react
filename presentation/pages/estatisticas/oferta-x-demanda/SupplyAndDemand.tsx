@@ -7,7 +7,7 @@ import IconFolder from '@/presentation/icons/icon-folder';
 import IconFolderPlus from '@/presentation/icons/icon-folder-plus';
 import IconFolderMinus from '@/presentation/icons/icon-folder-minus';
 import { percentLabel, pieTotal } from '../skills/skillStatisticsData';
-import { OTHERS, Slice, charts, money, regionName, regionTree, seniorities, slicesOf } from './supplyAndDemandData';
+import { OTHERS, Slice, charts, money, regionName, yearsLabel, regionTree, seniorities, slicesOf } from './supplyAndDemandData';
 
 const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
@@ -17,7 +17,7 @@ const sliceColors = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#00
 
 const fontFamily = 'var(--font-nunito), ui-sans-serif, system-ui, sans-serif';
 
-type Average = { resumes?: number; clt?: number; pj?: number };
+type Average = { resumes?: number; clt?: number; pj?: number; experience?: number };
 
 type Statistics = { ddd: number; total: number; averages: Record<string, Average>; charts: Record<string, Record<string, number>> };
 
@@ -89,6 +89,9 @@ const ChartPanel = ({ title, slices }: { title: string; slices: Slice[] }) => {
 
 const moneyOrDash = (value?: number) => (value ? money(value) : '—');
 
+/** Sem currículos na linha, "—"; com currículos, a média (0 é estágio de verdade): "4,5 anos". */
+const yearsOrDash = (resumes?: number, years?: number) => (resumes ? yearsLabel(years || 0) : '—');
+
 /** Os totais de currículos e as médias das pretensões CLT e PJ por senioridade e no geral. */
 const AveragesTable = ({ averages }: { averages: Record<string, Average> }) => {
     const rows = [...seniorities.map((seniority) => ({ id: seniority.id, nome: seniority.nome })), { id: 'all', nome: 'Geral' }];
@@ -100,6 +103,7 @@ const AveragesTable = ({ averages }: { averages: Record<string, Average> }) => {
                     <Table.Th className="text-right">Currículos</Table.Th>
                     <Table.Th className="text-right">Média CLT</Table.Th>
                     <Table.Th className="text-right">Média PJ</Table.Th>
+                    <Table.Th className="text-right">Média de experiência</Table.Th>
                 </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -111,6 +115,7 @@ const AveragesTable = ({ averages }: { averages: Record<string, Average> }) => {
                             <Table.Td className="text-right">{average.resumes || 0}</Table.Td>
                             <Table.Td className="text-right">{moneyOrDash(average.clt)}</Table.Td>
                             <Table.Td className="text-right">{moneyOrDash(average.pj)}</Table.Td>
+                            <Table.Td className="text-right">{yearsOrDash(average.resumes, average.experience)}</Table.Td>
                         </Table.Tr>
                     );
                 })}
