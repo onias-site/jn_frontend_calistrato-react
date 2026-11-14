@@ -13,8 +13,6 @@ export const charts = [
     { id: 'travel', title: 'Disponibilidade para viagens' },
     { id: 'disponibility', title: 'Disponibilidade' },
     { id: 'temporallyJob', title: 'Trabalho temporário' },
-    { id: 'clt', title: 'Pretensão CLT' },
-    { id: 'pj', title: 'Pretensão PJ' },
 ];
 
 /** As senioridades do backend (VisSeniorityType, sem a indefinida), na ordem da tabela de médias. */
@@ -64,39 +62,16 @@ export const sliceLabel = (chart: string, key: string): string => {
         const [name, level] = key.split('|');
         return `${name} ${level == '2' ? 'fluente' : 'intermediário'}`;
     }
-    if (chart == 'clt' || chart == 'pj') {
-        const start = Number(key);
-        return `${money(start)} a ${money(start + 999)}`;
-    }
     return fixedLabels[chart]?.[key] || key;
 };
 
 export type Slice = { key: string; label: string; total: number };
 
-/** Faixas salariais: todas aparecem, em ordem crescente, com o "Não informado" por último. */
-export const isSalaryChart = (chart: string) => chart == 'clt' || chart == 'pj';
-
-const byRange = (a: Slice, b: Slice) => {
-    if (a.key == NOT_INFORMED) {
-        return 1;
-    }
-    if (b.key == NOT_INFORMED) {
-        return -1;
-    }
-    return Number(a.key) - Number(b.key);
-};
-
 const byTotal = (a: Slice, b: Slice) => b.total - a.total || a.label.localeCompare(b.label);
 
-/**
- * As fatias de um gráfico: as faixas salariais todas, em ordem crescente; as demais da maior para a menor e, acima de 8,
- * as 7 maiores mais "Outras" com a soma do resto.
- */
+/** As fatias de um gráfico, da maior para a menor; acima de 8, as 7 maiores mais "Outras" com a soma do resto. */
 export const slicesOf = (chart: string, counts: Record<string, number> = {}): Slice[] => {
     const slices = Object.entries(counts).map(([key, total]) => ({ key, label: sliceLabel(chart, key), total }));
-    if (isSalaryChart(chart)) {
-        return slices.sort(byRange);
-    }
     const sorted = slices.sort(byTotal);
     if (sorted.length <= PIE_SLICES + 1) {
         return sorted;

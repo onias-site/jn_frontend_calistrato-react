@@ -25,13 +25,13 @@ type Situation = 'idle' | 'loading' | 'loaded' | 'error';
 
 const resumesLabel = (total: number) => `${total} ${total == 1 ? 'currículo' : 'currículos'}`;
 
-/** Um gráfico: pizza; quando há muitas fatias ("Outras" ou as faixas salariais), também em barras. */
+/** Um gráfico: pizza; quando há "Outras", também em barras. */
 const ChartPanel = ({ title, slices }: { title: string; slices: Slice[] }) => {
     const [chartType, setChartType] = useState<'pie' | 'bar'>('pie');
     const labels = slices.map((slice) => slice.label);
     const values = slices.map((slice) => slice.total);
     const total = pieTotal(values);
-    const manySlices = slices.some((slice) => slice.key == OTHERS) || slices.length > sliceColors.length;
+    const manySlices = slices.some((slice) => slice.key == OTHERS);
 
     const pieOptions: any = {
         chart: { type: 'pie', fontFamily },

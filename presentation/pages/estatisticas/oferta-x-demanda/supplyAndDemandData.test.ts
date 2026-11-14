@@ -4,8 +4,8 @@ describe('supplyAndDemandData', () => {
     it('rotula as fatias a partir dos códigos do backend', () => {
         expect(sliceLabel('spokenLanguage', 'Inglês|2')).toBe('Inglês fluente');
         expect(sliceLabel('spokenLanguage', 'Inglês|1')).toBe('Inglês intermediário');
-        expect(sliceLabel('clt', '8000')).toBe(`${money(8000)} a ${money(8999)}`);
-        expect(sliceLabel('pj', 'notInformed')).toBe('Não informado');
+        expect(sliceLabel('pcd', 'notInformed')).toBe('Não informado');
+        expect(money(8000)).toBe('R$ 8.000');
         expect(sliceLabel('disponibility', 'immediate')).toBe('Imediata');
         expect(sliceLabel('temporallyJob', 'doesNotAccept')).toBe('Não aceita');
         expect(sliceLabel('resumeType', '1')).toBe('Tecnologia da Informação');
@@ -16,16 +16,6 @@ describe('supplyAndDemandData', () => {
         expect(yearsLabel(4.5)).toBe('4,5 anos');
         expect(yearsLabel(1)).toBe('1 ano');
         expect(yearsLabel(0)).toBe('0 anos');
-    });
-
-    it('ordena as faixas salariais em ordem crescente, com o não informado por último e sem "Outras"', () => {
-        const counts: Record<string, number> = { notInformed: 50 };
-        for (let start = 0; start < 12000; start += 1000) counts[String(start)] = 1;
-        const slices = slicesOf('clt', counts);
-        expect(slices).toHaveLength(13);
-        expect(slices[0].key).toBe('0');
-        expect(slices[11].key).toBe('11000');
-        expect(slices[12].key).toBe('notInformed');
     });
 
     it('junta em "Outras" o que passa das 7 maiores fatias', () => {
