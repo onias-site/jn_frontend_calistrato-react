@@ -7,7 +7,7 @@ import IconFolder from '@/presentation/icons/icon-folder';
 import IconFolderPlus from '@/presentation/icons/icon-folder-plus';
 import IconFolderMinus from '@/presentation/icons/icon-folder-minus';
 import { percentLabel, pieTotal } from '../skills/skillStatisticsData';
-import { OTHERS, Slice, charts, money, regionName, yearsLabel, regionTree, seniorities, slicesOf } from './supplyAndDemandData';
+import { OTHERS, Slice, Source, charts, countLabel, money, regionName, regionTree, seniorities, slicesOf, sources, yearsLabel } from './supplyAndDemandData';
 
 const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
@@ -19,15 +19,24 @@ const fontFamily = 'var(--font-nunito), ui-sans-serif, system-ui, sans-serif';
 
 type Average = { resumes?: number; clt?: number; pj?: number; experience?: number };
 
-type Statistics = { ddd: number; total: number; averages: Record<string, Average>; charts: Record<string, Record<string, number>> };
+type SourceStatistics = { total: number; averages: Record<string, Average>; charts: Record<string, Record<string, number>> };
+
+type Statistics = { ddd: number } & Record<string, SourceStatistics | number>;
 
 type Situation = 'idle' | 'loading' | 'loaded' | 'error';
 
-const resumesLabel = (total: number) => `${total} ${total == 1 ? 'currículo' : 'currículos'}`;
+const statisticsOf = (statistics: Statistics, source: Source) => statistics[source.id] as SourceStatistics | undefined;
 
-/** Um gráfico: pizza; quando há "Outras", também em barras. */
-const ChartPanel = ({ title, slices }: { title: string; slices: Slice[] }) => {
+/**
+ * Um gráfico: os botões CVs, CVs vistos e Vagas trocam a fonte só deste gráfico (CVs é o padrão; Vagas ainda desligado);
+ * pizza e, quando há "Outras", também barras.
+ */
+const ChartPanel = ({ title, chart, statistics }: { title: string; chart: string; statistics: Statistics }) => {
+    const [sourceId, setSourceId] = useState(sources[0].id);
     const [chartType, setChartType] = useState<'pie' | 'bar'>('pie');
+    const source = sources.find((item) => item.id == sourceId) || sources[0];
+    const slices: Slice[] = slicesOf(chart, statisticsOf(statistics, source)?.charts?.[chart]);
+    const resumesLabel = (total: number) => countLabel(source, total);
     const labels = slices.map((slice) => slice.label);
     const values = slices.map((slice) => slice.total);
     const total = pieTotal(values);
@@ -68,21 +77,31 @@ const ChartPanel = ({ title, slices }: { title: string; slices: Slice[] }) => {
         <div className="panel">
             <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
                 <h5 className="text-lg font-semibold">{title}</h5>
-                {manySlices && slices.length > 0 && (
+                <div className="flex flex-wrap gap-2">
                     <SegmentedControl
                         size="xs"
-                        value={chartType}
-                        onChange={(value) => setChartType(value as 'pie' | 'bar')}
-                        data={[
-                            { value: 'pie', label: 'Pizza' },
-                            { value: 'bar', label: 'Barras' },
-                        ]}
+                        value={sourceId}
+                        onChange={setSourceId}
+                        data={sources.map((item) => ({ value: item.id, label: item.button, disabled: !item.ready }))}
                     />
-                )}
+                    {manySlices && slices.length > 0 && (
+                        <SegmentedControl
+                            size="xs"
+                            value={chartType}
+                            onChange={(value) => setChartType(value as 'pie' | 'bar')}
+                            data={[
+                                { value: 'pie', label: 'Pizza' },
+                                { value: 'bar', label: 'Barras' },
+                            ]}
+                        />
+                    )}
+                </div>
             </div>
-            {slices.length == 0 && <p className="text-white-dark">Nenhum currículo informou.</p>}
-            {slices.length > 0 && chartType == 'pie' && <ReactApexChart type="pie" height={340} options={pieOptions} series={values} />}
-            {slices.length > 0 && chartType == 'bar' && <ReactApexChart type="bar" height={40 + labels.length * 36} options={barOptions} series={[{ name: 'Currículos', data: values }]} />}
+            {slices.length == 0 && <p className="text-white-dark">Sem {source.many} com esta informação.</p>}
+            {slices.length > 0 && chartType == 'pie' && <ReactApexChart key={`pie-${sourceId}`} type="pie" height={340} options={pieOptions} series={values} />}
+            {slices.length > 0 && chartType == 'bar' && (
+                <ReactApexChart key={`bar-${sourceId}`} type="bar" height={40 + labels.length * 36} options={barOptions} series={[{ name: source.button, data: values }]} />
+            )}
         </div>
     );
 };
@@ -92,37 +111,67 @@ const moneyOrDash = (value?: number) => (value ? money(value) : '—');
 /** Sem currículos na linha, "—"; com currículos, a média (0 é estágio de verdade): "4,5 anos". */
 const yearsOrDash = (resumes?: number, years?: number) => (resumes ? yearsLabel(years || 0) : '—');
 
-/** Os totais de currículos e as médias das pretensões CLT e PJ por senioridade e no geral. */
-const AveragesTable = ({ averages }: { averages: Record<string, Average> }) => {
+/** As colunas da tabela: cada uma se abre em CVs, Visualizações e Vagas. */
+const columns = [
+    { title: 'Currículos', value: (average: Average) => String(average.resumes || 0) },
+    { title: 'Média CLT', value: (average: Average) => moneyOrDash(average.clt) },
+    { title: 'Média PJ', value: (average: Average) => moneyOrDash(average.pj) },
+    { title: 'Média de experiência', value: (average: Average) => yearsOrDash(average.resumes, average.experience) },
+];
+
+/** As quantidades e as médias das pretensões CLT e PJ e da experiência, por senioridade e no geral, para cada fonte. */
+const AveragesTable = ({ statistics }: { statistics: Statistics }) => {
     const rows = [...seniorities.map((seniority) => ({ id: seniority.id, nome: seniority.nome })), { id: 'all', nome: 'Geral' }];
     return (
-        <Table striped withTableBorder withColumnBorders>
-            <Table.Thead>
-                <Table.Tr>
-                    <Table.Th>Senioridade</Table.Th>
-                    <Table.Th className="text-right">Currículos</Table.Th>
-                    <Table.Th className="text-right">Média CLT</Table.Th>
-                    <Table.Th className="text-right">Média PJ</Table.Th>
-                    <Table.Th className="text-right">Média de experiência</Table.Th>
-                </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-                {rows.map((row) => {
-                    const average = averages[row.id] || {};
-                    return (
+        <Table.ScrollContainer minWidth={900}>
+            <Table striped withTableBorder withColumnBorders>
+                <Table.Thead>
+                    <Table.Tr>
+                        <Table.Th rowSpan={2}>Senioridade</Table.Th>
+                        {columns.map((column) => (
+                            <Table.Th key={column.title} colSpan={sources.length} className="text-center">
+                                {column.title}
+                            </Table.Th>
+                        ))}
+                    </Table.Tr>
+                    <Table.Tr>
+                        {columns.map((column) =>
+                            sources.map((source) => (
+                                <Table.Th key={`${column.title}-${source.id}`} className="text-right text-xs font-semibold text-white-dark">
+                                    {source.column}
+                                </Table.Th>
+                            )),
+                        )}
+                    </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                    {rows.map((row) => (
                         <Table.Tr key={row.id} className={row.id == 'all' ? 'font-bold' : ''}>
                             <Table.Td>{row.nome}</Table.Td>
-                            <Table.Td className="text-right">{average.resumes || 0}</Table.Td>
-                            <Table.Td className="text-right">{moneyOrDash(average.clt)}</Table.Td>
-                            <Table.Td className="text-right">{moneyOrDash(average.pj)}</Table.Td>
-                            <Table.Td className="text-right">{yearsOrDash(average.resumes, average.experience)}</Table.Td>
+                            {columns.map((column) =>
+                                sources.map((source) => {
+                                    const average = statisticsOf(statistics, source)?.averages?.[row.id];
+                                    return (
+                                        <Table.Td key={`${column.title}-${source.id}`} className="text-right">
+                                            {source.ready ? column.value(average || {}) : '—'}
+                                        </Table.Td>
+                                    );
+                                }),
+                            )}
                         </Table.Tr>
-                    );
-                })}
-            </Table.Tbody>
-        </Table>
+                    ))}
+                </Table.Tbody>
+            </Table>
+        </Table.ScrollContainer>
     );
 };
+
+/** "15 currículos · 7 visualizações": o total de cada fonte que já tem dados. */
+const totalsLabel = (statistics: Statistics) =>
+    sources
+        .filter((source) => source.ready)
+        .map((source) => countLabel(source, statisticsOf(statistics, source)?.total || 0))
+        .join(' · ');
 
 const isState = (value: string) => value.startsWith('uf-');
 
@@ -177,13 +226,16 @@ export const SupplyAndDemand = () => {
                     <>
                         <div className="panel mb-6">
                             <h5 className="mb-1 text-lg font-semibold">{regionName(ddd)}</h5>
-                            <div className="mb-3 text-2xl font-bold">{resumesLabel(statistics.total)}</div>
-                            <AveragesTable averages={statistics.averages || {}} />
-                            <p className="mt-2 text-sm text-white-dark">As médias contam só os currículos que informaram a pretensão.</p>
+                            <div className="mb-3 text-2xl font-bold">{totalsLabel(statistics)}</div>
+                            <AveragesTable statistics={statistics} />
+                            <p className="mt-2 text-sm text-white-dark">
+                                As médias contam só quem informou a pretensão ou o início da experiência. Visualizações trazem o currículo como estava quando o
+                                recrutador o viu. Vagas: em breve.
+                            </p>
                         </div>
                         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
                             {charts.map((chart) => (
-                                <ChartPanel key={`${ddd}-${chart.id}`} title={chart.title} slices={slicesOf(chart.id, statistics.charts?.[chart.id])} />
+                                <ChartPanel key={`${ddd}-${chart.id}`} title={chart.title} chart={chart.id} statistics={statistics} />
                             ))}
                         </div>
                     </>

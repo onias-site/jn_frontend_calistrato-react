@@ -1,4 +1,4 @@
-import { HOME_OFFICE, OTHERS, money, regionName, regionTree, sliceLabel, slicesOf, yearsLabel } from './supplyAndDemandData';
+import { HOME_OFFICE, OTHERS, money, regionName, regionTree, sliceLabel, slicesOf, yearsLabel, sources, countLabel } from './supplyAndDemandData';
 
 describe('supplyAndDemandData', () => {
     it('rotula as fatias a partir dos códigos do backend', () => {
@@ -10,6 +10,13 @@ describe('supplyAndDemandData', () => {
         expect(sliceLabel('temporallyJob', 'doesNotAccept')).toBe('Não aceita');
         expect(sliceLabel('resumeType', '1')).toBe('Tecnologia da Informação');
         expect(sliceLabel('skill', 'Java')).toBe('Java');
+    });
+
+    it('tem as fontes CVs (padrão), CVs vistos e Vagas, esta ainda sem dados', () => {
+        expect(sources.map((source) => source.button)).toEqual(['CVs', 'CVs vistos', 'Vagas']);
+        expect(sources.map((source) => source.ready)).toEqual([true, true, false]);
+        expect(countLabel(sources[1], 1)).toBe('1 visualização');
+        expect(countLabel(sources[0], 15)).toBe('15 currículos');
     });
 
     it('escreve a média de experiência em anos', () => {

@@ -15,6 +15,21 @@ export const charts = [
     { id: 'temporallyJob', title: 'Trabalho temporário' },
 ];
 
+/**
+ * De onde vêm os números de cada gráfico e de cada coluna da tabela: os grupos do jn_grouper do ddd que o backend devolve
+ * (resumes e viewedResumes). Vagas ainda não têm grupo: o botão aparece desligado e as colunas ficam com "—".
+ */
+export const sources = [
+    { id: 'resumes', button: 'CVs', column: 'CVs', one: 'currículo', many: 'currículos', ready: true },
+    { id: 'viewedResumes', button: 'CVs vistos', column: 'Visualizações', one: 'visualização', many: 'visualizações', ready: true },
+    { id: 'vacancies', button: 'Vagas', column: 'Vagas', one: 'vaga', many: 'vagas', ready: false },
+];
+
+export type Source = (typeof sources)[number];
+
+/** 1 vira "1 currículo"; 7 vira "7 visualizações". */
+export const countLabel = (source: Source, total: number) => `${total} ${total == 1 ? source.one : source.many}`;
+
 /** As senioridades do backend (VisSeniorityType, sem a indefinida), na ordem da tabela de médias. */
 export const seniorities = [
     { id: 'estag', nome: 'Estágio' },
