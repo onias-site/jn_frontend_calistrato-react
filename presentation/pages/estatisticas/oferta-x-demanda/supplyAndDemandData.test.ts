@@ -1,4 +1,4 @@
-import { HOME_OFFICE, OTHERS, money, regionName, regionTree, sliceLabel, slicesOf, yearsLabel, sources, countLabel, folderTotals } from './supplyAndDemandData';
+import { HOME_OFFICE, OTHERS, money, regionName, regionTree, sliceLabel, slicesOf, yearsLabel, sources, countLabel, folderTotals, monthTitle, daysOfTheMonth, lastMonths, insertionSeries } from './supplyAndDemandData';
 
 describe('supplyAndDemandData', () => {
     it('rotula as fatias a partir dos códigos do backend', () => {
@@ -32,6 +32,23 @@ describe('supplyAndDemandData', () => {
         expect(folderTotals(totals, ['11', '12', '13'])).toBe('17 currículos · 22 visualizações');
         expect(folderTotals(totals, ['99'])).toBe('0 currículos · 0 visualizações');
         expect(folderTotals({}, ['11'])).toBe('0 currículos · 0 visualizações');
+    });
+
+    it('monta os dias do mês corrente e os últimos meses do gráfico de linhas', () => {
+        const now = new Date(2026, 10, 14);
+        expect(monthTitle(now)).toBe('novembro de 2026');
+        const days = daysOfTheMonth(now);
+        expect(days.length).toBe(14);
+        expect(days[0]).toEqual({ key: '20261101', label: '01' });
+        expect(days[13]).toEqual({ key: '20261114', label: '14' });
+        const months = lastMonths(now, 12);
+        expect(months[0]).toEqual({ key: '202512', label: 'dez/25' });
+        expect(months[11]).toEqual({ key: '202611', label: 'nov/26' });
+        const series = insertionSeries({ resumes: { '20261114': 3 }, viewedResumes: { '20261101': 37 } }, days);
+        expect(series.map((line) => line.name)).toEqual(['Currículos inseridos', 'Visualizações feitas']);
+        expect(series[0].data[13]).toBe(3);
+        expect(series[1].data[0]).toBe(37);
+        expect(insertionSeries(undefined, days)[0].data.every((value) => value == 0)).toBe(true);
     });
 
     it('escreve a média de experiência em anos', () => {

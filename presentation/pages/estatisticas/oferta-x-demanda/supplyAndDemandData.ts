@@ -28,9 +28,9 @@ const fixedOrders: Record<string, string[]> = {
  * (resumes e viewedResumes). Vagas ainda não têm grupo: o botão aparece desligado e as colunas ficam com "—".
  */
 export const sources = [
-    { id: 'resumes', button: 'CVs', column: 'CVs', one: 'currículo', many: 'currículos', ready: true },
-    { id: 'viewedResumes', button: 'CVs vistos', column: 'Visualizações', one: 'visualização', many: 'visualizações', ready: true },
-    { id: 'vacancies', button: 'Vagas', column: 'Vagas', one: 'vaga', many: 'vagas', ready: false },
+    { id: 'resumes', button: 'CVs', column: 'CVs', one: 'currículo', many: 'currículos', line: 'Currículos inseridos', ready: true },
+    { id: 'viewedResumes', button: 'CVs vistos', column: 'Visualizações', one: 'visualização', many: 'visualizações', line: 'Visualizações feitas', ready: true },
+    { id: 'vacancies', button: 'Vagas', column: 'Vagas', one: 'vaga', many: 'vagas', line: 'Vagas publicadas', ready: false },
 ];
 
 export type Source = (typeof sources)[number];
@@ -50,6 +50,44 @@ export const folderTotals = (totals: TotalsByRegion, ddds: string[]) =>
         .filter((source) => source.ready)
         .map((source) => countLabel(source, ddds.reduce((sum, ddd) => sum + (totals[source.id]?.[ddd] || 0), 0)))
         .join(' · ');
+
+/**
+ * Tudo o que a página lê ao abrir (GET statistics/resumes/totals): os totais por ddd (títulos das pastas) e as inserções
+ * por dia (yyyyMMdd) e por mês (yyyyMM) de cada fonte (gráfico de linhas). Contam só os registros ativos.
+ */
+export type Totals = { byRegion?: TotalsByRegion; byDay?: TotalsByRegion; byMonth?: TotalsByRegion };
+
+const monthNames = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+
+const twoDigits = (value: number) => String(value).padStart(2, '0');
+
+const yearMonthKey = (year: number, month: number) => `${year}${twoDigits(month + 1)}`;
+
+/** "novembro de 2026": o mês corrente, para o título do gráfico por dia. */
+export const monthTitle = (now: Date) => `${monthNames[now.getMonth()]} de ${now.getFullYear()}`;
+
+/** Um ponto do eixo x do gráfico de linhas: a chave do contador no backend e o rótulo da tela. */
+export type Period = { key: string; label: string };
+
+/** Os dias do mês corrente até hoje: { key: '20261114', label: '14' }. */
+export const daysOfTheMonth = (now: Date): Period[] => {
+    const prefix = yearMonthKey(now.getFullYear(), now.getMonth());
+    return Array.from({ length: now.getDate() }, (_, index) => ({ key: `${prefix}${twoDigits(index + 1)}`, label: twoDigits(index + 1) }));
+};
+
+/** Os últimos meses, o corrente por último: { key: '202611', label: 'nov/26' }. */
+export const lastMonths = (now: Date, count: number): Period[] =>
+    Array.from({ length: count }, (_, index) => {
+        const moment = new Date(now.getFullYear(), now.getMonth() - (count - 1 - index), 1);
+        const label = `${monthNames[moment.getMonth()].substring(0, 3)}/${String(moment.getFullYear()).substring(2)}`;
+        return { key: yearMonthKey(moment.getFullYear(), moment.getMonth()), label };
+    });
+
+/** Uma linha por fonte que já tem dados, com o total de cada período (0 quando o contador não tem a chave). */
+export const insertionSeries = (counts: TotalsByRegion = {}, periods: Period[]) =>
+    sources
+        .filter((source) => source.ready)
+        .map((source) => ({ name: source.line, data: periods.map((period) => counts[source.id]?.[period.key] || 0) }));
 
 /** As senioridades do backend (VisSeniorityType, sem a indefinida), na ordem da tabela de médias. */
 export const seniorities = [

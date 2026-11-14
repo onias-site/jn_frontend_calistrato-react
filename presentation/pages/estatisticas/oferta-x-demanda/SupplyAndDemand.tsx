@@ -11,10 +11,14 @@ import {
     OTHERS,
     Slice,
     Source,
-    TotalsByRegion,
+    Totals,
     charts,
     countLabel,
+    daysOfTheMonth,
     folderTotals,
+    insertionSeries,
+    lastMonths,
+    monthTitle,
     money,
     regionName,
     regionTree,
@@ -188,6 +192,53 @@ const totalsLabel = (statistics: Statistics) =>
         .map((source) => countLabel(source, statisticsOf(statistics, source)?.total || 0))
         .join(' · ');
 
+const lineColors = ['#2a78d6', '#eb6834', '#1baf7a'];
+
+/**
+ * As inserções ao longo do tempo, acima das pastas: os botões trocam entre os dias do mês corrente (o mês vai no título)
+ * e os últimos 12 meses; uma linha por fonte (currículos inseridos, visualizações feitas e, quando houver, vagas), pela
+ * data de inserção dos registros ainda ativos.
+ */
+const InsertionsPanel = ({ totals }: { totals: Totals }) => {
+    const [period, setPeriod] = useState<'day' | 'month'>('day');
+    const now = new Date();
+    const byDay = period == 'day';
+    const periods = byDay ? daysOfTheMonth(now) : lastMonths(now, 12);
+    const series = insertionSeries(byDay ? totals.byDay : totals.byMonth, periods);
+    const title = byDay ? `Inserções por dia — ${monthTitle(now)}` : 'Inserções por mês — últimos 12 meses';
+
+    const options: any = {
+        chart: { type: 'line', fontFamily, toolbar: { show: false }, zoom: { enabled: false } },
+        colors: lineColors,
+        stroke: { width: 3, curve: 'straight' },
+        markers: { size: 4 },
+        xaxis: { categories: periods.map((item) => item.label) },
+        yaxis: { min: 0, forceNiceScale: true, labels: { formatter: (value: number) => String(Math.round(value)) } },
+        legend: { position: 'top', horizontalAlign: 'left' },
+        grid: { borderColor: '#e0e6ed' },
+        dataLabels: { enabled: false },
+    };
+
+    return (
+        <div className="mb-4 rounded border border-[#e0e6ed] p-3 dark:border-[#1b2e4b]">
+            <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
+                <h5 className="text-lg font-semibold">{title}</h5>
+                <SegmentedControl
+                    size="xs"
+                    value={period}
+                    onChange={(value) => setPeriod(value as 'day' | 'month')}
+                    data={[
+                        { value: 'day', label: 'Por dia' },
+                        { value: 'month', label: 'Por mês' },
+                    ]}
+                />
+            </div>
+            <ReactApexChart key={`line-${period}`} type="line" height={300} options={options} series={series} />
+            <p className="mt-1 text-sm text-white-dark">Pela data de inserção; contam só os registros ainda ativos. Vagas: em breve.</p>
+        </div>
+    );
+};
+
 type RegionData = { situation: Situation; statistics?: Statistics };
 
 type TreeNode = { value: string; label: string; children?: TreeNode[] };
@@ -238,17 +289,17 @@ export const SupplyAndDemand = () => {
     const [opened, setOpened] = useState<Set<string>>(new Set());
     const [regions, setRegions] = useState<Record<string, RegionData>>({});
     const [tree] = useState<TreeNode[]>(regionTree);
-    const [totals, setTotals] = useState<TotalsByRegion | null>(null);
+    const [totals, setTotals] = useState<Totals | null>(null);
 
     useEffect(() => {
         const callbacks: any = { withoutSession: true };
-        callbacks[200] = (response: TotalsByRegion) => setTotals(response);
+        callbacks[200] = (response: Totals) => setTotals(response);
         // sem os totais, as pastas ficam só com o nome
         callbacks['onUnexpectedHttpStatus'] = () => setTotals(null);
         JnAjax.doAnAjaxRequest('statistics/resumes/totals', callbacks, 'GET', null as any, {}, API);
     }, []);
 
-    const totalsOf = (ddds: string[]) => (totals ? folderTotals(totals, ddds) : undefined);
+    const totalsOf = (ddds: string[]) => (totals?.byRegion ? folderTotals(totals.byRegion, ddds) : undefined);
 
     const toggle = (id: string) =>
         setOpened((current) => {
@@ -302,6 +353,7 @@ export const SupplyAndDemand = () => {
 
     return (
         <div className="panel mt-6">
+            {totals && <InsertionsPanel totals={totals} />}
             <h5 className="mb-1 text-lg font-semibold">Regiões metropolitanas</h5>
             <p className="mb-3 text-sm text-white-dark">Abra uma pasta para ver o que os currículos da região oferecem.</p>
             {tree.map((node) => {
