@@ -19,6 +19,13 @@ describe('supplyAndDemandData', () => {
         expect(countLabel(sources[0], 15)).toBe('15 currículos');
     });
 
+    it('mantém a ordem própria das faixas de habilidades e das formas de contratação', () => {
+        const skills = slicesOf('skillsCount', { over50: 1, upTo5: 3, from16To30: 9 });
+        expect(skills.map((slice) => slice.label)).toEqual(['Até 5', 'De 16 a 30', 'Mais de 50']);
+        const contracts = slicesOf('contractType', { both: 106, onlyPj: 3, onlyClt: 7 });
+        expect(contracts.map((slice) => slice.label)).toEqual(['Aceita apenas CLT', 'Aceita apenas PJ', 'Aceita ambos']);
+    });
+
     it('escreve a média de experiência em anos', () => {
         expect(yearsLabel(4.5)).toBe('4,5 anos');
         expect(yearsLabel(1)).toBe('1 ano');

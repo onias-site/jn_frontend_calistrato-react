@@ -13,7 +13,15 @@ export const charts = [
     { id: 'travel', title: 'Disponibilidade para viagens' },
     { id: 'disponibility', title: 'Disponibilidade' },
     { id: 'temporallyJob', title: 'Trabalho temporário' },
+    { id: 'skillsCount', title: 'Quantidade de habilidades declaradas' },
+    { id: 'contractType', title: 'Formas de contratação aceitas' },
 ];
+
+/** Gráficos de faixas ou categorias com ordem própria: as fatias seguem esta ordem, não o tamanho. */
+const fixedOrders: Record<string, string[]> = {
+    skillsCount: ['upTo5', 'from6To15', 'from16To30', 'from31To50', 'over50'],
+    contractType: ['onlyClt', 'onlyPj', 'both', 'notInformed'],
+};
 
 /**
  * De onde vêm os números de cada gráfico e de cada coluna da tabela: os grupos do jn_grouper do ddd que o backend devolve
@@ -53,6 +61,8 @@ const fixedLabels: Record<string, Record<string, string>> = {
     travel: { true: 'Sim', false: 'Não' },
     disponibility: { immediate: 'Imediata', notImmediate: 'Não Imediata' },
     temporallyJob: { accepts: 'Aceita', doesNotAccept: 'Não aceita' },
+    skillsCount: { upTo5: 'Até 5', from6To15: 'De 6 a 15', from16To30: 'De 16 a 30', from31To50: 'De 31 a 50', over50: 'Mais de 50' },
+    contractType: { onlyClt: 'Aceita apenas CLT', onlyPj: 'Aceita apenas PJ', both: 'Aceita ambos' },
 };
 
 const NOT_INFORMED = 'notInformed';
@@ -84,9 +94,16 @@ export type Slice = { key: string; label: string; total: number };
 
 const byTotal = (a: Slice, b: Slice) => b.total - a.total || a.label.localeCompare(b.label);
 
-/** As fatias de um gráfico, da maior para a menor; acima de 8, as 7 maiores mais "Outras" com a soma do resto. */
+/**
+ * As fatias de um gráfico: na ordem própria do gráfico, quando ele tem uma; senão da maior para a menor e, acima de 8, as
+ * 7 maiores mais "Outras" com a soma do resto.
+ */
 export const slicesOf = (chart: string, counts: Record<string, number> = {}): Slice[] => {
     const slices = Object.entries(counts).map(([key, total]) => ({ key, label: sliceLabel(chart, key), total }));
+    const order = fixedOrders[chart];
+    if (order) {
+        return slices.sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key));
+    }
     const sorted = slices.sort(byTotal);
     if (sorted.length <= PIE_SLICES + 1) {
         return sorted;

@@ -205,9 +205,11 @@ const RegionContent = ({ ddd, level, statistics }: { ddd: string; level: number;
                 o viu. Vagas: em breve.
             </p>
         </div>
-        {charts.map((chart) => (
-            <ChartPanel key={`${ddd}-${chart.id}`} title={chart.title} chart={chart.id} statistics={statistics} />
-        ))}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {charts.map((chart) => (
+                <ChartPanel key={`${ddd}-${chart.id}`} title={chart.title} chart={chart.id} statistics={statistics} />
+            ))}
+        </div>
     </div>
 );
 
