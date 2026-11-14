@@ -188,7 +188,7 @@ const Sidebar = () => {
                                 <AnimateHeight duration={300} height={currentMenu === 'statistics' ? 'auto' : 0}>
                                     <ul className="sub-menu text-gray-500">
                                         <li>
-                                            <Link href="/estatisticas/skills">{t('Telegram job groups')}</Link>
+                                            <Link href="/estatisticas/telegram/vagas">{t('Telegram job groups')}</Link>
                                         </li>
                                     </ul>
                                 </AnimateHeight>

@@ -484,7 +484,7 @@ const SubMenuMyResume = () => {
     const openPreview = () => router.push('/meus-dados/sobre-mim/previa');
     const returnToThePendingSearch = () => {
         if (resumeSavedForTheSearch()) {
-            router.push('/estatisticas/skills');
+            router.push('/estatisticas/telegram/vagas');
             return;
         }
         setTabsReset((value) => value + 1);
