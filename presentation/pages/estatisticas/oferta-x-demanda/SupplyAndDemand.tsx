@@ -205,7 +205,7 @@ const InsertionsPanel = ({ totals }: { totals: Totals }) => {
     const byDay = period == 'day';
     const periods = byDay ? daysOfTheMonth(now) : lastMonths(now, 12);
     const series = insertionSeries(byDay ? totals.byDay : totals.byMonth, periods);
-    const title = byDay ? `Inserções por dia — ${monthTitle(now)}` : 'Inserções por mês — últimos 12 meses';
+    const title = byDay ? `Novos Registros por dia — ${monthTitle(now)}` : 'Novos Registros por mês — últimos 12 meses';
 
     const options: any = {
         chart: { type: 'line', fontFamily, toolbar: { show: false }, zoom: { enabled: false } },
