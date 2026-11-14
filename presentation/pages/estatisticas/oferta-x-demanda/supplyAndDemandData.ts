@@ -138,7 +138,7 @@ export const sliceLabel = (chart: string, key: string): string => {
         return 'Não informado';
     }
     if (chart == 'spokenLanguage' && key == NO_LANGUAGE) {
-        return 'Nenhum';
+        return 'Nenhum Idioma';
     }
     if (chart == 'spokenLanguage') {
         const [name, level] = key.split('|');
