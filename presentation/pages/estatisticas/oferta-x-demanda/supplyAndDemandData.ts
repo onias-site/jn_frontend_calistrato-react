@@ -15,6 +15,7 @@ export const charts = [
     { id: 'temporallyJob', title: 'Trabalho temporário' },
     { id: 'skillsCount', title: 'Quantidade de habilidades declaradas' },
     { id: 'contractType', title: 'Formas de contratação aceitas' },
+    { id: 'negotiableClaim', title: 'Negocia pretensão salarial' },
 ];
 
 /** Gráficos de faixas ou categorias com ordem própria: as fatias seguem esta ordem, não o tamanho. */
@@ -110,6 +111,7 @@ const fixedLabels: Record<string, Record<string, string>> = {
     seniority: Object.fromEntries(seniorities.map((seniority) => [seniority.id, seniority.nome])),
     pcd: { true: 'Sim', false: 'Não' },
     travel: { true: 'Sim', false: 'Não' },
+    negotiableClaim: { true: 'Sim', false: 'Não' },
     disponibility: { immediate: 'Imediata', notImmediate: 'Não Imediata' },
     temporallyJob: { accepts: 'Aceita', doesNotAccept: 'Não aceita' },
     skillsCount: { upTo5: 'Até 5', from6To15: 'De 6 a 15', from16To30: 'De 16 a 30', from31To50: 'De 31 a 50', over50: 'Mais de 50' },

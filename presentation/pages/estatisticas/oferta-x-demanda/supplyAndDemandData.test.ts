@@ -11,6 +11,9 @@ describe('supplyAndDemandData', () => {
         expect(sliceLabel('temporallyJob', 'doesNotAccept')).toBe('Não aceita');
         expect(sliceLabel('resumeType', '1')).toBe('Tecnologia da Informação');
         expect(sliceLabel('skill', 'Java')).toBe('Java');
+        expect(sliceLabel('negotiableClaim', 'true')).toBe('Sim');
+        expect(sliceLabel('negotiableClaim', 'false')).toBe('Não');
+        expect(sliceLabel('negotiableClaim', 'notInformed')).toBe('Não informado');
     });
 
     it('tem as fontes CVs (padrão), CVs vistos e Vagas, esta ainda sem dados', () => {
