@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Tabs } from '@mantine/core';
+import { Checkbox, Tabs } from '@mantine/core';
 import JnAjax from '@/app/JnAjax';
 import { Modal } from '@/presentation/components/source/Modal';
 import { ConfirmModal } from '@/presentation/components/source/ConfirmModal';
@@ -16,6 +16,12 @@ import { ViewedResume, editView, moveView, parseViews } from './viewedResumesDat
 type Situation = 'loading' | 'loaded' | 'notLogged' | 'error';
 
 type Tab = 'viewed' | 'unwanted';
+
+// o mês da API que lista todas as visualizações do recrutador, de qualquer mês ("Listar todos")
+const ALL_MONTHS = 'all';
+
+// as linhas de cada página do grid quando "Listar todos" está marcado
+const ALL_MONTHS_PAGE_SIZE = 50;
 
 const messages: Record<Exclude<Situation, 'loaded'>, string> = {
     loading: 'Carregando os currículos visualizados...',
@@ -54,9 +60,13 @@ const moves: Record<Tab, { path: string; label: string; header: string; message:
  * comentário, gravados no lado em que a visualização está) e "Negativar CV" / "Positivar CV", que, depois de confirmar,
  * troca o currículo de aba. As gravações são assíncronas no back end: a tela atualiza as listas com o que enviou e
  * descarta a lista guardada em memória, para a próxima leitura ir ao back end.
+ * Ao lado do mês/ano, o checkbox "Listar todos" (desde 2026-11-15, desmarcado ao abrir): marcado, o seletor de mês some e
+ * as duas abas mostram todas as visualizações do recrutador, de qualquer mês (o grupo do recrutador no jn_grouper, sem
+ * mês), em páginas de 50; a negativação vale para sempre, então os indesejados de meses passados aparecem nele.
  */
 export const ViewedResumesOfTheMonth = () => {
     const [month, setMonth] = useState(currentMonth());
+    const [listAll, setListAll] = useState(false);
     const [situation, setSituation] = useState<Situation>('loading');
     const [views, setViews] = useState<ViewedResume[]>([]);
     const [unwantedViews, setUnwantedViews] = useState<ViewedResume[]>([]);
@@ -66,7 +76,10 @@ export const ViewedResumesOfTheMonth = () => {
     const [moving, setMoving] = useState<ViewedResume | null>(null);
     const router = useRouter();
 
-    const load = (chosenMonth: string) => () => {
+    // o mês que vai para a API: o escolhido (yyyyMM) ou "all", com "Listar todos" marcado
+    const period = listAll ? ALL_MONTHS : monthParameter(month);
+
+    const load = (chosenPeriod: string) => () => {
         setSituation('loading');
         const callbacks: any = {};
         callbacks[200] = (response: any) => {
@@ -81,14 +94,14 @@ export const ViewedResumesOfTheMonth = () => {
             setSituation('notLogged');
             // fechar o modal sem entrar leva à tela inicial: aqui ficaria só uma tela vazia
             ModalLoginStore.getState().setDismissAction(() => router.push('/'));
-            JnAjax.getHandler401(load(chosenMonth))();
+            JnAjax.getHandler401(load(chosenPeriod))();
         };
         callbacks['onUnexpectedHttpStatus'] = () => setSituation('error');
         // GET sem corpo: com {} o jQuery poria "?{}" na URL
-        JnAjax.doACachedRequest(`recruiter/{email}/viewed-resumes/${monthParameter(chosenMonth)}`, callbacks, 'GET', null as any, {}, 'http://localhost:8081');
+        JnAjax.doACachedRequest(`recruiter/{email}/viewed-resumes/${chosenPeriod}`, callbacks, 'GET', null as any, {}, 'http://localhost:8081');
     };
 
-    useEffect(load(month), [month]);
+    useEffect(load(period), [period]);
 
     // a lista guardada em memória ficou velha depois de uma gravação: a próxima leitura vai ao back end
     const forgetTheLists = () => JnAjax.clearScreenCache('/viewed-resumes/');
@@ -112,24 +125,28 @@ export const ViewedResumesOfTheMonth = () => {
             forgetTheLists();
             notify({ summary: chosenMove.label, detail: chosenMove.done });
         };
-        callbacks[404] = () => notify({ summary: 'Currículo não encontrado', detail: 'Este currículo não está entre os que você visualizou neste mês.', severity: 'error' });
+        const notFound = listAll ? 'Este currículo não está entre os que você visualizou.' : 'Este currículo não está entre os que você visualizou neste mês.';
+        callbacks[404] = () => notify({ summary: 'Currículo não encontrado', detail: notFound, severity: 'error' });
         callbacks[401] = () => {
             // sem login o JnAjax chama o 401 antes de enviar, e não desliga o carregamento que já ligou
             JnAjax.setNotLoading()();
             JnAjax.getHandler401(move(view, fromTab))();
         };
         callbacks['onUnexpectedHttpStatus'] = () => notify({ summary: 'Não foi possível concluir', detail: 'Tente de novo em alguns instantes.', severity: 'error' });
-        JnAjax.doAnAjaxRequest(`recruiter/{email}/viewed-resumes/${monthParameter(month)}/${chosenMove.path}`, callbacks, 'POST', { linkedinHash: view.linkedinHash }, {}, 'http://localhost:8081');
+        JnAjax.doAnAjaxRequest(`recruiter/{email}/viewed-resumes/${period}/${chosenMove.path}`, callbacks, 'POST', { linkedinHash: view.linkedinHash }, {}, 'http://localhost:8081');
     };
+
+    const listAllCheckbox = <Checkbox id="viewedResumesListAll" label="Listar todos" checked={listAll} onChange={(event) => setListAll(event.currentTarget.checked)} />;
 
     const grid = (gridTab: Tab, gridViews: ViewedResume[], emptyMessage: string, singularTitle: string, pluralTitle: string) => (
         <ViewedResumesGrid
-            key={month}
+            key={period}
             views={gridViews}
             emptyMessage={emptyMessage}
             singularTitle={singularTitle}
             pluralTitle={pluralTitle}
             moveLabel={moves[gridTab].label}
+            pageSize={listAll ? ALL_MONTHS_PAGE_SIZE : undefined}
             onSelect={setSelected}
             onEdit={setEditing}
             onMove={setMoving}
@@ -138,7 +155,14 @@ export const ViewedResumesOfTheMonth = () => {
 
     return (
         <div className="panel mt-6">
-            <MonthPicker id="viewedResumesMonth" month={month} onChange={setMonth} />
+            {/* marcado, o seletor de mês some e fica só o checkbox, na mesma linha e com o mesmo espaçamento */}
+            {listAll ? (
+                <div className="mb-4 flex flex-wrap items-center gap-3">{listAllCheckbox}</div>
+            ) : (
+                <MonthPicker id="viewedResumesMonth" month={month} onChange={setMonth}>
+                    {listAllCheckbox}
+                </MonthPicker>
+            )}
             {situation != 'loaded' ? (
                 <div>{messages[situation]}</div>
             ) : (
@@ -153,18 +177,22 @@ export const ViewedResumesOfTheMonth = () => {
                         </Tabs.Tab>
                     </Tabs.List>
                     <Tabs.Panel value="viewed">
-                        {grid('viewed', views, 'Você não visualizou nenhum currículo neste mês.', 'currículo visualizado no mês', 'currículos visualizados no mês')}
+                        {listAll
+                            ? grid('viewed', views, 'Você não visualizou nenhum currículo.', 'currículo visualizado', 'currículos visualizados')
+                            : grid('viewed', views, 'Você não visualizou nenhum currículo neste mês.', 'currículo visualizado no mês', 'currículos visualizados no mês')}
                     </Tabs.Panel>
                     <Tabs.Panel value="unwanted">
-                        {grid('unwanted', unwantedViews, 'Nenhum currículo visualizado neste mês está entre os indesejados.', 'currículo indesejado no mês', 'currículos indesejados no mês')}
+                        {listAll
+                            ? grid('unwanted', unwantedViews, 'Nenhum currículo visualizado está entre os indesejados.', 'currículo indesejado', 'currículos indesejados')
+                            : grid('unwanted', unwantedViews, 'Nenhum currículo visualizado neste mês está entre os indesejados.', 'currículo indesejado no mês', 'currículos indesejados no mês')}
                     </Tabs.Panel>
                 </Tabs>
             )}
             <Modal visible={selected != null} setVisible={(visible) => !visible && setSelected(null)} title={selected ? selected.alias : ''} size="90rem">
-                {selected && <ViewedResumeDetails month={month} linkedinHash={selected.linkedinHash} />}
+                {selected && <ViewedResumeDetails period={period} linkedinHash={selected.linkedinHash} />}
             </Modal>
             <Modal visible={editing != null} setVisible={(visible) => !visible && setEditing(null)} title="Editar detalhes" size="lg">
-                {editing && <EditViewedResumeDetails key={editing.linkedinHash} month={month} view={editing} onSaved={saved} onCancel={() => setEditing(null)} />}
+                {editing && <EditViewedResumeDetails key={editing.linkedinHash} period={period} view={editing} onSaved={saved} onCancel={() => setEditing(null)} />}
             </Modal>
             <ConfirmModal
                 visible={moving != null}

@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import { GridPagination, paginate } from '@/presentation/components/source/GridPagination';
+import { GRID_PAGE_SIZE, GridPagination, paginate } from '@/presentation/components/source/GridPagination';
 import { ViewedResume } from './viewedResumesData';
 
 type ViewedResumesGridProps = {
@@ -12,6 +12,8 @@ type ViewedResumesGridProps = {
     pluralTitle: string;
     // "Negativar CV" na aba Visualizados, "Positivar CV" na aba Indesejados
     moveLabel: string;
+    // as linhas de cada página: 50 com "Listar todos" marcado, o padrão dos grids no mês
+    pageSize?: number;
     onSelect: (view: ViewedResume) => void;
     onEdit: (view: ViewedResume) => void;
     onMove: (view: ViewedResume) => void;
@@ -20,9 +22,9 @@ type ViewedResumesGridProps = {
 /**
  * O grid de uma aba da tela de currículos visualizados: apelido, comentário, data da última visualização e as ações "ver
  * detalhes", "Editar detalhes" e a que troca o currículo de aba (desde 2026-11-15), paginado no navegador. Cada nova lista
- * (troca de mês) volta à primeira página.
+ * (troca de mês, ou "Listar todos") volta à primeira página.
  */
-export const ViewedResumesGrid = ({ views, emptyMessage, singularTitle, pluralTitle, moveLabel, onSelect, onEdit, onMove }: ViewedResumesGridProps) => {
+export const ViewedResumesGrid = ({ views, emptyMessage, singularTitle, pluralTitle, moveLabel, pageSize = GRID_PAGE_SIZE, onSelect, onEdit, onMove }: ViewedResumesGridProps) => {
     // a troca de mês recria o grid (key do mês na tela) e volta à primeira página; negativar ou editar uma linha mantém a
     // página (o paginate limita à última, quando ela some)
     const [page, setPage] = useState(1);
@@ -31,7 +33,7 @@ export const ViewedResumesGrid = ({ views, emptyMessage, singularTitle, pluralTi
         return <div>{emptyMessage}</div>;
     }
 
-    const { pageRows } = paginate(views, page);
+    const { pageRows } = paginate(views, page, pageSize);
     const action = 'whitespace-nowrap text-primary hover:underline';
 
     return (
@@ -73,7 +75,7 @@ export const ViewedResumesGrid = ({ views, emptyMessage, singularTitle, pluralTi
                     </tbody>
                 </table>
             </div>
-            <GridPagination total={views.length} page={page} onChange={setPage} />
+            <GridPagination total={views.length} page={page} onChange={setPage} pageSize={pageSize} />
         </>
     );
 };

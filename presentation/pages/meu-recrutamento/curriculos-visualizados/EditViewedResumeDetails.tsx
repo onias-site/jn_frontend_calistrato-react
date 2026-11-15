@@ -4,11 +4,11 @@ import { Textarea, TextInput } from '@mantine/core';
 import JnAjax from '@/app/JnAjax';
 import { LoadingButton } from '@/presentation/components/source/LoadingButton';
 import { notify } from '@/presentation/components/source/notify';
-import { monthParameter } from '@/presentation/components/month-picker/MonthPicker';
 import { ViewedResume, detailsErrors } from './viewedResumesData';
 
 type EditViewedResumeDetailsProps = {
-    month: string;
+    // o mês da visualização (yyyyMM), ou "all" com "Listar todos" marcado
+    period: string;
     view: ViewedResume;
     onSaved: (alias: string, comment: string) => void;
     onCancel: () => void;
@@ -19,7 +19,7 @@ type EditViewedResumeDetailsProps = {
  * O back end grava no lado em que a visualização está, então uma visualização da aba "Indesejados" continua lá. A
  * gravação é assíncrona: a tela atualiza a linha com o que foi enviado, sem reler a lista.
  */
-export const EditViewedResumeDetails = ({ month, view, onSaved, onCancel }: EditViewedResumeDetailsProps) => {
+export const EditViewedResumeDetails = ({ period, view, onSaved, onCancel }: EditViewedResumeDetailsProps) => {
     const [alias, setAlias] = useState(view.alias || '');
     const [comment, setComment] = useState(view.comment || '');
     const [saving, setSaving] = useState(false);
@@ -59,7 +59,7 @@ export const EditViewedResumeDetails = ({ month, view, onSaved, onCancel }: Edit
             setSaving(false);
             notify({ summary: 'Não foi possível salvar', detail: 'Tente de novo em alguns instantes.', severity: 'error' });
         };
-        JnAjax.doAnAjaxRequest(`recruiter/{email}/viewed-resumes/${monthParameter(month)}/edit`, callbacks, 'POST', requestBody, {}, 'http://localhost:8081');
+        JnAjax.doAnAjaxRequest(`recruiter/{email}/viewed-resumes/${period}/edit`, callbacks, 'POST', requestBody, {}, 'http://localhost:8081');
     };
 
     return (

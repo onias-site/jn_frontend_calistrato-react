@@ -1,7 +1,6 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import JnAjax from '@/app/JnAjax';
-import { monthParameter } from '@/presentation/components/month-picker/MonthPicker';
 import { ResumePreview, previewDataFromSavedResume } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/ResumePreview';
 
 type Situation = 'loading' | 'loaded' | 'notViewed' | 'notLogged' | 'error';
@@ -20,7 +19,7 @@ const messages: Record<Exclude<Situation, 'loaded'>, string> = {
  * da prévia em {@code preview}; até então a linha expandida mostrava o currículo como o e-mail de currículos. Se o
  * candidato bloqueou a empresa do recrutador, o back end não devolve o currículo nem o LinkedIn.
  */
-export const ViewedResumeDetails = ({ month, linkedinHash }: { month: string; linkedinHash: string }) => {
+export const ViewedResumeDetails = ({ period, linkedinHash }: { period: string; linkedinHash: string }) => {
     const [situation, setSituation] = useState<Situation>('loading');
     const [resumes, setResumes] = useState<any[]>([]);
 
@@ -39,10 +38,10 @@ export const ViewedResumeDetails = ({ month, linkedinHash }: { month: string; li
             JnAjax.getHandler401(load)();
         };
         callbacks['onUnexpectedHttpStatus'] = () => setSituation('error');
-        JnAjax.doACachedRequest(`recruiter/{email}/viewed-resumes/${monthParameter(month)}/details`, callbacks, 'POST', { linkedinHash }, {}, 'http://localhost:8081');
+        JnAjax.doACachedRequest(`recruiter/{email}/viewed-resumes/${period}/details`, callbacks, 'POST', { linkedinHash }, {}, 'http://localhost:8081');
     };
 
-    useEffect(load, [month, linkedinHash]);
+    useEffect(load, [period, linkedinHash]);
 
     if (situation != 'loaded') {
         return <div>{messages[situation]}</div>;
