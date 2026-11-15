@@ -5,6 +5,7 @@ import JnAjax from '@/app/JnAjax';
 import { Modal } from '@/presentation/components/source/Modal';
 import { ModalLoginStore } from '@/presentation/auth/ModalLogin';
 import { MonthPicker, currentMonth, monthParameter } from '@/presentation/components/month-picker/MonthPicker';
+import { GridPagination, paginate } from '@/presentation/components/source/GridPagination';
 import { ViewedResumeDetails } from './ViewedResumeDetails';
 
 type Situation = 'loading' | 'loaded' | 'notLogged' | 'error';
@@ -44,13 +45,15 @@ const parseViews = (texts: string[]): ViewedResume[] =>
  * currículo (e a cada apelido dado) e lida pelo id do grupo do recrutador no mês; por isso exige login, e quem não está
  * logado vê o modal de login, que repete a busca ao entrar. "ver detalhes" abre um modal com o currículo como a prévia
  * do currículo do candidato o mostra, sem as empresas que não recebem o LinkedIn (até 2026-11-14, expandia a linha com o
- * currículo como o e-mail de currículos o mostra).
+ * currículo como o e-mail de currículos o mostra). O grid é paginado no navegador (desde 2026-11-14), e a troca de mês volta
+ * à primeira página.
  */
 export const ViewedResumesOfTheMonth = () => {
     const [month, setMonth] = useState(currentMonth());
     const [situation, setSituation] = useState<Situation>('loading');
     const [views, setViews] = useState<ViewedResume[]>([]);
     const [selected, setSelected] = useState<ViewedResume | null>(null);
+    const [page, setPage] = useState(1);
     const router = useRouter();
 
     const load = (chosenMonth: string) => () => {
@@ -59,6 +62,7 @@ export const ViewedResumesOfTheMonth = () => {
         callbacks[200] = (response: any) => {
             setViews(parseViews(response.viewedResume));
             setSelected(null);
+            setPage(1);
             setSituation('loaded');
         };
         callbacks[401] = () => {
@@ -75,6 +79,8 @@ export const ViewedResumesOfTheMonth = () => {
     };
 
     useEffect(load(month), [month]);
+
+    const { pageRows } = paginate(views, page);
 
     return (
         <div className="panel mt-6">
@@ -98,7 +104,7 @@ export const ViewedResumesOfTheMonth = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {views.map((view) => (
+                                {pageRows.map((view) => (
                                     <tr key={view.linkedinHash}>
                                         <td>{view.alias}</td>
                                         <td>{view.date}</td>
@@ -112,6 +118,7 @@ export const ViewedResumesOfTheMonth = () => {
                             </tbody>
                         </table>
                     </div>
+                    <GridPagination total={views.length} page={page} onChange={setPage} />
                 </>
             )}
             <Modal visible={selected != null} setVisible={(visible) => !visible && setSelected(null)} title={selected ? selected.alias : ''} size="90rem">
