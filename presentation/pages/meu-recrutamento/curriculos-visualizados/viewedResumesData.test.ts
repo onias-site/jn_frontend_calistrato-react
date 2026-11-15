@@ -1,4 +1,4 @@
-import { parseViews, sortableDate } from './viewedResumesData';
+import { detailsErrors, editView, moveView, parseViews, sortableDate } from './viewedResumesData';
 
 const view = (alias: string, date: string) => JSON.stringify({ linkedinHash: alias, alias, date });
 
@@ -20,5 +20,28 @@ describe('lista de currículos visualizados', () => {
 
     it('a data vira yyyyMMddHHmmss', () => {
         expect(sortableDate('15/11/2026 13:05:09')).toBe('20261115130509');
+    });
+
+    it('editar troca apelido e comentário só da visualização do hash', () => {
+        const views = parseViews([view('um', '01/11/2026 08:00:00'), view('dois', '02/11/2026 08:00:00')]);
+        const edited = editView(views, 'um', 'Apelido novo', 'Comentário novo aqui');
+        expect(edited.find((item) => item.linkedinHash == 'um')).toMatchObject({ alias: 'Apelido novo', comment: 'Comentário novo aqui', date: '01/11/2026 08:00:00' });
+        expect(edited.find((item) => item.linkedinHash == 'dois')!.alias).toBe('dois');
+    });
+
+    it('negativar ou positivar tira de uma lista e põe na outra, na ordem da data', () => {
+        const viewed = parseViews([view('um', '01/11/2026 08:00:00'), view('dois', '03/11/2026 08:00:00')]);
+        const unwanted = parseViews([view('tres', '02/11/2026 08:00:00')]);
+        const [remaining, reached] = moveView(viewed, unwanted, 'dois');
+        expect(remaining.map((item) => item.alias)).toEqual(['um']);
+        expect(reached.map((item) => item.alias)).toEqual(['dois', 'tres']);
+    });
+
+    it('valida apelido e comentário como o back end', () => {
+        expect(detailsErrors('abc', '')).toHaveProperty('alias');
+        expect(detailsErrors('Apelido bom', '')).toEqual({});
+        expect(detailsErrors('Apelido bom', 'curto')).toHaveProperty('comment');
+        expect(detailsErrors('Apelido bom', '', 'Comentário salvo antes')).toHaveProperty('comment');
+        expect(detailsErrors('Apelido bom', 'Comentário com tamanho bom')).toEqual({});
     });
 });

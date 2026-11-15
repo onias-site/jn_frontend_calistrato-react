@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { GridPagination, paginate } from '@/presentation/components/source/GridPagination';
 import { ViewedResume } from './viewedResumesData';
 
@@ -10,23 +10,29 @@ type ViewedResumesGridProps = {
     // o título acima do grid, no singular e no plural, com a quantidade na frente
     singularTitle: string;
     pluralTitle: string;
+    // "Negativar CV" na aba Visualizados, "Positivar CV" na aba Indesejados
+    moveLabel: string;
     onSelect: (view: ViewedResume) => void;
+    onEdit: (view: ViewedResume) => void;
+    onMove: (view: ViewedResume) => void;
 };
 
 /**
- * O grid de uma aba da tela de currículos visualizados: apelido, data da última visualização e "ver detalhes", paginado no
- * navegador. Cada nova lista (troca de mês) volta à primeira página.
+ * O grid de uma aba da tela de currículos visualizados: apelido, comentário, data da última visualização e as ações "ver
+ * detalhes", "Editar detalhes" e a que troca o currículo de aba (desde 2026-11-15), paginado no navegador. Cada nova lista
+ * (troca de mês) volta à primeira página.
  */
-export const ViewedResumesGrid = ({ views, emptyMessage, singularTitle, pluralTitle, onSelect }: ViewedResumesGridProps) => {
+export const ViewedResumesGrid = ({ views, emptyMessage, singularTitle, pluralTitle, moveLabel, onSelect, onEdit, onMove }: ViewedResumesGridProps) => {
+    // a troca de mês recria o grid (key do mês na tela) e volta à primeira página; negativar ou editar uma linha mantém a
+    // página (o paginate limita à última, quando ela some)
     const [page, setPage] = useState(1);
-
-    useEffect(() => setPage(1), [views]);
 
     if (views.length == 0) {
         return <div>{emptyMessage}</div>;
     }
 
     const { pageRows } = paginate(views, page);
+    const action = 'whitespace-nowrap text-primary hover:underline';
 
     return (
         <>
@@ -38,6 +44,7 @@ export const ViewedResumesGrid = ({ views, emptyMessage, singularTitle, pluralTi
                     <thead>
                         <tr>
                             <th>Apelido</th>
+                            <th>Comentário</th>
                             <th>Última visualização</th>
                             <th></th>
                         </tr>
@@ -46,11 +53,20 @@ export const ViewedResumesGrid = ({ views, emptyMessage, singularTitle, pluralTi
                         {pageRows.map((view) => (
                             <tr key={view.linkedinHash}>
                                 <td>{view.alias}</td>
+                                <td className="max-w-xs break-words">{view.comment || ''}</td>
                                 <td>{view.date}</td>
                                 <td>
-                                    <button type="button" className="whitespace-nowrap text-primary hover:underline" aria-haspopup="dialog" onClick={() => onSelect(view)}>
-                                        ver detalhes
-                                    </button>
+                                    <div className="flex flex-wrap gap-x-4 gap-y-1">
+                                        <button type="button" className={action} aria-haspopup="dialog" onClick={() => onSelect(view)}>
+                                            ver detalhes
+                                        </button>
+                                        <button type="button" className={action} aria-haspopup="dialog" onClick={() => onEdit(view)}>
+                                            Editar detalhes
+                                        </button>
+                                        <button type="button" className={action} aria-haspopup="dialog" onClick={() => onMove(view)}>
+                                            {moveLabel}
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}
