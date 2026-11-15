@@ -44,7 +44,6 @@ export const repositorySections: BackendRepositorySection[] = [
         title: 'Repositórios GIT das demais siglas',
         repositories: [
             { name: 'jb_business_jobsnow', description: 'Regras de negócio do BackOffice e motor dos bots.' },
-            { name: 'jb_instant-messenger-listener_jobsnow_dependency-chooser', description: 'Listener dos bots do BackOffice.' },
             { name: 'jn_business_jobsnow', description: 'Regras de negócio centrais do Onias.Site.' },
             { name: 'jn_frontend_calistrato-react', description: 'Front end do Onias.Site em Next.js e React.' },
             { name: 'jn_mensageria-consumer_gcp-pubsub-push-spring_dependency_chooser', description: 'Consumidor de mensagens do Pub/Sub por push, em Spring Boot.' },
