@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useState } from 'react';
+import { Checkbox } from '@mantine/core';
 import JnAjax from '@/app/JnAjax';
 import { ResumeRowCells, ResumeRowHeaders } from '../ResumeRowCells';
 import PageTitle from '@/presentation/layouts/page-title';
@@ -22,7 +23,13 @@ const messages: Record<Exclude<Situation, 'loaded' | 'wrongAccount'>, string> = 
  * O link do e-mail leva o destinatário (`?email=`): com outra conta logada, a tela avisa, sai dessa conta e abre o login
  * (até 2026-11-12 abria vazia, lendo a lista da conta errada). O grid é paginado no navegador (desde 2026-11-14), com a
  * coluna # numerando a lista inteira, na ordem do e-mail.
+ * O checkbox "Mostrar apenas os currículos que ainda não vi" (desde 2026-11-15, desmarcado ao abrir) deixa no grid só os
+ * currículos sem visualização do recrutador (o campo viewed da lista, gravado no envio do e-mail: uma visualização feita
+ * depois do envio só aparece na lista do próximo e-mail); a coluna # numera as linhas que ficaram.
  */
+/** Quantas linhas cada página da lista mostra. */
+const PAGE_SIZE = 50;
+
 export const ResumesOfTheWeek = () => {
     const [situation, setSituation] = useState<Situation>('loading');
     const [resumes, setResumes] = useState<any[]>([]);
@@ -30,6 +37,7 @@ export const ResumesOfTheWeek = () => {
     const [recipient, setRecipient] = useState('');
     const [wrongEmail, setWrongEmail] = useState('');
     const [page, setPage] = useState(1);
+    const [onlyNotViewed, setOnlyNotViewed] = useState(false);
 
     // sai da conta logada (que não é a do destinatário) e abre o login, que repete a busca ao entrar
     const loginAsTheRecipient = (expected: string, login: any) => {
@@ -102,7 +110,14 @@ export const ResumesOfTheWeek = () => {
         );
     }
 
-    const { first, pageRows } = paginate(resumes, page);
+    const shownResumes = onlyNotViewed ? resumes.filter((resume) => !resume.viewed) : resumes;
+    const { first, pageRows } = paginate(shownResumes, page, PAGE_SIZE);
+
+    // marcar ou desmarcar muda a lista: volta à primeira página
+    const changeOnlyNotViewed = (checked: boolean) => {
+        setOnlyNotViewed(checked);
+        setPage(1);
+    };
 
     return (
         <div>
@@ -110,35 +125,47 @@ export const ResumesOfTheWeek = () => {
             <div className="panel mt-6">
                 <h5 className="mb-4 text-lg font-semibold">
                     {resumes.length} {resumes.length == 1 ? 'currículo inserido ou alterado' : 'currículos inseridos ou alterados'} nos últimos 7 dias
+                    {onlyNotViewed && `, ${shownResumes.length} ${shownResumes.length == 1 ? 'ainda não visto' : 'ainda não vistos'}`}
                 </h5>
-                <div className="table-responsive">
-                    <table className="table-hover">
-                        <thead>
-                            <tr>
-                                <th className="text-center">#</th>
-                                <ResumeRowHeaders />
-                                <th>Datas e visualização</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {pageRows.map((resume, pageIndex) => (
-                                <tr key={resume.resumeId}>
-                                    <td className="text-center align-top">{first + pageIndex + 1}</td>
-                                    <ResumeRowCells resume={resume} />
-                                    <td className="align-top">
-                                        <div className={resume.viewed ? '' : 'font-semibold text-danger'}>{resume.lastView}</div>
-                                        <a href={viewLink(resume)} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                                            {resume.viewLabel}
-                                        </a>
-                                        <div>{resume.insertion}</div>
-                                        <div>{resume.lastChange}</div>
-                                    </td>
+                <Checkbox
+                    id="resumesOfTheWeekOnlyNotViewed"
+                    className="mb-4"
+                    label="Mostrar apenas os currículos que ainda não vi"
+                    checked={onlyNotViewed}
+                    onChange={(event) => changeOnlyNotViewed(event.currentTarget.checked)}
+                />
+                {shownResumes.length == 0 ? (
+                    <div>Você já viu todos os currículos desta lista.</div>
+                ) : (
+                    <div className="table-responsive">
+                        <table className="table-hover">
+                            <thead>
+                                <tr>
+                                    <th className="text-center">#</th>
+                                    <ResumeRowHeaders />
+                                    <th>Datas e visualização</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-                <GridPagination total={resumes.length} page={page} onChange={setPage} />
+                            </thead>
+                            <tbody>
+                                {pageRows.map((resume, pageIndex) => (
+                                    <tr key={resume.resumeId}>
+                                        <td className="text-center align-top">{first + pageIndex + 1}</td>
+                                        <ResumeRowCells resume={resume} />
+                                        <td className="align-top">
+                                            <div className={resume.viewed ? '' : 'font-semibold text-danger'}>{resume.lastView}</div>
+                                            <a href={viewLink(resume)} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                                {resume.viewLabel}
+                                            </a>
+                                            <div>{resume.insertion}</div>
+                                            <div>{resume.lastChange}</div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+                <GridPagination total={shownResumes.length} page={page} onChange={setPage} pageSize={PAGE_SIZE} />
             </div>
         </div>
     );
