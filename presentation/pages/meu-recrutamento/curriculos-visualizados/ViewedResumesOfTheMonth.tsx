@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import JnAjax from '@/app/JnAjax';
-import IconCaretDown from '@/presentation/icons/icon-caret-down';
+import { Modal } from '@/presentation/components/source/Modal';
 import { ModalLoginStore } from '@/presentation/auth/ModalLogin';
 import { MonthPicker, currentMonth, monthParameter } from '@/presentation/components/month-picker/MonthPicker';
 import { ViewedResumeDetails } from './ViewedResumeDetails';
@@ -42,14 +42,15 @@ const parseViews = (texts: string[]): ViewedResume[] =>
  * Os currículos que o recrutador logado visualizou num mês: um por currículo, com o apelido e a data da última
  * visualização no mês; o LinkedIn fica nos detalhes. O mês é escolhido na tela e começa no mês corrente (até 2026-11-11, no anterior). A lista é gravada a cada abertura de
  * currículo (e a cada apelido dado) e lida pelo id do grupo do recrutador no mês; por isso exige login, e quem não está
- * logado vê o modal de login, que repete a busca ao entrar. "ver detalhes" expande a linha com o currículo como o
- * e-mail de currículos o mostra; várias linhas podem ficar expandidas ao mesmo tempo.
+ * logado vê o modal de login, que repete a busca ao entrar. "ver detalhes" abre um modal com o currículo como a prévia
+ * do currículo do candidato o mostra, sem as empresas que não recebem o LinkedIn (até 2026-11-14, expandia a linha com o
+ * currículo como o e-mail de currículos o mostra).
  */
 export const ViewedResumesOfTheMonth = () => {
     const [month, setMonth] = useState(currentMonth());
     const [situation, setSituation] = useState<Situation>('loading');
     const [views, setViews] = useState<ViewedResume[]>([]);
-    const [expanded, setExpanded] = useState<string[]>([]);
+    const [selected, setSelected] = useState<ViewedResume | null>(null);
     const router = useRouter();
 
     const load = (chosenMonth: string) => () => {
@@ -57,7 +58,7 @@ export const ViewedResumesOfTheMonth = () => {
         const callbacks: any = {};
         callbacks[200] = (response: any) => {
             setViews(parseViews(response.viewedResume));
-            setExpanded([]);
+            setSelected(null);
             setSituation('loaded');
         };
         callbacks[401] = () => {
@@ -74,9 +75,6 @@ export const ViewedResumesOfTheMonth = () => {
     };
 
     useEffect(load(month), [month]);
-
-    const toggle = (linkedinHash: string) =>
-        setExpanded((current) => (current.includes(linkedinHash) ? current.filter((item) => item != linkedinHash) : [...current, linkedinHash]));
 
     return (
         <div className="panel mt-6">
@@ -100,35 +98,25 @@ export const ViewedResumesOfTheMonth = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {views.map((view) => {
-                                    const open = expanded.includes(view.linkedinHash);
-                                    return (
-                                        <React.Fragment key={view.linkedinHash}>
-                                            <tr>
-                                                <td>{view.alias}</td>
-                                                <td>{view.date}</td>
-                                                <td>
-                                                    <button type="button" className="flex items-center gap-1 whitespace-nowrap text-primary hover:underline" aria-expanded={open} onClick={() => toggle(view.linkedinHash)}>
-                                                        <IconCaretDown className={`inline h-4 w-4 transition-transform ${open ? '' : '-rotate-90'}`} />
-                                                        ver detalhes
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                            {open && (
-                                                <tr>
-                                                    <td colSpan={3} className="bg-gray-50 dark:bg-dark-dark-light">
-                                                        <ViewedResumeDetails month={month} linkedinHash={view.linkedinHash} />
-                                                    </td>
-                                                </tr>
-                                            )}
-                                        </React.Fragment>
-                                    );
-                                })}
+                                {views.map((view) => (
+                                    <tr key={view.linkedinHash}>
+                                        <td>{view.alias}</td>
+                                        <td>{view.date}</td>
+                                        <td>
+                                            <button type="button" className="whitespace-nowrap text-primary hover:underline" aria-haspopup="dialog" onClick={() => setSelected(view)}>
+                                                ver detalhes
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
                             </tbody>
                         </table>
                     </div>
                 </>
             )}
+            <Modal visible={selected != null} setVisible={(visible) => !visible && setSelected(null)} title={selected ? selected.alias : ''} size="90rem">
+                {selected && <ViewedResumeDetails month={month} linkedinHash={selected.linkedinHash} />}
+            </Modal>
         </div>
     );
 };

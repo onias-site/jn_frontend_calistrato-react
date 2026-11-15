@@ -38,7 +38,7 @@ export interface ITabResumeStore {
     testLinkedinAddress: () => void;
     setNotAllowedCompany: (notAllowedCompany: string[]) => void;
 }
-const resumeTypes = [
+export const resumeTypes = [
     { id: 1, label: 'Tecnologia da Informação (Com curso técnico ou profissionalizante ou faculdade ou simples experiência comprovada)' },
     { id: 2, label: 'Recrutamento e seleção (Com curso técnico ou profissionalizante ou faculdade ou simples experiência comprovada)' },
     { id: 3, label: 'Outras profissões de nível Superior (Graduação ou Pós Graduação em faculdade e/ou universidade)' },

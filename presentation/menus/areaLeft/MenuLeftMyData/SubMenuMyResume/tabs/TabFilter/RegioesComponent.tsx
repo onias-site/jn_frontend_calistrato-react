@@ -19,7 +19,7 @@ export interface IRegioesStore {
 }
 
 // regiões metropolitanas da lista, sem "qualquer estado / cidade" (0) e sem home office (10)
-const totalDeRegioesMetropolitanas = 67;
+export const totalDeRegioesMetropolitanas = 67;
 
 // id da opção "aceito trabalhar em qualquer estado / cidade" e do home office
 export const TODAS_AS_REGIOES = '0';
