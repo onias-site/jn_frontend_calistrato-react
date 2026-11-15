@@ -4,6 +4,7 @@ import JnAjax from '@/app/JnAjax';
 import { ResumeRowCells, ResumeRowHeaders } from '../ResumeRowCells';
 import PageTitle from '@/presentation/layouts/page-title';
 import { decideSeeAll, getRecipientFromQuery, getSeeAllTitle } from './seeAllRecipient';
+import { GridPagination, paginate } from '@/presentation/components/source/GridPagination';
 
 type Situation = 'loading' | 'loaded' | 'noEmail' | 'notLogged' | 'error' | 'wrongAccount';
 
@@ -19,7 +20,8 @@ const messages: Record<Exclude<Situation, 'loaded' | 'wrongAccount'>, string> = 
  * os textos do e-mail (que mostra só os 30 primeiros). A lista foi gravada antes do envio e é lida pelo id, o e-mail do
  * recrutador; por isso exige login, e quem não está logado vê o modal de login, que repete a busca ao entrar.
  * O link do e-mail leva o destinatário (`?email=`): com outra conta logada, a tela avisa, sai dessa conta e abre o login
- * (até 2026-11-12 abria vazia, lendo a lista da conta errada).
+ * (até 2026-11-12 abria vazia, lendo a lista da conta errada). O grid é paginado no navegador (desde 2026-11-14), com a
+ * coluna # numerando a lista inteira, na ordem do e-mail.
  */
 export const ResumesOfTheWeek = () => {
     const [situation, setSituation] = useState<Situation>('loading');
@@ -27,6 +29,7 @@ export const ResumesOfTheWeek = () => {
     const [email, setEmail] = useState('');
     const [recipient, setRecipient] = useState('');
     const [wrongEmail, setWrongEmail] = useState('');
+    const [page, setPage] = useState(1);
 
     // sai da conta logada (que não é a do destinatário) e abre o login, que repete a busca ao entrar
     const loginAsTheRecipient = (expected: string, login: any) => {
@@ -53,6 +56,7 @@ export const ResumesOfTheWeek = () => {
         callbacks[200] = (response: any) => {
             setResumes(response.resumes || []);
             setEmail((JnAjax.getLogin() as any).email || '');
+            setPage(1);
             setSituation('loaded');
         };
         callbacks[404] = () => setSituation('noEmail');
@@ -98,6 +102,8 @@ export const ResumesOfTheWeek = () => {
         );
     }
 
+    const { first, pageRows } = paginate(resumes, page);
+
     return (
         <div>
             {title}
@@ -115,9 +121,9 @@ export const ResumesOfTheWeek = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {resumes.map((resume, index) => (
+                            {pageRows.map((resume, pageIndex) => (
                                 <tr key={resume.resumeId}>
-                                    <td className="text-center align-top">{index + 1}</td>
+                                    <td className="text-center align-top">{first + pageIndex + 1}</td>
                                     <ResumeRowCells resume={resume} />
                                     <td className="align-top">
                                         <div className={resume.viewed ? '' : 'font-semibold text-danger'}>{resume.lastView}</div>
@@ -132,6 +138,7 @@ export const ResumesOfTheWeek = () => {
                         </tbody>
                     </table>
                 </div>
+                <GridPagination total={resumes.length} page={page} onChange={setPage} />
             </div>
         </div>
     );
