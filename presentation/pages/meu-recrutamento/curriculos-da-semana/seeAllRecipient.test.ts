@@ -1,4 +1,4 @@
-import { decideSeeAll, getRecipientFromQuery, getSeeAllTitle } from './seeAllRecipient';
+import { decideSeeAll, getRecipientFromQuery, getSeeAllTitle, prefillTheLoginWithTheRecipient } from './seeAllRecipient';
 
 describe('tela Ver todos: título com o recrutador', () => {
     it('com a lista carregada: o e-mail da lista', () => {
@@ -41,5 +41,20 @@ describe('tela Ver todos: destinatário do link x conta logada', () => {
 
     it('link sem destinatário: carrega a lista da conta logada, como antes', () => {
         expect(decideSeeAll('', 'onias86@gmail.com')).toBe('load');
+    });
+});
+
+// 2026-11-16: um recrutador digitou no modal outro e-mail do mesmo domínio, sem cadastro, e desistiu
+describe('tela Ver todos: modal de login preenchido com o destinatário', () => {
+    it('preenche com o destinatário do link, em minúsculas', () => {
+        const filled: string[] = [];
+        prefillTheLoginWithTheRecipient(' Recrutador@Empresa.com.br ', (email) => filled.push(email));
+        expect(filled).toEqual(['recrutador@empresa.com.br']);
+    });
+
+    it('link antigo, sem destinatário: não mexe no modal', () => {
+        const filled: string[] = [];
+        prefillTheLoginWithTheRecipient('', (email) => filled.push(email));
+        expect(filled).toEqual([]);
     });
 });

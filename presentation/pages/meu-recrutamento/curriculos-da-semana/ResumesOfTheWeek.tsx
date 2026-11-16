@@ -4,7 +4,9 @@ import { Checkbox } from '@mantine/core';
 import JnAjax from '@/app/JnAjax';
 import { ResumeRowCells, ResumeRowHeaders } from '../ResumeRowCells';
 import PageTitle from '@/presentation/layouts/page-title';
-import { decideSeeAll, getRecipientFromQuery, getSeeAllTitle } from './seeAllRecipient';
+import { decideSeeAll, getRecipientFromQuery, getSeeAllTitle, prefillTheLoginWithTheRecipient } from './seeAllRecipient';
+import { ModalLoginStore } from '@/presentation/auth/ModalLogin';
+import { registerTheRecipientAnswers } from './registerTheRecipientAnswers';
 import { GridPagination, paginate } from '@/presentation/components/source/GridPagination';
 
 type Situation = 'loading' | 'loaded' | 'noEmail' | 'notLogged' | 'error' | 'wrongAccount';
@@ -39,6 +41,12 @@ export const ResumesOfTheWeek = () => {
     const [page, setPage] = useState(1);
     const [onlyNotViewed, setOnlyNotViewed] = useState(false);
 
+    // abre o login já com o e-mail do destinatário do link; ao entrar, repete a busca
+    const askTheRecipientLogin = (expected: string) => {
+        prefillTheLoginWithTheRecipient(expected, ModalLoginStore.getState().setEmail);
+        JnAjax.getHandler401(() => load(expected))();
+    };
+
     // sai da conta logada (que não é a do destinatário) e abre o login, que repete a busca ao entrar
     const loginAsTheRecipient = (expected: string, login: any) => {
         setWrongEmail(login.email);
@@ -49,7 +57,7 @@ export const ResumesOfTheWeek = () => {
         const ignore = () => {};
         const logoutCallbacks: any = { setLoading: ignore, setNotLoading: ignore, 401: ignore, onUnexpectedHttpStatus: ignore };
         JnAjax.doAnAjaxRequest(`login/${login.email}/${login.sessionToken}`, logoutCallbacks, 'DELETE', null as any, {}, 'http://localhost:8082');
-        JnAjax.getHandler401(() => load(expected))();
+        askTheRecipientLogin(expected);
     };
 
     const load = (expected: string = recipient) => {
@@ -72,7 +80,7 @@ export const ResumesOfTheWeek = () => {
             // sem login o JnAjax chama o 401 antes de enviar, e não desliga o carregamento que já ligou
             JnAjax.setNotLoading()();
             setSituation('notLogged');
-            JnAjax.getHandler401(() => load(expected))();
+            askTheRecipientLogin(expected);
         };
         callbacks['onUnexpectedHttpStatus'] = () => setSituation('error');
         // GET sem corpo: com {} o jQuery poria "?{}" na URL
@@ -82,6 +90,8 @@ export const ResumesOfTheWeek = () => {
     useEffect(() => {
         const expected = getRecipientFromQuery(window.location.search);
         setRecipient(expected);
+        // o destinatário é recrutador: grava as suas respostas do pré-cadastro, se ainda não as tem
+        registerTheRecipientAnswers(expected);
         load(expected);
     }, []);
 

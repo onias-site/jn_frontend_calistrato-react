@@ -24,6 +24,16 @@ export const getSeeAllTitle = (listEmail: string | null | undefined, recipient: 
 };
 
 /**
+ * Preenche o e-mail do modal de login com o destinatário do link (pedido de 2026-11-16: em 2026-11-16 um recrutador
+ * digitou no modal outro e-mail do mesmo domínio, sem cadastro, e desistiu). Link sem destinatário não mexe no modal.
+ */
+export const prefillTheLoginWithTheRecipient = (recipient: string, setLoginEmail: (email: string) => void): void => {
+    const expected = normalize(recipient);
+    if (!expected) return;
+    setLoginEmail(expected);
+};
+
+/**
  * `load` quando a lista pode ser lida: link sem destinatário, ninguém logado (o 401 abre o login) ou a conta logada é
  * a do destinatário. `wrongAccount` quando outra conta está logada.
  */
