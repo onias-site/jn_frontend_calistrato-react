@@ -397,11 +397,24 @@ const getAllPendingRequirements = (stateSkills: any, stateResume: any, stateLang
     return [...otherTabsPending, ...stateSalary.getPendingRequirements()];
 };
 
+/**
+ * Quando começou o salvamento do currículo que ainda espera a resposta (0 = nenhum). Um segundo clique em "Salvar dados"
+ * nesse meio tempo é ignorado: em 2026-11-16 um duplo envio (70 ms) contou o mesmo currículo duas vezes em produção. A
+ * trava cai na resposta, ou sozinha depois de RESUME_SAVE_LOCK_MS, se a resposta nunca chegar.
+ */
+let resumeSaveStartedAt = 0;
+const RESUME_SAVE_LOCK_MS = 30000;
+
 const saveResume = (stateSkills: any, stateResume: any, stateLanguage: any, stateSalary: any, stateRegioes: any, stateOptions: any, onSaved: () => void) => {
     const formErrors = getAllPendingRequirements(stateSkills, stateResume, stateLanguage, stateSalary, stateRegioes, stateOptions);
     if (formErrors.length) {
         return formErrors;
     }
+    const saveInProgress = Date.now() - resumeSaveStartedAt < RESUME_SAVE_LOCK_MS;
+    if (saveInProgress) {
+        return [];
+    }
+    resumeSaveStartedAt = Date.now();
     // o backend descarta o id de cada idioma
     const spokenLanguage = stateLanguage.getSelectedLanguages();
     // as habilidades só existem para o currículo de tecnologia: as de um texto colado antes de trocar o tipo não vão
@@ -456,7 +469,14 @@ const saveResume = (stateSkills: any, stateResume: any, stateLanguage: any, stat
     const { resumeStatus } = SubMenuMyResumeStore.getState();
     const isUpdate = resumeStatus === 'active' || resumeStatus === 'inactive';
 
-    callbacks['retryAfterAuthentication'] = () => saveResume(stateSkills, stateResume, stateLanguage, stateSalary, stateRegioes, stateOptions, onSaved);
+    const releaseTheSave = () => {
+        resumeSaveStartedAt = 0;
+    };
+    callbacks['afterHttpRequest'] = releaseTheSave;
+    callbacks['retryAfterAuthentication'] = () => {
+        releaseTheSave();
+        saveResume(stateSkills, stateResume, stateLanguage, stateSalary, stateRegioes, stateOptions, onSaved);
+    };
     callbacks[429] = getHandler429('update');
     callbacks[200] = () => {
         isUpdate && recordResumeDailyAction(currentEmail(), 'update');
