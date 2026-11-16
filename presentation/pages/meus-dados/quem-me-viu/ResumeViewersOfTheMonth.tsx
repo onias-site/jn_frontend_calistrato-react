@@ -78,7 +78,7 @@ export const ResumeViewersOfTheMonth = () => {
             </button>
             <Modal visible={howToVisible} setVisible={setHowToVisible} title="Como fazer?">
                 <ol className="list-none space-y-2">
-                    <li className="flex flex-wrap items-center gap-2">
+                    <li>
                         <span>
                             1) Clique no bot{' '}
                             <a href={USER_BOT_LINK} target="_blank" rel="noopener noreferrer" className="text-primary underline">
@@ -86,16 +86,16 @@ export const ResumeViewersOfTheMonth = () => {
                             </a>{' '}
                             (ou abra o telegram e procure o bot {USER_BOT_NAME})
                         </span>
-                        <button type="button" className="btn btn-outline-dark btn-sm gap-2" onClick={copyBotName}>
+                        <button type="button" className="btn btn-outline-dark btn-sm ml-2 inline-flex gap-2 align-middle" onClick={copyBotName}>
                             <IconCopy className="h-4 w-4" />
                             Copiar nome do bot
                         </button>
                     </li>
-                    <li className="flex flex-wrap items-center gap-2">
+                    <li>
                         <span>
                             2) Execute o comando <code className="break-all">{botCommand}</code>
                         </span>
-                        <button type="button" className="btn btn-outline-dark btn-sm gap-2" onClick={copyBotCommand}>
+                        <button type="button" className="btn btn-outline-dark btn-sm ml-2 inline-flex gap-2 align-middle" onClick={copyBotCommand}>
                             <IconCopy className="h-4 w-4" />
                             Copiar comando
                         </button>
