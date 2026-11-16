@@ -69,7 +69,7 @@ export const ResumeViewersOfTheMonth = () => {
                     <a href={USER_BOT_LINK} target="_blank" rel="noopener noreferrer" className="text-primary underline">
                         {USER_BOT_LINK}
                     </a>{' '}
-                    e então execute o comando <code className="break-all">/receberMensagens {loggedEmail}</code>
+                    e então execute o comando <code className="break-all">/receberMensagens {loggedEmail}</code> ou, abra o telegram e procure o bot onias_site_prd_bot
                 </p>
             </Modal>
             <MonthPicker id="resumeViewersMonth" month={month} onChange={setMonth} />
