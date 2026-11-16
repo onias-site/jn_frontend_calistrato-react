@@ -82,9 +82,11 @@ export const ResumeViewersOfTheMonth = () => {
                         </a>{' '}
                         (ou abra o telegram e procure o bot onias_site_user_prd_bot)
                     </li>
-                    <li>
-                        2) Execute o comando <code className="break-all">{botCommand}</code>{' '}
-                        <button type="button" className="btn btn-outline-dark btn-sm mt-2 gap-2" onClick={copyBotCommand}>
+                    <li className="flex flex-wrap items-center gap-2">
+                        <span>
+                            2) Execute o comando <code className="break-all">{botCommand}</code>
+                        </span>
+                        <button type="button" className="btn btn-outline-dark btn-sm gap-2" onClick={copyBotCommand}>
                             <IconCopy className="h-4 w-4" />
                             Copiar
                         </button>
