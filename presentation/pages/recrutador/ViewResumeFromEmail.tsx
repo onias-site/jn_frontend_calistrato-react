@@ -1,18 +1,20 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { ConfirmModal } from '@/presentation/components/source/ConfirmModal';
+import { Modal } from '@/presentation/components/source/Modal';
+import { ResumePreview, previewDataFromSavedResume } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/ResumePreview';
 import JnAjax from '@/app/JnAjax';
 
 // os limites do apelido em vis_viewed_resume
 const ALIAS_MIN_LENGTH = 5;
 const ALIAS_MAX_LENGTH = 200;
 
-type Situation = 'confirming' | 'opening' | 'opened' | 'saved' | 'canceled' | 'invalidLink' | 'notFound' | 'invalidLinkedin' | 'inactiveView' | 'error';
+type Situation = 'confirming' | 'opening' | 'previewing' | 'opened' | 'saved' | 'canceled' | 'invalidLink' | 'notFound' | 'invalidLinkedin' | 'inactiveView' | 'error';
 
 // a denúncia de LinkedIn inválido: confirmando, enviando, aceita ou falha
 type Report = 'none' | 'confirming' | 'sending' | 'sent' | 'error';
 
-const messages: Record<Exclude<Situation, 'confirming' | 'opened'>, string> = {
+const messages: Record<Exclude<Situation, 'confirming' | 'previewing' | 'opened'>, string> = {
     opening: 'Abrindo o currículo...',
     invalidLinkedin: 'Este perfil foi confirmado com endereço de LinkedIn inacessível. Pedimos desculpas.',
     saved: 'Visualização salva. Nos próximos e-mails este currículo aparecerá com o apelido que você deu.',
@@ -32,8 +34,9 @@ export const getLinkParameters = () => {
 /**
  * A página aberta pelo link "Ver currículo" (ou pelo apelido) do e-mail de currículos. Antes de tudo pede a confirmação
  * de quem clicou: os robôs dos provedores de e-mail clicam em todos os links, e a visualização só conta quando uma
- * pessoa confirma. Confirmada, abre o LinkedIn do currículo numa aba nova (aberta ainda no clique, para o navegador não
- * bloquear) e grava a visualização; esta página fica com o apelido do currículo, que o recrutador pode trocar. Depois
+ * pessoa confirma. Confirmada, grava a visualização e mostra num modal a prévia do currículo (a mesma do "Ver detalhes"
+ * de meu-recrutamento/curriculos-visualizados, com o LinkedIn; até 2026-11-15 o LinkedIn abria numa aba nova); fechado o
+ * modal, esta página fica com o apelido do currículo, que o recrutador pode trocar, e o botão de salvar. Depois
  * que o recrutador reporta o LinkedIn, a visualização fica entre as inativas e o botão de salvá-la fica desabilitado.
  */
 export const ViewResumeFromEmail = () => {
@@ -43,33 +46,27 @@ export const ViewResumeFromEmail = () => {
     const [report, setReport] = useState<Report>('none');
     // a visualização está entre as inativas (o recrutador reportou o LinkedIn): o back end não a salva mais
     const [inactiveView, setInactiveView] = useState(false);
+    // os campos da prévia do currículo, mostrados no modal antes do apelido
+    const [preview, setPreview] = useState<any>({});
 
     useEffect(() => setLink(getLinkParameters()), []);
 
-    const failWith = (newTab: Window | null, failure: Situation) => () => {
-        newTab?.close();
-        setSituation(failure);
-    };
+    const failWith = (failure: Situation) => () => setSituation(failure);
 
     const openTheResume = () => {
-        // a aba nasce no clique da confirmação: aberta depois da resposta, seria barrada como pop-up
-        const newTab = window.open('', '_blank');
         setSituation('opening');
         const callbacks: any = {};
         callbacks[200] = (response: any) => {
-            if (newTab) {
-                newTab.opener = null;
-                newTab.location.href = response.linkedinAddress;
-            }
+            setPreview(response.preview || { linkedinAddress: response.linkedinAddress });
             setAlias(response.alias || '');
             setInactiveView(response.inactiveView == true);
-            setSituation('opened');
+            setSituation('previewing');
         };
-        callbacks[401] = failWith(newTab, 'invalidLink');
-        callbacks[404] = failWith(newTab, 'notFound');
-        callbacks[410] = failWith(newTab, 'invalidLinkedin');
-        callbacks[422] = failWith(newTab, 'invalidLink');
-        callbacks['onUnexpectedHttpStatus'] = failWith(newTab, 'error');
+        callbacks[401] = failWith('invalidLink');
+        callbacks[404] = failWith('notFound');
+        callbacks[410] = failWith('invalidLinkedin');
+        callbacks[422] = failWith('invalidLink');
+        callbacks['onUnexpectedHttpStatus'] = failWith('error');
         JnAjax.doAnAjaxRequest('recruiter-email-link/view-resume', callbacks, 'POST', link, {}, 'http://localhost:8081');
     };
 
@@ -111,16 +108,20 @@ export const ViewResumeFromEmail = () => {
                 visible={situation == 'confirming'}
                 onHide={() => setSituation((current) => (current == 'confirming' ? 'canceled' : current))}
                 header="Ver currículo"
-                message="Deseja abrir este currículo? Ele será aberto numa nova aba, e esta visualização ficará registrada para você."
+                message="Deseja abrir este currículo? Esta visualização ficará registrada para você."
                 acceptLabel="Sim, abrir"
                 rejectLabel="Não"
                 accept={openTheResume}
                 reject={() => setSituation('canceled')}
             />
+            {/* fechado o modal da prévia, a página mostra o apelido e o botão de salvar a visualização */}
+            <Modal visible={situation == 'previewing'} setVisible={(visible) => !visible && setSituation('opened')} title={alias} size="90rem">
+                <ResumePreview data={previewDataFromSavedResume(preview)} />
+            </Modal>
             <h5 className="mb-4 text-lg font-semibold">Currículo do e-mail de currículos</h5>
             {situation == 'opened' && (
                 <div className="space-y-3">
-                    <p>O currículo foi aberto numa nova aba. Dê a ele um apelido que você reconheça nos próximos e-mails (nós não guardamos dados pessoais de forma legível):</p>
+                    <p>Dê a este currículo um apelido que você reconheça nos próximos e-mails (nós não guardamos dados pessoais de forma legível):</p>
                     <input type="text" className="form-input" value={alias} maxLength={ALIAS_MAX_LENGTH} onChange={(event) => setAlias(event.target.value)} />
                     <p className="text-xs text-white-dark">
                         De {ALIAS_MIN_LENGTH} a {ALIAS_MAX_LENGTH} caracteres ({aliasLength} usados).
@@ -131,7 +132,7 @@ export const ViewResumeFromEmail = () => {
                     {inactiveView && <p className="text-sm text-white-dark">{messages.inactiveView}</p>}
                 </div>
             )}
-            {situation != 'opened' && situation != 'confirming' && <p>{messages[situation]}</p>}
+            {situation != 'opened' && situation != 'confirming' && situation != 'previewing' && <p>{messages[situation]}</p>}
             <ConfirmModal
                 visible={canReport && report == 'confirming'}
                 onHide={() => setReport((current) => (current == 'confirming' ? 'none' : current))}
