@@ -5,6 +5,8 @@ import JnAjax from '@/app/JnAjax';
 import { ModalLoginStore } from '@/presentation/auth/ModalLogin';
 import { MonthPicker, currentMonth, monthParameter } from '@/presentation/components/month-picker/MonthPicker';
 import { Modal } from '@/presentation/components/source/Modal';
+import { notify } from '@/presentation/components/source/notify';
+import IconCopy from '@/presentation/icons/icon-copy';
 
 // o bot dos usuários de produção: o comando /receberMensagens liga o chat ao e-mail e passa a receber cada visualização nova
 const USER_BOT_LINK = 'https://t.me/onias_site_user_prd_bot';
@@ -33,6 +35,14 @@ export const ResumeViewersOfTheMonth = () => {
     const router = useRouter();
     // o e-mail é lido ao abrir o modal: quem entra pelo modal de login já aparece com o e-mail certo
     const loggedEmail: string = howToVisible ? (JnAjax.getLogin() as any).email || '' : '';
+    const botCommand = `/receberMensagens ${loggedEmail}`;
+    const copyBotCommand = () => {
+        const copied = () => notify({ summary: 'Comando copiado', detail: 'Cole-o na conversa com o bot no Telegram.', life: 4000 });
+        const failed = () => notify({ summary: 'Não foi possível copiar', detail: 'Selecione o comando e copie-o manualmente.', severity: 'warn' });
+        // o clipboard só existe em contexto seguro (https ou localhost)
+        if (!navigator.clipboard) return failed();
+        navigator.clipboard.writeText(botCommand).then(copied, failed);
+    };
 
     const load = (chosenMonth: string) => () => {
         setSituation('loading');
@@ -73,7 +83,11 @@ export const ResumeViewersOfTheMonth = () => {
                         (ou abra o telegram e procure o bot onias_site_user_prd_bot)
                     </li>
                     <li>
-                        2) Execute o comando <code className="break-all">/receberMensagens {loggedEmail}</code>
+                        2) Execute o comando <code className="break-all">{botCommand}</code>{' '}
+                        <button type="button" className="btn btn-outline-dark btn-sm mt-2 gap-2" onClick={copyBotCommand}>
+                            <IconCopy className="h-4 w-4" />
+                            Copiar
+                        </button>
                     </li>
                 </ol>
             </Modal>
