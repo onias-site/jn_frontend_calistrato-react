@@ -4,6 +4,10 @@ import { useRouter } from 'next/navigation';
 import JnAjax from '@/app/JnAjax';
 import { ModalLoginStore } from '@/presentation/auth/ModalLogin';
 import { MonthPicker, currentMonth, monthParameter } from '@/presentation/components/month-picker/MonthPicker';
+import { Modal } from '@/presentation/components/source/Modal';
+
+// o bot dos usuários de produção: o comando /receberMensagens liga o chat ao e-mail e passa a receber cada visualização nova
+const USER_BOT_LINK = 'https://t.me/onias_site_prd_bot';
 
 type Situation = 'loading' | 'loaded' | 'notLogged' | 'error';
 
@@ -25,7 +29,10 @@ export const ResumeViewersOfTheMonth = () => {
     const [month, setMonth] = useState(currentMonth());
     const [situation, setSituation] = useState<Situation>('loading');
     const [viewers, setViewers] = useState<Viewer[]>([]);
+    const [howToVisible, setHowToVisible] = useState(false);
     const router = useRouter();
+    // o e-mail é lido ao abrir o modal: quem entra pelo modal de login já aparece com o e-mail certo
+    const loggedEmail: string = howToVisible ? (JnAjax.getLogin() as any).email || '' : '';
 
     const load = (chosenMonth: string) => () => {
         setSituation('loading');
@@ -53,6 +60,18 @@ export const ResumeViewersOfTheMonth = () => {
 
     return (
         <div className="panel mt-6">
+            <button type="button" className="mb-4 text-primary underline hover:no-underline" onClick={() => setHowToVisible(true)}>
+                Receber notificações instantâneas de nova visualização no celular
+            </button>
+            <Modal visible={howToVisible} setVisible={setHowToVisible} title="Como fazer?">
+                <p>
+                    Clique no bot{' '}
+                    <a href={USER_BOT_LINK} target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                        {USER_BOT_LINK}
+                    </a>{' '}
+                    e então execute o comando <code className="break-all">/receberMensagens {loggedEmail}</code>
+                </p>
+            </Modal>
             <MonthPicker id="resumeViewersMonth" month={month} onChange={setMonth} />
             {situation != 'loaded' ? (
                 <div>{messages[situation]}</div>
