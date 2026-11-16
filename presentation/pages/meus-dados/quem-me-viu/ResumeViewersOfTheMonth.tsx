@@ -9,7 +9,8 @@ import { notify } from '@/presentation/components/source/notify';
 import IconCopy from '@/presentation/icons/icon-copy';
 
 // o bot dos usuários de produção: o comando /receberMensagens liga o chat ao e-mail e passa a receber cada visualização nova
-const USER_BOT_LINK = 'https://t.me/onias_site_user_prd_bot';
+const USER_BOT_NAME = 'onias_site_user_prd_bot';
+const USER_BOT_LINK = `https://t.me/${USER_BOT_NAME}`;
 
 type Situation = 'loading' | 'loaded' | 'notLogged' | 'error';
 
@@ -36,13 +37,15 @@ export const ResumeViewersOfTheMonth = () => {
     // o e-mail é lido ao abrir o modal: quem entra pelo modal de login já aparece com o e-mail certo
     const loggedEmail: string = howToVisible ? (JnAjax.getLogin() as any).email || '' : '';
     const botCommand = `/receberMensagens ${loggedEmail}`;
-    const copyBotCommand = () => {
-        const copied = () => notify({ summary: 'Comando copiado', detail: 'Cole-o na conversa com o bot no Telegram.', life: 4000 });
-        const failed = () => notify({ summary: 'Não foi possível copiar', detail: 'Selecione o comando e copie-o manualmente.', severity: 'warn' });
+    const copy = (text: string, summary: string, detail: string) => () => {
+        const copied = () => notify({ summary, detail, life: 4000 });
+        const failed = () => notify({ summary: 'Não foi possível copiar', detail: 'Selecione o texto e copie-o manualmente.', severity: 'warn' });
         // o clipboard só existe em contexto seguro (https ou localhost)
         if (!navigator.clipboard) return failed();
-        navigator.clipboard.writeText(botCommand).then(copied, failed);
+        navigator.clipboard.writeText(text).then(copied, failed);
     };
+    const copyBotName = copy(USER_BOT_NAME, 'Nome do bot copiado', 'Cole-o na busca do Telegram.');
+    const copyBotCommand = copy(botCommand, 'Comando copiado', 'Cole-o na conversa com o bot no Telegram.');
 
     const load = (chosenMonth: string) => () => {
         setSituation('loading');
@@ -75,12 +78,18 @@ export const ResumeViewersOfTheMonth = () => {
             </button>
             <Modal visible={howToVisible} setVisible={setHowToVisible} title="Como fazer?">
                 <ol className="list-none space-y-2">
-                    <li>
-                        1) Clique no bot{' '}
-                        <a href={USER_BOT_LINK} target="_blank" rel="noopener noreferrer" className="text-primary underline">
-                            {USER_BOT_LINK}
-                        </a>{' '}
-                        (ou abra o telegram e procure o bot onias_site_user_prd_bot)
+                    <li className="flex flex-wrap items-center gap-2">
+                        <span>
+                            1) Clique no bot{' '}
+                            <a href={USER_BOT_LINK} target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                                {USER_BOT_LINK}
+                            </a>{' '}
+                            (ou abra o telegram e procure o bot {USER_BOT_NAME})
+                        </span>
+                        <button type="button" className="btn btn-outline-dark btn-sm gap-2" onClick={copyBotName}>
+                            <IconCopy className="h-4 w-4" />
+                            Copiar nome do bot
+                        </button>
                     </li>
                     <li className="flex flex-wrap items-center gap-2">
                         <span>
