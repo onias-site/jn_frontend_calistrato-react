@@ -88,7 +88,7 @@ export const ResumeViewersOfTheMonth = () => {
                         </span>
                         <button type="button" className="btn btn-outline-dark btn-sm gap-2" onClick={copyBotCommand}>
                             <IconCopy className="h-4 w-4" />
-                            Copiar
+                            Copiar comando
                         </button>
                     </li>
                 </ol>
