@@ -64,13 +64,17 @@ export const ResumeViewersOfTheMonth = () => {
                 Receber notificações instantâneas de nova visualização no celular
             </button>
             <Modal visible={howToVisible} setVisible={setHowToVisible} title="Como fazer?">
-                <p>
-                    Clique no bot{' '}
-                    <a href={USER_BOT_LINK} target="_blank" rel="noopener noreferrer" className="text-primary underline">
-                        {USER_BOT_LINK}
-                    </a>{' '}
-                    e então execute o comando <code className="break-all">/receberMensagens {loggedEmail}</code> ou, abra o telegram e procure o bot onias_site_user_prd_bot
-                </p>
+                <ol className="list-none space-y-2">
+                    <li>
+                        1) Clique no bot{' '}
+                        <a href={USER_BOT_LINK} target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                            {USER_BOT_LINK}
+                        </a>
+                    </li>
+                    <li>
+                        2) Execute o comando <code className="break-all">/receberMensagens {loggedEmail}</code> ou... Abra o telegram e procure o bot onias_site_user_prd_bot
+                    </li>
+                </ol>
             </Modal>
             <MonthPicker id="resumeViewersMonth" month={month} onChange={setMonth} />
             {situation != 'loaded' ? (
