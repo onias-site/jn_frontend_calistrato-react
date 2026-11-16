@@ -69,10 +69,11 @@ export const ResumeViewersOfTheMonth = () => {
                         1) Clique no bot{' '}
                         <a href={USER_BOT_LINK} target="_blank" rel="noopener noreferrer" className="text-primary underline">
                             {USER_BOT_LINK}
-                        </a>
+                        </a>{' '}
+                        (ou abra o telegram e procure o bot onias_site_user_prd_bot)
                     </li>
                     <li>
-                        2) Execute o comando <code className="break-all">/receberMensagens {loggedEmail}</code> ou... Abra o telegram e procure o bot onias_site_user_prd_bot
+                        2) Execute o comando <code className="break-all">/receberMensagens {loggedEmail}</code>
                     </li>
                 </ol>
             </Modal>
