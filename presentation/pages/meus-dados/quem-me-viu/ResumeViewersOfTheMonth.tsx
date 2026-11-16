@@ -7,7 +7,7 @@ import { MonthPicker, currentMonth, monthParameter } from '@/presentation/compon
 import { Modal } from '@/presentation/components/source/Modal';
 
 // o bot dos usuários de produção: o comando /receberMensagens liga o chat ao e-mail e passa a receber cada visualização nova
-const USER_BOT_LINK = 'https://t.me/onias_site_prd_bot';
+const USER_BOT_LINK = 'https://t.me/onias_site_user_prd_bot';
 
 type Situation = 'loading' | 'loaded' | 'notLogged' | 'error';
 
@@ -69,7 +69,7 @@ export const ResumeViewersOfTheMonth = () => {
                     <a href={USER_BOT_LINK} target="_blank" rel="noopener noreferrer" className="text-primary underline">
                         {USER_BOT_LINK}
                     </a>{' '}
-                    e então execute o comando <code className="break-all">/receberMensagens {loggedEmail}</code> ou, abra o telegram e procure o bot onias_site_prd_bot
+                    e então execute o comando <code className="break-all">/receberMensagens {loggedEmail}</code> ou, abra o telegram e procure o bot onias_site_user_prd_bot
                 </p>
             </Modal>
             <MonthPicker id="resumeViewersMonth" month={month} onChange={setMonth} />
