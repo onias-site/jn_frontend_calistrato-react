@@ -6,7 +6,12 @@ import JnAjax from '@/app/JnAjax';
 import { HelpButton } from '@/presentation/components/source/HelpButton';
 import { percentLabel, pieTotal } from '../skills/skillStatisticsData';
 import { daysOfTheMonth, lastMonths, monthTitle } from '../oferta-x-demanda/supplyAndDemandData';
-import { Curiosities as CuriositiesData, newUsersSeries, pies, slicesOf, totalLabel } from './curiositiesData';
+import { Curiosities as CuriositiesData, PieKind, newUsersSeries, pies, slicesOf, totalLabel } from './curiositiesData';
+import { HighlightsPanel } from './HighlightsPanel';
+import { RankingPanel } from './RankingPanel';
+import { ChannelGoalPanel } from './ChannelGoalPanel';
+import { ContactUsStatusPanel } from './ContactUsStatusPanel';
+import { NewUsersWeekdayPanel } from './NewUsersWeekdayPanel';
 
 const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
@@ -88,6 +93,16 @@ const PiePanel = ({ title, help, counts, labels, excluded }: { title: string; he
     );
 };
 
+type ChartProps = { title: string; help?: string; counts?: Record<string, number>; labels?: Record<string, string>; excluded?: string[]; curiosities: CuriositiesData };
+
+/** O painel de cada tipo de gráfico (PieKind): a pizza é o padrão; os demais vieram das sugestões de 2026-11-17. */
+const panelsByKind: Record<PieKind, (props: ChartProps) => React.ReactElement> = {
+    pie: (props) => <PiePanel {...props} />,
+    ranking: (props) => <RankingPanel {...props} />,
+    contactUsStatus: (props) => <ContactUsStatusPanel opened={props.counts} pending={props.curiosities.pendingContactUsTypes} />,
+    channelGoal: (props) => <ChannelGoalPanel counts={props.counts} />,
+};
+
 /**
  * A tela Curiosidades: os novos usuários no tempo e 10 pizzas, todos de uma só leitura (GET statistics/curiosities, que
  * busca os grupos do jn_grouper por id), guardada no localStorage por 1 hora (JnAjax.doAPersistedRequest).
@@ -110,11 +125,17 @@ export const Curiosities = () => {
     if (situation == 'error') return <div className="panel mt-6 text-danger">Não foi possível carregar as curiosidades.</div>;
     return (
         <div className="panel mt-6">
+            <HighlightsPanel curiosities={curiosities} />
             <NewUsersPanel curiosities={curiosities} />
+            <div className="mb-4">
+                <NewUsersWeekdayPanel byDay={curiosities.newUsersByDay} />
+            </div>
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                {pies.map((pie) => (
-                    <PiePanel key={pie.id} title={pie.title} help={pie.help} counts={curiosities[pie.id]} labels={pie.labels} excluded={pie.excluded} />
-                ))}
+                {pies.map((pie) => {
+                    const counts = pie.transform ? pie.transform(curiosities[pie.id]) : curiosities[pie.id];
+                    const Panel = panelsByKind[pie.kind || 'pie'];
+                    return <Panel key={pie.id} title={pie.title} help={pie.help} counts={counts} labels={pie.labels} excluded={pie.excluded} curiosities={curiosities} />;
+                })}
             </div>
         </div>
     );

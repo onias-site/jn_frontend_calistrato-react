@@ -1,9 +1,8 @@
-import { MAX_SLICES, OTHERS, newUsersSeries, pies, slicesOf, totalLabel } from './curiositiesData';
+import { MAX_SLICES, OTHERS, newUsersSeries, pies, situationPie, slicesOf, totalLabel } from './curiositiesData';
 
 describe('curiositiesData', () => {
     it('ordena as fatias da maior para a menor e usa os rótulos', () => {
-        const situation = pies.find((pie) => pie.id == 'resumeSituation');
-        expect(slicesOf({ inactive: 2, active: 51 }, situation?.labels)).toEqual([
+        expect(slicesOf({ inactive: 2, active: 51 }, situationPie.labels)).toEqual([
             { key: 'active', label: 'Ativo', total: 51 },
             { key: 'inactive', label: 'Inativo', total: 2 },
         ]);
@@ -33,11 +32,12 @@ describe('curiositiesData', () => {
         const areas = pies.find((pie) => pie.id == 'resumeTypes');
         const domains = pies.find((pie) => pie.id == 'viewerDomains');
         expect(slicesOf({ '1': 45 }, areas?.labels)[0].label).toBe('Tecnologia da Informação');
-        expect(slicesOf({ freelancer: 52, 'onias.site': 39 }, domains?.labels).map((slice) => slice.label)).toEqual(['Recrutadores com e-mail pessoal', 'onias.site']);
-        expect(pies.find((pie) => pie.id == 'resumeSituation')?.title).toBe('Situação do Currículo');
+        // 2026-11-17: a equipe Onias.Site fica fora das empresas que veem currículos
+        expect(slicesOf({ freelancer: 52, 'onias.site': 39 }, domains?.labels, domains?.excluded).map((slice) => slice.label)).toEqual(['Recrutadores com e-mail pessoal']);
+        expect(situationPie.title).toBe('Situação do Currículo');
     });
 
-    it('mostra as 10 pizzas na ordem pedida em 2026-11-17', () => {
+    it('mostra os gráficos na ordem pedida em 2026-11-17, com origem x objetivo e sem a situação do currículo (virou cartão)', () => {
         expect(pies.map((pie) => pie.title)).toEqual([
             'Empresas que mais veem currículos',
             'Consultorias / Empresas já contratantes',
@@ -45,8 +45,8 @@ describe('curiositiesData', () => {
             'Chamados abertos por tipo',
             'Objetivos dos usuários',
             'Origem do usuário',
+            'Origem x objetivo do usuário',
             'Áreas dos currículos',
-            'Situação do Currículo',
             'Skills Evitadas',
             'DDDs do currículo',
         ]);
