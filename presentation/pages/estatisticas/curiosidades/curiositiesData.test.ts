@@ -12,6 +12,13 @@ describe('curiositiesData', () => {
     it('usa os rótulos do combo dos chamados', () => {
         const tickets = pies.find((pie) => pie.id == 'contactUsTypes');
         expect(slicesOf({ reportBug: 1 }, tickets?.labels)[0].label).toBe('Bug');
+        // 2026-11-17: os chamados do vis, com os textos do combo da tela de chamados, e uma fatia por opção, sem "Outras"
+        const counts = { reportBug: 1, makeCompliment: 1, makeCriticism: 1, makeSuggestion: 1, makeComment: 1, clarifyDoubts: 1, hierarchyAdd: 1, hierarchyRemove: 1, skillSuggestion: 1, invalidLinkedin: 1 };
+        const slices = slicesOf(counts, tickets?.labels, tickets?.excluded, tickets?.maxSlices);
+        expect(slices).toHaveLength(10);
+        expect(slices.map((slice) => slice.label)).toEqual(
+            expect.arrayContaining(['Associação de hierarquia', 'Dissociação de hierarquia', 'Sugestão de habilidade', 'LinkedIn inválido']),
+        );
     });
 
     it('junta o que passa do limite em Outras', () => {

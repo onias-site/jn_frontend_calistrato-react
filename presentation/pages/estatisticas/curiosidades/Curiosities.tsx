@@ -14,7 +14,8 @@ const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false })
 
 const API = 'http://localhost:8081';
 
-const sliceColors = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#8a8a86'];
+// 10 cores: a pizza dos chamados tem uma fatia por opção do combo da tela de chamados
+const sliceColors = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#8a8a86', '#0097a7', '#a0522d'];
 
 const fontFamily = 'var(--font-nunito), ui-sans-serif, system-ui, sans-serif';
 
@@ -62,8 +63,8 @@ const NewUsersPanel = ({ curiosities }: { curiosities: CuriositiesData }) => {
 };
 
 /** Uma pizza, com o "?" ao lado do título quando há explicação e o total geral das fatias. */
-const PiePanel = ({ title, help, counts, labels, excluded }: { title: string; help?: string; counts?: Record<string, number>; labels?: Record<string, string>; excluded?: string[] }) => {
-    const slices = slicesOf(counts, labels, excluded);
+const PiePanel = ({ title, help, counts, labels, excluded, maxSlices }: { title: string; help?: string; counts?: Record<string, number>; labels?: Record<string, string>; excluded?: string[]; maxSlices?: number }) => {
+    const slices = slicesOf(counts, labels, excluded, maxSlices);
     const values = slices.map((slice) => slice.total);
     const total = pieTotal(values);
 
@@ -91,7 +92,7 @@ const PiePanel = ({ title, help, counts, labels, excluded }: { title: string; he
     );
 };
 
-type ChartProps = { title: string; help?: string; counts?: Record<string, number>; labels?: Record<string, string>; excluded?: string[] };
+type ChartProps = { title: string; help?: string; counts?: Record<string, number>; labels?: Record<string, string>; excluded?: string[]; maxSlices?: number };
 
 /** O painel de cada tipo de gráfico (PieKind): a pizza é o padrão. */
 const panelsByKind: Record<PieKind, (props: ChartProps) => React.ReactElement> = {
@@ -126,7 +127,7 @@ export const Curiosities = () => {
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 {pies.map((pie) => {
                     const Panel = panelsByKind[pie.kind || 'pie'];
-                    return <Panel key={pie.id} title={pie.title} help={pie.help} counts={curiosities[pie.id]} labels={pie.labels} excluded={pie.excluded} />;
+                    return <Panel key={pie.id} title={pie.title} help={pie.help} counts={curiosities[pie.id]} labels={pie.labels} excluded={pie.excluded} maxSlices={pie.maxSlices} />;
                 })}
             </div>
         </div>
