@@ -1,6 +1,5 @@
 import { CONTACT_US_TYPES } from '@/presentation/layouts/contactUsTypes';
 import { Period, resumeTypes } from '../oferta-x-demanda/supplyAndDemandData';
-import { OWN_DOMAINS, cleanCompanies } from './moreCuriositiesData';
 
 /** A resposta de GET statistics/curiosities: um mapa {chave: total} por gráfico. */
 export type Curiosities = Record<string, Record<string, number>>;
@@ -25,7 +24,8 @@ const situations: Record<string, string> = { active: 'Ativo', inactive: 'Inativo
 
 const viewerDomains: Record<string, string> = { freelancer: 'Recrutadores com e-mail pessoal' };
 
-const contactUsTypes: Record<string, string> = Object.fromEntries(CONTACT_US_TYPES.map((type) => [type.value, type.label]));
+// os mesmos textos do combo da tela de listagem dos chamados (Meus dados > Chamados): o tipo do chamado aberto, "Bug", e não a ação, "Reportar um bug"
+const contactUsTypes: Record<string, string> = Object.fromEntries(CONTACT_US_TYPES.map((type) => [type.value, type.kindLabel]));
 
 // a origem de cada recrutador (source de vis_recruiter); a legacy (a carga do JobsNow antigo) não entra no gráfico
 const recruiterSources: Record<string, string> = {
@@ -42,35 +42,26 @@ const regionScopes: Record<string, string> = {
     anyRegion: 'Trabalha em qualquer região',
 };
 
-/**
- * Como cada gráfico aparece: pizza (o padrão), ranking em barras (sugestão 3), chamados respondidos x sem resposta
- * (sugestão 7) ou origem x objetivo (sugestão 6). transform limpa as contagens antes de desenhar (sugestão 1).
- */
-export type PieKind = 'pie' | 'ranking' | 'contactUsStatus' | 'channelGoal';
+/** Como cada gráfico aparece: pizza (o padrão), ranking em barras (Skills Evitadas) ou origem x objetivo (barras empilhadas). */
+export type PieKind = 'pie' | 'ranking' | 'channelGoal';
 
-type Pie = { id: string; title: string; labels?: Record<string, string>; help?: string; excluded?: string[]; kind?: PieKind; transform?: (counts?: Record<string, number>) => Record<string, number> };
+type Pie = { id: string; title: string; labels?: Record<string, string>; help?: string; excluded?: string[]; kind?: PieKind };
 
-/**
- * Os gráficos da tela, na ordem pedida em 2026-11-17; os rótulos dos combos de onde os valores vieram, o texto do "?" e
- * as chaves que ficam fora. Sugestões de 2026-11-17 (cada uma sai desfazendo a sua linha): 1 (transform cleanCompanies),
- * 2 (excluded OWN_DOMAINS), 3 (kind ranking), 5 (a pizza "Situação do Currículo" virou cartão: situationPie), 6
- * (channelGoals) e 7 (kind contactUsStatus).
- */
+/** Os 11 gráficos da tela, na ordem pedida em 2026-11-17 (origem x objetivo e o ranking das Skills Evitadas desde a mesma data); os rótulos dos combos de onde os valores vieram, o texto do "?" e as chaves que ficam fora. */
 export const pies: Pie[] = [
-    { id: 'viewerDomains', title: 'Empresas que mais veem currículos', labels: viewerDomains, excluded: OWN_DOMAINS, kind: 'ranking' },
+    { id: 'viewerDomains', title: 'Empresas que mais veem currículos', labels: viewerDomains },
     {
         id: 'notAllowedCompanies',
         title: 'Consultorias / Empresas já contratantes',
         help: 'Estas são as consultorias / empresas que os candidatos mais evitam enviar currículos, pois provavelmente já trabalham ou trabalharam nelas.',
-        kind: 'ranking',
-        transform: cleanCompanies,
     },
     { id: 'recruiterSources', title: 'Origem dos recrutadores', labels: recruiterSources, excluded: ['legacy'] },
-    { id: 'contactUsTypes', title: 'Chamados abertos por tipo', labels: contactUsTypes, kind: 'contactUsStatus' },
+    { id: 'contactUsTypes', title: 'Chamados abertos por tipo', labels: contactUsTypes },
     { id: 'goals', title: 'Objetivos dos usuários', labels: goals },
     { id: 'channels', title: 'Origem do usuário', labels: channels },
     { id: 'channelGoals', title: 'Origem x objetivo do usuário', kind: 'channelGoal' },
     { id: 'resumeTypes', title: 'Áreas dos currículos', labels: resumeTypes },
+    { id: 'resumeSituation', title: 'Situação do Currículo', labels: situations },
     {
         id: 'avoidedSkills',
         title: 'Skills Evitadas',
@@ -79,9 +70,6 @@ export const pies: Pie[] = [
     },
     { id: 'resumeRegionScopes', title: 'DDDs do currículo', labels: regionScopes },
 ];
-
-/** A pizza retirada pela sugestão 5 (a taxa de desistência foi para o cartão "Currículos ativos"): para voltar, recoloque-a em pies. */
-export const situationPie: Pie = { id: 'resumeSituation', title: 'Situação do Currículo', labels: situations };
 
 /**
  * As fatias de uma pizza, da maior para a menor (empate pelo rótulo); o que passar de MAX_SLICES vira uma fatia "Outras"

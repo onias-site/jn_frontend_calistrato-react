@@ -1,8 +1,9 @@
-import { MAX_SLICES, OTHERS, newUsersSeries, pies, situationPie, slicesOf, totalLabel } from './curiositiesData';
+import { MAX_SLICES, OTHERS, newUsersSeries, pies, slicesOf, totalLabel } from './curiositiesData';
 
 describe('curiositiesData', () => {
     it('ordena as fatias da maior para a menor e usa os rótulos', () => {
-        expect(slicesOf({ inactive: 2, active: 51 }, situationPie.labels)).toEqual([
+        const situation = pies.find((pie) => pie.id == 'resumeSituation');
+        expect(slicesOf({ inactive: 2, active: 51 }, situation?.labels)).toEqual([
             { key: 'active', label: 'Ativo', total: 51 },
             { key: 'inactive', label: 'Inativo', total: 2 },
         ]);
@@ -10,7 +11,7 @@ describe('curiositiesData', () => {
 
     it('usa os rótulos do combo dos chamados', () => {
         const tickets = pies.find((pie) => pie.id == 'contactUsTypes');
-        expect(slicesOf({ reportBug: 1 }, tickets?.labels)[0].label).toBe('Reportar um bug');
+        expect(slicesOf({ reportBug: 1 }, tickets?.labels)[0].label).toBe('Bug');
     });
 
     it('junta o que passa do limite em Outras', () => {
@@ -32,12 +33,11 @@ describe('curiositiesData', () => {
         const areas = pies.find((pie) => pie.id == 'resumeTypes');
         const domains = pies.find((pie) => pie.id == 'viewerDomains');
         expect(slicesOf({ '1': 45 }, areas?.labels)[0].label).toBe('Tecnologia da Informação');
-        // 2026-11-17: a equipe Onias.Site fica fora das empresas que veem currículos
-        expect(slicesOf({ freelancer: 52, 'onias.site': 39 }, domains?.labels, domains?.excluded).map((slice) => slice.label)).toEqual(['Recrutadores com e-mail pessoal']);
-        expect(situationPie.title).toBe('Situação do Currículo');
+        expect(slicesOf({ freelancer: 52, 'onias.site': 39 }, domains?.labels).map((slice) => slice.label)).toEqual(['Recrutadores com e-mail pessoal', 'onias.site']);
+        expect(pies.find((pie) => pie.id == 'resumeSituation')?.title).toBe('Situação do Currículo');
     });
 
-    it('mostra os gráficos na ordem pedida em 2026-11-17, com origem x objetivo e sem a situação do currículo (virou cartão)', () => {
+    it('mostra os gráficos na ordem pedida em 2026-11-17', () => {
         expect(pies.map((pie) => pie.title)).toEqual([
             'Empresas que mais veem currículos',
             'Consultorias / Empresas já contratantes',
@@ -47,6 +47,7 @@ describe('curiositiesData', () => {
             'Origem do usuário',
             'Origem x objetivo do usuário',
             'Áreas dos currículos',
+            'Situação do Currículo',
             'Skills Evitadas',
             'DDDs do currículo',
         ]);
