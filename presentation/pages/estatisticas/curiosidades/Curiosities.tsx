@@ -59,8 +59,8 @@ const NewUsersPanel = ({ curiosities }: { curiosities: CuriositiesData }) => {
 };
 
 /** Uma pizza, com o "?" ao lado do título quando há explicação e o total geral das fatias. */
-const PiePanel = ({ title, help, counts, labels }: { title: string; help?: string; counts?: Record<string, number>; labels?: Record<string, string> }) => {
-    const slices = slicesOf(counts, labels);
+const PiePanel = ({ title, help, counts, labels, excluded }: { title: string; help?: string; counts?: Record<string, number>; labels?: Record<string, string>; excluded?: string[] }) => {
+    const slices = slicesOf(counts, labels, excluded);
     const values = slices.map((slice) => slice.total);
     const total = pieTotal(values);
 
@@ -89,7 +89,7 @@ const PiePanel = ({ title, help, counts, labels }: { title: string; help?: strin
 };
 
 /**
- * A tela Curiosidades: os novos usuários no tempo e 6 pizzas, todos de uma só leitura (GET statistics/curiosities, que
+ * A tela Curiosidades: os novos usuários no tempo e 10 pizzas, todos de uma só leitura (GET statistics/curiosities, que
  * busca os grupos do jn_grouper por id), guardada no localStorage por 1 hora (JnAjax.doAPersistedRequest).
  */
 export const Curiosities = () => {
@@ -113,7 +113,7 @@ export const Curiosities = () => {
             <NewUsersPanel curiosities={curiosities} />
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 {pies.map((pie) => (
-                    <PiePanel key={pie.id} title={pie.title} help={pie.help} counts={curiosities[pie.id]} labels={pie.labels} />
+                    <PiePanel key={pie.id} title={pie.title} help={pie.help} counts={curiosities[pie.id]} labels={pie.labels} excluded={pie.excluded} />
                 ))}
             </div>
         </div>

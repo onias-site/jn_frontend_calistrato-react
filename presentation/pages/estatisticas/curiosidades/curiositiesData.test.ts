@@ -37,6 +37,39 @@ describe('curiositiesData', () => {
         expect(pies.find((pie) => pie.id == 'resumeSituation')?.title).toBe('Situação do Currículo');
     });
 
+    it('mostra as 10 pizzas na ordem pedida em 2026-11-17', () => {
+        expect(pies.map((pie) => pie.title)).toEqual([
+            'Empresas que mais veem currículos',
+            'Consultorias / Empresas já contratantes',
+            'Origem dos recrutadores',
+            'Chamados abertos por tipo',
+            'Objetivos dos usuários',
+            'Origem do usuário',
+            'Áreas dos currículos',
+            'Situação do Currículo',
+            'Skills Evitadas',
+            'DDDs do currículo',
+        ]);
+    });
+
+    it('deixa os recrutadores legacy fora da origem dos recrutadores e do total', () => {
+        const sources = pies.find((pie) => pie.id == 'recruiterSources');
+        const slices = slicesOf({ legacy: 36364, telegram: 4297, login: 2, support: 1 }, sources?.labels, sources?.excluded);
+        expect(slices.map((slice) => slice.key)).toEqual(['telegram', 'login', 'support']);
+        expect(slices.reduce((sum, slice) => sum + slice.total, 0)).toBe(4300);
+    });
+
+    it('rotula o alcance dos ddds dos currículos', () => {
+        const scopes = pies.find((pie) => pie.id == 'resumeRegionScopes');
+        const slices = slicesOf({ homeOfficeOnly: 4, oneRegion: 3, severalRegions: 2, anyRegion: 1 }, scopes?.labels);
+        expect(slices.map((slice) => slice.label)).toEqual([
+            'Aceita somente HomeOffice',
+            'Trabalha em apenas uma região',
+            'Trabalha em mais de uma região',
+            'Trabalha em qualquer região',
+        ]);
+    });
+
     it('preenche com zero os períodos sem contagem', () => {
         const periods = [
             { key: '20261113', label: '13' },
