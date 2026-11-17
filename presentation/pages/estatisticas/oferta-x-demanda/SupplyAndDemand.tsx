@@ -1,5 +1,4 @@
 'use client';
-import dynamic from 'next/dynamic';
 import { SegmentedControl, Table } from '@mantine/core';
 import React, { useEffect, useState } from 'react';
 import JnAjax from '@/app/JnAjax';
@@ -9,7 +8,6 @@ import IconFolderMinus from '@/presentation/icons/icon-folder-minus';
 import {
     Comparison,
     PROFILE,
-    Source,
     Totals,
     charts,
     comparisonOf,
@@ -19,7 +17,6 @@ import {
     folderTotals,
     insertionSeries,
     isMultiValue,
-    isSmallSample,
     lastMonths,
     monthTitle,
     money,
@@ -33,44 +30,16 @@ import {
     sources,
     yearsLabel,
 } from './supplyAndDemandData';
-
-const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false });
+import { Average, ChartFrame, ReactApexChart, SmallSampleWarning, Statistics, fontFamily, lineColors, readySources, sourceTotalsLabel, statisticsOf } from './chartCommons';
+import { GapPanel } from './GapPanel';
+import { SalaryBySeniorityPanel } from './SalaryBySeniorityPanel';
+import { SeniorityContractPanel } from './SeniorityContractPanel';
+import { DisputedRegionsPanel } from './DisputedRegionsPanel';
+import { WeekdayPanel } from './WeekdayPanel';
 
 const API = 'http://localhost:8081';
 
-const fontFamily = 'var(--font-nunito), ui-sans-serif, system-ui, sans-serif';
-
-/** As cores das fontes: CVs, CVs vistos e Vagas (linhas e barras lado a lado). */
-const lineColors = ['#2a78d6', '#eb6834', '#1baf7a'];
-
-
-type Average = { resumes?: number; clt?: number; pj?: number; experience?: number };
-
-type SourceStatistics = { total: number; averages: Record<string, Average>; charts: Record<string, Record<string, number>> };
-
-type Statistics = { ddd: number } & Record<string, SourceStatistics | number>;
-
 type Situation = 'idle' | 'loading' | 'loaded' | 'error';
-
-const statisticsOf = (statistics: Statistics, source: Source) => statistics[source.id] as SourceStatistics | undefined;
-
-/** As fontes que já têm dados: cada gráfico mostra todas lado a lado (CVs e CVs vistos; Vagas quando houver). */
-const readySources = sources.filter((item) => item.ready);
-
-/** "30 currículos · 44 visualizações": o total de cada fonte do gráfico, ao lado do título. */
-const sourceTotalsLabel = (statistics: Statistics) => readySources.map((item) => countLabel(item, statisticsOf(statistics, item)?.total || 0)).join(' · ');
-
-/** O aviso das fontes com poucos registros na região: as porcentagens de 2 ou 3 registros não são tendência. */
-const SmallSampleWarning = ({ statistics }: { statistics: Statistics }) => {
-    const small = readySources.filter((item) => isSmallSample(statisticsOf(statistics, item)?.total || 0));
-    if (small.length == 0) return null;
-    const texts = small.map((item) => countLabel(item, statisticsOf(statistics, item)?.total || 0)).join(' e ');
-    return (
-        <p className="mb-2 rounded bg-warning-light px-2 py-1 text-sm text-warning">
-            Amostra pequena: só {texts} nesta região. As porcentagens oscilam muito com poucos registros.
-        </p>
-    );
-};
 
 /**
  * Barras agrupadas: uma série por fonte, em porcentagem da base de cada uma (as fontes têm tamanhos diferentes, os números
@@ -102,6 +71,9 @@ const ComparisonChart = ({ comparison }: { comparison: Comparison }) => {
     return <ReactApexChart type="bar" height={height} options={options} series={series.map((item) => ({ name: item.name, data: item.data }))} />;
 };
 
+/** O complemento da explicação dos gráficos que contam só uma parte dos registros. */
+const chartNotes: Record<string, string> = { cltRange: ', sobre quem informou a pretensão CLT', pjRange: ', sobre quem informou a pretensão PJ' };
+
 /**
  * Um gráfico: as fontes sempre lado a lado (CVs e CVs vistos), em barras agrupadas. Nos gráficos de vários valores por
  * currículo (habilidades, idiomas), cada barra é a porcentagem dos registros que têm o item e ficam os mais frequentes.
@@ -111,21 +83,15 @@ const ChartPanel = ({ title, chart, statistics }: { title: string; chart: string
     const comparison = comparisonOf(chart, bySource);
     const multi = isMultiValue(chart);
     const distinct = Math.max(...bySource.map((item) => distinctItems(item.counts)));
+    const note = multi
+        ? `Porcentagem dos registros de cada fonte que têm o item${distinct > comparison.categories.length ? ` (os ${comparison.categories.length} mais frequentes de ${distinct})` : ''}; um registro pode ter vários, as porcentagens não somam 100%.`
+        : `Porcentagem de cada fonte${chartNotes[chart] || ''}: os tamanhos das fontes diferem, os números absolutos não se comparam.`;
     return (
-        <div className="rounded border border-[#e0e6ed] p-3 dark:border-[#1b2e4b]">
-            <h5 className="mb-1 text-lg font-semibold">
-                {title}
-                <span className="ml-2 text-sm font-semibold text-white-dark">{sourceTotalsLabel(statistics)}</span>
-            </h5>
-            <p className="mb-1 text-sm text-white-dark">
-                {multi
-                    ? `Porcentagem dos registros de cada fonte que têm o item${distinct > comparison.categories.length ? ` (os ${comparison.categories.length} mais frequentes de ${distinct})` : ''}; um registro pode ter vários, as porcentagens não somam 100%.`
-                    : 'Porcentagem de cada fonte: os tamanhos das fontes diferem, os números absolutos não se comparam.'}
-            </p>
+        <ChartFrame title={title} detail={sourceTotalsLabel(statistics)} note={note}>
             <SmallSampleWarning statistics={statistics} />
             {comparison.categories.length == 0 && <p className="text-white-dark">Sem registros com esta informação.</p>}
             {comparison.categories.length > 0 && <ComparisonChart comparison={comparison} />}
-        </div>
+        </ChartFrame>
     );
 };
 
@@ -136,15 +102,10 @@ const ChartPanel = ({ title, chart, statistics }: { title: string; chart: string
 const ProfilePanel = ({ title, statistics }: { title: string; statistics: Statistics }) => {
     const comparison = profileComparisonOf(readySources.map((item) => ({ source: item, charts: statisticsOf(statistics, item)?.charts })));
     return (
-        <div className="rounded border border-[#e0e6ed] p-3 dark:border-[#1b2e4b]">
-            <h5 className="mb-1 text-lg font-semibold">
-                {title}
-                <span className="ml-2 text-sm font-semibold text-white-dark">{sourceTotalsLabel(statistics)}</span>
-            </h5>
-            <p className="mb-1 text-sm text-white-dark">Porcentagem que diz &quot;sim&quot; em cada item (quem não informou conta como &quot;não&quot;).</p>
+        <ChartFrame title={title} detail={sourceTotalsLabel(statistics)} note='Porcentagem que diz "sim" em cada item (quem não informou conta como "não").'>
             <SmallSampleWarning statistics={statistics} />
             <ComparisonChart comparison={comparison} />
-        </div>
+        </ChartFrame>
     );
 };
 
@@ -278,6 +239,14 @@ const TreeRow = ({ level, open, label, detail, onToggle }: { level: number; open
     </button>
 );
 
+/** Os gráficos da região com painel próprio; os demais usam o ChartPanel (barras agrupadas por fonte). */
+const specialPanels: Record<string, React.ComponentType<{ title: string; statistics: Statistics }>> = {
+    [PROFILE]: ProfilePanel,
+    gap: GapPanel,
+    seniorityContract: SeniorityContractPanel,
+    salaryBySeniority: SalaryBySeniorityPanel,
+};
+
 /**
  * O conteúdo de uma região aberta, recuado sob a sua pasta e na largura que sobra: os totais e as médias e, abaixo, um
  * gráfico por linha.
@@ -294,13 +263,11 @@ const RegionContent = ({ ddd, level, statistics }: { ddd: string; level: number;
             </p>
         </div>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {charts.map((chart) => (
-                chart.id == PROFILE ? (
-                    <ProfilePanel key={`${ddd}-${chart.id}`} title={chart.title} statistics={statistics} />
-                ) : (
-                    <ChartPanel key={`${ddd}-${chart.id}`} title={chart.title} chart={chart.id} statistics={statistics} />
-                )
-            ))}
+            {charts.map((chart) => {
+                const Panel = specialPanels[chart.id];
+                if (Panel) return <Panel key={`${ddd}-${chart.id}`} title={chart.title} statistics={statistics} />;
+                return <ChartPanel key={`${ddd}-${chart.id}`} title={chart.title} chart={chart.id} statistics={statistics} />;
+            })}
         </div>
     </div>
 );
@@ -381,6 +348,12 @@ export const SupplyAndDemand = () => {
     return (
         <div className="panel mt-6">
             {totals && <InsertionsPanel totals={totals} />}
+            {totals && (
+                <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <DisputedRegionsPanel byRegion={totals.byRegion} />
+                    <WeekdayPanel byDay={totals.byDay} />
+                </div>
+            )}
             <h5 className="mb-1 text-lg font-semibold">Regiões metropolitanas</h5>
             <p className="mb-3 text-sm text-white-dark">Abra uma pasta para ver o que os currículos da região oferecem.</p>
             {sortFolders(tree, totals?.byRegion).map((node) => {

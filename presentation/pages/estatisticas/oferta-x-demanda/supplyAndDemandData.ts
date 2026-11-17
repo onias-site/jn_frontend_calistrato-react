@@ -9,12 +9,17 @@ export const HOME_OFFICE = '10';
  * "Perfil dos currículos" (profileItems). O "profile" marca onde esse painel entra.
  */
 export const charts = [
+    { id: 'gap', title: 'O que os recrutadores procuram mais do que existe' },
     { id: 'resumeType', title: 'Tipo do currículo' },
     { id: 'seniority', title: 'Senioridade' },
     { id: 'skill', title: 'Habilidades' },
     { id: 'spokenLanguage', title: 'Idiomas falados' },
     { id: 'profile', title: 'Perfil dos currículos' },
     { id: 'contractType', title: 'Formas de contratação aceitas' },
+    { id: 'seniorityContract', title: 'Senioridade x contratação' },
+    { id: 'salaryBySeniority', title: 'Pretensão salarial por senioridade' },
+    { id: 'cltRange', title: 'Faixas de pretensão CLT' },
+    { id: 'pjRange', title: 'Faixas de pretensão PJ' },
     { id: 'skillsCount', title: 'Quantidade de habilidades declaradas' },
 ];
 
@@ -52,11 +57,18 @@ export const SMALL_SAMPLE = 10;
 
 export const isSmallSample = (total: number) => total > 0 && total < SMALL_SAMPLE;
 
+/** As faixas das pretensões CLT e PJ (cltRange e pjRange do backend), em ordem. */
+const salaryRanges = ['upTo3k', 'from3kTo6k', 'from6kTo10k', 'from10kTo15k', 'from15kTo20k', 'over20k'];
+
+const salaryRangeLabels = { upTo3k: 'Até R$ 3 mil', from3kTo6k: 'R$ 3 a 6 mil', from6kTo10k: 'R$ 6 a 10 mil', from10kTo15k: 'R$ 10 a 15 mil', from15kTo20k: 'R$ 15 a 20 mil', over20k: 'Mais de R$ 20 mil' };
+
 /** Gráficos de faixas ou categorias com ordem própria: as categorias seguem esta ordem, não o tamanho. */
 const fixedOrders: Record<string, string[]> = {
     skillsCount: ['upTo5', 'from6To15', 'from16To30', 'from31To50', 'over50'],
     contractType: ['onlyClt', 'onlyPj', 'both', 'notInformed'],
     seniority: ['estag', 'junior', 'pleno', 'senior', 'especialista', 'notInformed'],
+    cltRange: salaryRanges,
+    pjRange: salaryRanges,
 };
 
 /** 12.345 vira "12,3%". */
@@ -160,6 +172,8 @@ const fixedLabels: Record<string, Record<string, string>> = {
     temporallyJob: { accepts: 'Aceita', doesNotAccept: 'Não aceita' },
     skillsCount: { upTo5: 'Até 5', from6To15: 'De 6 a 15', from16To30: 'De 16 a 30', from31To50: 'De 31 a 50', over50: 'Mais de 50' },
     contractType: { onlyClt: 'Aceita apenas CLT', onlyPj: 'Aceita apenas PJ', both: 'Aceita ambos' },
+    cltRange: salaryRangeLabels,
+    pjRange: salaryRangeLabels,
 };
 
 const NOT_INFORMED = 'notInformed';
