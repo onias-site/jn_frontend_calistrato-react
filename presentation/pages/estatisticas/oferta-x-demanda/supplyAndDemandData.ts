@@ -84,6 +84,9 @@ export const lastMonths = (now: Date, count: number): Period[] =>
         return { key: yearMonthKey(moment.getFullYear(), moment.getMonth()), label };
     });
 
+/** O cabeçalho da dica do gráfico de linhas: "Dia 14" ou "Mês nov/26" (o eixo x fica só com "14" ou "nov/26"). */
+export const periodTooltipLabel = (byDay: boolean, label: string) => (byDay ? `Dia ${label}` : `Mês ${label}`);
+
 /** Uma linha por fonte que já tem dados, com o total de cada período (0 quando o contador não tem a chave). */
 export const insertionSeries = (counts: TotalsByRegion = {}, periods: Period[]) =>
     sources

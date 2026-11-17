@@ -21,6 +21,7 @@ import {
     lastMonths,
     monthTitle,
     money,
+    periodTooltipLabel,
     regionName,
     regionTree,
     sortFolders,
@@ -220,6 +221,7 @@ const InsertionsPanel = ({ totals }: { totals: Totals }) => {
         xaxis: { categories: periods.map((item) => item.label) },
         yaxis: { min: 0, forceNiceScale: true, labels: { formatter: (value: number) => String(Math.round(value)) } },
         legend: { position: 'top', horizontalAlign: 'left' },
+        tooltip: { x: { formatter: (value: any, tooltip: any) => periodTooltipLabel(byDay, periods[tooltip?.dataPointIndex]?.label ?? String(value)) } },
         grid: { borderColor: '#e0e6ed' },
         dataLabels: { enabled: false },
     };

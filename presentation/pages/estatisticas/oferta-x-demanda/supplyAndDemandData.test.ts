@@ -1,4 +1,4 @@
-import { HOME_OFFICE, OTHERS, money, regionName, regionTree, sliceLabel, slicesOf, yearsLabel, sources, countLabel, folderTotals, monthTitle, daysOfTheMonth, lastMonths, insertionSeries, sortFolders } from './supplyAndDemandData';
+import { HOME_OFFICE, OTHERS, money, regionName, regionTree, sliceLabel, slicesOf, yearsLabel, sources, countLabel, folderTotals, monthTitle, daysOfTheMonth, lastMonths, insertionSeries, sortFolders, periodTooltipLabel } from './supplyAndDemandData';
 
 describe('supplyAndDemandData', () => {
     it('rotula as fatias a partir dos códigos do backend', () => {
@@ -96,5 +96,10 @@ describe('supplyAndDemandData', () => {
         expect(sp?.children.some((region) => region.value == '11')).toBe(true);
         expect(regionName(HOME_OFFICE)).toBe('Home office');
         expect(regionName('11')).toBe(sp?.children.find((region) => region.value == '11')?.label);
+    });
+
+    it('põe Dia ou Mês antes do período na dica do gráfico de linhas', () => {
+        expect(periodTooltipLabel(true, '14')).toBe('Dia 14');
+        expect(periodTooltipLabel(false, 'nov/26')).toBe('Mês nov/26');
     });
 });
