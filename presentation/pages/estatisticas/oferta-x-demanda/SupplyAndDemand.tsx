@@ -6,27 +6,30 @@ import JnAjax from '@/app/JnAjax';
 import IconCaretDown from '@/presentation/icons/icon-caret-down';
 import IconFolderPlus from '@/presentation/icons/icon-folder-plus';
 import IconFolderMinus from '@/presentation/icons/icon-folder-minus';
-import { percentLabel, pieTotal } from '../skills/skillStatisticsData';
-import { totalLabel } from '../curiosidades/curiositiesData';
 import {
-    OTHERS,
-    Slice,
+    Comparison,
+    PROFILE,
     Source,
     Totals,
     charts,
+    comparisonOf,
     countLabel,
     daysOfTheMonth,
+    distinctItems,
     folderTotals,
     insertionSeries,
+    isMultiValue,
+    isSmallSample,
     lastMonths,
     monthTitle,
     money,
+    percentText,
     periodTooltipLabel,
+    profileComparisonOf,
     regionName,
     regionTree,
     sortFolders,
     seniorities,
-    slicesOf,
     sources,
     yearsLabel,
 } from './supplyAndDemandData';
@@ -35,9 +38,11 @@ const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false })
 
 const API = 'http://localhost:8081';
 
-const sliceColors = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#8a8a86'];
-
 const fontFamily = 'var(--font-nunito), ui-sans-serif, system-ui, sans-serif';
+
+/** As cores das fontes: CVs, CVs vistos e Vagas (linhas e barras lado a lado). */
+const lineColors = ['#2a78d6', '#eb6834', '#1baf7a'];
+
 
 type Average = { resumes?: number; clt?: number; pj?: number; experience?: number };
 
@@ -49,84 +54,96 @@ type Situation = 'idle' | 'loading' | 'loaded' | 'error';
 
 const statisticsOf = (statistics: Statistics, source: Source) => statistics[source.id] as SourceStatistics | undefined;
 
+/** As fontes que já têm dados: cada gráfico mostra todas lado a lado (CVs e CVs vistos; Vagas quando houver). */
+const readySources = sources.filter((item) => item.ready);
+
+/** "30 currículos · 44 visualizações": o total de cada fonte do gráfico, ao lado do título. */
+const sourceTotalsLabel = (statistics: Statistics) => readySources.map((item) => countLabel(item, statisticsOf(statistics, item)?.total || 0)).join(' · ');
+
+/** O aviso das fontes com poucos registros na região: as porcentagens de 2 ou 3 registros não são tendência. */
+const SmallSampleWarning = ({ statistics }: { statistics: Statistics }) => {
+    const small = readySources.filter((item) => isSmallSample(statisticsOf(statistics, item)?.total || 0));
+    if (small.length == 0) return null;
+    const texts = small.map((item) => countLabel(item, statisticsOf(statistics, item)?.total || 0)).join(' e ');
+    return (
+        <p className="mb-2 rounded bg-warning-light px-2 py-1 text-sm text-warning">
+            Amostra pequena: só {texts} nesta região. As porcentagens oscilam muito com poucos registros.
+        </p>
+    );
+};
+
 /**
- * Um gráfico: os botões CVs, CVs vistos e Vagas trocam a fonte só deste gráfico (CVs é o padrão; Vagas ainda desligado);
- * pizza e, quando há "Outras", também barras.
+ * Barras agrupadas: uma série por fonte, em porcentagem da base de cada uma (as fontes têm tamanhos diferentes, os números
+ * absolutos não se comparam); o texto da barra é a porcentagem e a dica traz também a quantidade.
+ */
+const ComparisonChart = ({ comparison }: { comparison: Comparison }) => {
+    const { categories, series } = comparison;
+    const highest = Math.max(...series.flatMap((item) => item.data), 1);
+    const options: any = {
+        chart: { type: 'bar', fontFamily, toolbar: { show: false }, animations: { enabled: false } },
+        colors: lineColors,
+        plotOptions: { bar: { horizontal: true, borderRadius: 4, barHeight: '70%', dataLabels: { position: 'top' } } },
+        // folga depois da maior barra para o texto; as marcas acima de 100% ficam sem rótulo
+        xaxis: { categories, max: highest * 1.4, tickAmount: 5, labels: { formatter: (value: number) => (value > 100 ? '' : `${Math.round(value)}%`) } },
+        yaxis: { labels: { style: { fontSize: '13px', fontWeight: 600, colors: '#0e1726' }, maxWidth: 220 } },
+        dataLabels: { enabled: true, textAnchor: 'start', offsetX: 30, style: { fontSize: '11px', colors: ['#3b3f5c'] }, formatter: (value: number) => percentText(value), dropShadow: { enabled: false } },
+        legend: { position: 'top', horizontalAlign: 'left' },
+        tooltip: {
+            y: {
+                formatter: (value: number, tooltip: any) => {
+                    const item = series[tooltip.seriesIndex];
+                    return `${countLabel(item.source, item.counts[tooltip.dataPointIndex])} (${percentText(value)})`;
+                },
+            },
+        },
+        grid: { borderColor: '#e0e6ed' },
+    };
+    const height = 70 + categories.length * series.length * 24;
+    return <ReactApexChart type="bar" height={height} options={options} series={series.map((item) => ({ name: item.name, data: item.data }))} />;
+};
+
+/**
+ * Um gráfico: as fontes sempre lado a lado (CVs e CVs vistos), em barras agrupadas. Nos gráficos de vários valores por
+ * currículo (habilidades, idiomas), cada barra é a porcentagem dos registros que têm o item e ficam os mais frequentes.
  */
 const ChartPanel = ({ title, chart, statistics }: { title: string; chart: string; statistics: Statistics }) => {
-    const [sourceId, setSourceId] = useState(sources[0].id);
-    const [chartType, setChartType] = useState<'pie' | 'bar'>('pie');
-    const source = sources.find((item) => item.id == sourceId) || sources[0];
-    const slices: Slice[] = slicesOf(chart, statisticsOf(statistics, source)?.charts?.[chart]);
-    const resumesLabel = (total: number) => countLabel(source, total);
-    const labels = slices.map((slice) => slice.label);
-    const values = slices.map((slice) => slice.total);
-    const total = pieTotal(values);
-    const manySlices = slices.some((slice) => slice.key == OTHERS);
-
-    const pieOptions: any = {
-        chart: { type: 'pie', fontFamily },
-        labels,
-        colors: sliceColors,
-        stroke: { width: 2 },
-        plotOptions: { pie: { dataLabels: { minAngleToShowLabel: 18 } } },
-        legend: { position: 'bottom', formatter: (label: string, legend: any) => `${label}: ${percentLabel(values[legend.seriesIndex], total)}` },
-        dataLabels: { enabled: true, formatter: (percent: number, dataLabel: any) => percentLabel(values[dataLabel.seriesIndex], total) },
-        tooltip: { y: { formatter: (value: number) => resumesLabel(value) } },
-    };
-
-    const barOptions: any = {
-        chart: { type: 'bar', fontFamily, toolbar: { show: false }, animations: { enabled: false } },
-        colors: sliceColors,
-        plotOptions: { bar: { horizontal: true, distributed: true, borderRadius: 6, barHeight: '60%', dataLabels: { position: 'top' } } },
-        xaxis: { categories: labels, labels: { show: false }, axisBorder: { show: false }, axisTicks: { show: false }, max: Math.max(...values, 1) * 1.45 },
-        yaxis: { labels: { style: { fontSize: '13px', fontWeight: 600, colors: '#0e1726' }, maxWidth: 200 } },
-        dataLabels: {
-            enabled: true,
-            textAnchor: 'start',
-            offsetX: 8,
-            style: { fontSize: '12px', fontWeight: 600, colors: ['#3b3f5c'] },
-            formatter: (value: number) => `${resumesLabel(value)}  ·  ${percentLabel(value, total)}`,
-            dropShadow: { enabled: false },
-        },
-        legend: { show: false },
-        grid: { show: false, padding: { left: 8, right: 16 } },
-        tooltip: { enabled: false },
-        states: { hover: { filter: { type: 'none' } }, active: { filter: { type: 'none' } } },
-    };
-
+    const bySource = readySources.map((item) => ({ source: item, total: statisticsOf(statistics, item)?.total || 0, counts: statisticsOf(statistics, item)?.charts?.[chart] }));
+    const comparison = comparisonOf(chart, bySource);
+    const multi = isMultiValue(chart);
+    const distinct = Math.max(...bySource.map((item) => distinctItems(item.counts)));
     return (
         <div className="rounded border border-[#e0e6ed] p-3 dark:border-[#1b2e4b]">
-            <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
-                <h5 className="text-lg font-semibold">
-                    {title}
-                    {slices.length > 0 && <span className="ml-2 text-sm font-semibold text-white-dark">{totalLabel(total)}</span>}
-                </h5>
-                <div className="flex flex-wrap gap-2">
-                    <SegmentedControl
-                        size="xs"
-                        value={sourceId}
-                        onChange={setSourceId}
-                        data={sources.map((item) => ({ value: item.id, label: item.button, disabled: !item.ready }))}
-                    />
-                    {manySlices && slices.length > 0 && (
-                        <SegmentedControl
-                            size="xs"
-                            value={chartType}
-                            onChange={(value) => setChartType(value as 'pie' | 'bar')}
-                            data={[
-                                { value: 'pie', label: 'Pizza' },
-                                { value: 'bar', label: 'Barras' },
-                            ]}
-                        />
-                    )}
-                </div>
-            </div>
-            {slices.length == 0 && <p className="text-white-dark">Sem {source.many} com esta informação.</p>}
-            {slices.length > 0 && chartType == 'pie' && <ReactApexChart key={`pie-${sourceId}`} type="pie" height={340} options={pieOptions} series={values} />}
-            {slices.length > 0 && chartType == 'bar' && (
-                <ReactApexChart key={`bar-${sourceId}`} type="bar" height={40 + labels.length * 36} options={barOptions} series={[{ name: source.button, data: values }]} />
-            )}
+            <h5 className="mb-1 text-lg font-semibold">
+                {title}
+                <span className="ml-2 text-sm font-semibold text-white-dark">{sourceTotalsLabel(statistics)}</span>
+            </h5>
+            <p className="mb-1 text-sm text-white-dark">
+                {multi
+                    ? `Porcentagem dos registros de cada fonte que têm o item${distinct > comparison.categories.length ? ` (os ${comparison.categories.length} mais frequentes de ${distinct})` : ''}; um registro pode ter vários, as porcentagens não somam 100%.`
+                    : 'Porcentagem de cada fonte: os tamanhos das fontes diferem, os números absolutos não se comparam.'}
+            </p>
+            <SmallSampleWarning statistics={statistics} />
+            {comparison.categories.length == 0 && <p className="text-white-dark">Sem registros com esta informação.</p>}
+            {comparison.categories.length > 0 && <ComparisonChart comparison={comparison} />}
+        </div>
+    );
+};
+
+/**
+ * O painel "Perfil dos currículos": os 5 gráficos de sim/não (que eram 5 pizzas de 2 fatias) numa barra cada, com a
+ * porcentagem de "sim" sobre todos os registros de cada fonte, as fontes lado a lado.
+ */
+const ProfilePanel = ({ title, statistics }: { title: string; statistics: Statistics }) => {
+    const comparison = profileComparisonOf(readySources.map((item) => ({ source: item, charts: statisticsOf(statistics, item)?.charts })));
+    return (
+        <div className="rounded border border-[#e0e6ed] p-3 dark:border-[#1b2e4b]">
+            <h5 className="mb-1 text-lg font-semibold">
+                {title}
+                <span className="ml-2 text-sm font-semibold text-white-dark">{sourceTotalsLabel(statistics)}</span>
+            </h5>
+            <p className="mb-1 text-sm text-white-dark">Porcentagem que diz &quot;sim&quot; em cada item (quem não informou conta como &quot;não&quot;).</p>
+            <SmallSampleWarning statistics={statistics} />
+            <ComparisonChart comparison={comparison} />
         </div>
     );
 };
@@ -197,8 +214,6 @@ const totalsLabel = (statistics: Statistics) =>
         .filter((source) => source.ready)
         .map((source) => countLabel(source, statisticsOf(statistics, source)?.total || 0))
         .join(' · ');
-
-const lineColors = ['#2a78d6', '#eb6834', '#1baf7a'];
 
 /**
  * As inserções ao longo do tempo, acima das pastas: os botões trocam entre os dias do mês corrente (o mês vai no título)
@@ -280,7 +295,11 @@ const RegionContent = ({ ddd, level, statistics }: { ddd: string; level: number;
         </div>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {charts.map((chart) => (
-                <ChartPanel key={`${ddd}-${chart.id}`} title={chart.title} chart={chart.id} statistics={statistics} />
+                chart.id == PROFILE ? (
+                    <ProfilePanel key={`${ddd}-${chart.id}`} title={chart.title} statistics={statistics} />
+                ) : (
+                    <ChartPanel key={`${ddd}-${chart.id}`} title={chart.title} chart={chart.id} statistics={statistics} />
+                )
             ))}
         </div>
     </div>

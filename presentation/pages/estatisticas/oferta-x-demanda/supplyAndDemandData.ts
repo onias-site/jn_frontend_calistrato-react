@@ -3,30 +3,71 @@ import { dddRegions } from '@/presentation/components/regions/dddRegions';
 /** O ddd do home office, que o formulário do currículo grava junto das regiões metropolitanas. */
 export const HOME_OFFICE = '10';
 
-/** Os gráficos de pizza que o backend devolve (GET statistics/resumes/{ddd}), na ordem da tela. */
+/**
+ * Os gráficos que o backend devolve (GET statistics/resumes/{ddd}), na ordem da tela. Os de sim/não (PCD, viagens,
+ * pretensão negociável, disponibilidade imediata e trabalho temporário) não têm painel próprio: vão juntos no painel
+ * "Perfil dos currículos" (profileItems). O "profile" marca onde esse painel entra.
+ */
 export const charts = [
     { id: 'resumeType', title: 'Tipo do currículo' },
-    { id: 'spokenLanguage', title: 'Idiomas falados' },
-    { id: 'skill', title: 'Habilidades' },
     { id: 'seniority', title: 'Senioridade' },
-    { id: 'pcd', title: 'PCD' },
-    { id: 'travel', title: 'Disponibilidade para viagens' },
-    { id: 'disponibility', title: 'Disponibilidade' },
-    { id: 'temporallyJob', title: 'Trabalho temporário' },
-    { id: 'skillsCount', title: 'Quantidade de habilidades declaradas' },
+    { id: 'skill', title: 'Habilidades' },
+    { id: 'spokenLanguage', title: 'Idiomas falados' },
+    { id: 'profile', title: 'Perfil dos currículos' },
     { id: 'contractType', title: 'Formas de contratação aceitas' },
-    { id: 'negotiableClaim', title: 'Negocia pretensão salarial' },
+    { id: 'skillsCount', title: 'Quantidade de habilidades declaradas' },
 ];
 
-/** Gráficos de faixas ou categorias com ordem própria: as fatias seguem esta ordem, não o tamanho. */
+/** O id do painel que junta os gráficos de sim/não. */
+export const PROFILE = 'profile';
+
+/**
+ * Os gráficos de sim/não do painel "Perfil dos currículos": a chave que conta como "sim" e o texto da barra. Cada
+ * currículo cai em uma só chave de cada gráfico, então a soma das chaves é o total de currículos.
+ */
+export const profileItems = [
+    { chart: 'disponibility', yes: 'immediate', label: 'Disponibilidade imediata' },
+    { chart: 'negotiableClaim', yes: 'true', label: 'Negocia a pretensão salarial' },
+    { chart: 'travel', yes: 'true', label: 'Aceita viajar' },
+    { chart: 'temporallyJob', yes: 'accepts', label: 'Aceita trabalho temporário' },
+    { chart: 'pcd', yes: 'true', label: 'PCD' },
+];
+
+/**
+ * Gráficos em que um currículo conta em várias fatias (várias habilidades, vários idiomas): as fatias somam mais que os
+ * currículos, então não são pizza; cada barra é a porcentagem dos currículos que têm o item.
+ */
+export const multiValueCharts = ['skill', 'spokenLanguage'];
+
+export const isMultiValue = (chart: string) => multiValueCharts.includes(chart);
+
+/** Quantas categorias os gráficos de vários valores mostram: os itens mais frequentes. */
+export const MULTI_VALUE_BARS = 12;
+
+/** Quantos itens diferentes o gráfico tem: a tela diz quando mostra só os mais frequentes. */
+export const distinctItems = (counts: Record<string, number> = {}) => Object.keys(counts).length;
+
+/** Abaixo disto, as porcentagens de uma região oscilam muito: a tela avisa que a amostra é pequena. */
+export const SMALL_SAMPLE = 10;
+
+export const isSmallSample = (total: number) => total > 0 && total < SMALL_SAMPLE;
+
+/** Gráficos de faixas ou categorias com ordem própria: as categorias seguem esta ordem, não o tamanho. */
 const fixedOrders: Record<string, string[]> = {
     skillsCount: ['upTo5', 'from6To15', 'from16To30', 'from31To50', 'over50'],
     contractType: ['onlyClt', 'onlyPj', 'both', 'notInformed'],
+    seniority: ['estag', 'junior', 'pleno', 'senior', 'especialista', 'notInformed'],
 };
+
+/** 12.345 vira "12,3%". */
+export const percentText = (percent: number) => `${percent.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`;
+
+const percentOf = (count: number, base: number) => (base ? Math.round((count * 1000) / base) / 10 : 0);
 
 /**
  * De onde vêm os números de cada gráfico e de cada coluna da tabela: os grupos do jn_grouper do ddd que o backend devolve
- * (resumes e viewedResumes). Vagas ainda não têm grupo: o botão aparece desligado e as colunas ficam com "—".
+ * (resumes e viewedResumes), lado a lado em cada gráfico. Vagas ainda não têm grupo: ficam fora dos gráficos e as colunas
+ * da tabela ficam com "—".
  */
 export const sources = [
     { id: 'resumes', button: 'CVs', column: 'CVs', one: 'currículo', many: 'currículos', line: 'Currículos inseridos', ready: true },
@@ -126,11 +167,6 @@ const NOT_INFORMED = 'notInformed';
 /** A fatia dos currículos que não falam nenhum idioma. */
 const NO_LANGUAGE = 'none';
 
-/** O que sobra das fatias vai para "Outras": acima de 8 cores não dá para distinguir as fatias. */
-const PIE_SLICES = 7;
-
-export const OTHERS = 'Outras';
-
 /** 8000 vira "R$ 8.000". */
 export const money = (value: number) => `R$ ${Math.round(value).toLocaleString('pt-BR')}`;
 
@@ -150,28 +186,6 @@ export const sliceLabel = (chart: string, key: string): string => {
         return `${name} ${level == '2' ? 'fluente' : 'intermediário'}`;
     }
     return fixedLabels[chart]?.[key] || key;
-};
-
-export type Slice = { key: string; label: string; total: number };
-
-const byTotal = (a: Slice, b: Slice) => b.total - a.total || a.label.localeCompare(b.label);
-
-/**
- * As fatias de um gráfico: na ordem própria do gráfico, quando ele tem uma; senão da maior para a menor e, acima de 8, as
- * 7 maiores mais "Outras" com a soma do resto.
- */
-export const slicesOf = (chart: string, counts: Record<string, number> = {}): Slice[] => {
-    const slices = Object.entries(counts).map(([key, total]) => ({ key, label: sliceLabel(chart, key), total }));
-    const order = fixedOrders[chart];
-    if (order) {
-        return slices.sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key));
-    }
-    const sorted = slices.sort(byTotal);
-    if (sorted.length <= PIE_SLICES + 1) {
-        return sorted;
-    }
-    const others = sorted.slice(PIE_SLICES).reduce((sum, slice) => sum + slice.total, 0);
-    return [...sorted.slice(0, PIE_SLICES), { key: OTHERS, label: OTHERS, total: others }];
 };
 
 /** As pastas da árvore: o home office e, por estado, as regiões metropolitanas do formulário do currículo. */
@@ -212,6 +226,60 @@ export const sortFolders = (nodes: FolderNode[], totals: TotalsByRegion = {}): F
             }
             return a.label.localeCompare(b.label);
         });
+
+/** A base das porcentagens: os currículos da fonte nos gráficos de vários valores, a soma das fatias nos demais. */
+export const percentBase = (chart: string, sourceTotal: number, counts: Record<string, number> = {}) =>
+    isMultiValue(chart) ? sourceTotal : Object.values(counts).reduce((sum, count) => sum + count, 0);
+
+export type ProfileBar = { label: string; yes: number; total: number; percent: number };
+
+/** As barras do painel "Perfil dos currículos" de uma fonte: quantos dizem "sim" em cada item, sobre todos da fonte. */
+export const profileOf = (chartsOfSource: Record<string, Record<string, number>> = {}): ProfileBar[] =>
+    profileItems.map((item) => {
+        const counts = chartsOfSource[item.chart] || {};
+        const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
+        const yes = counts[item.yes] || 0;
+        return { label: item.label, yes, total, percent: percentOf(yes, total) };
+    });
+
+/** Uma série das barras agrupadas: a fonte, a porcentagem de cada categoria e a quantidade por trás dela. */
+export type ComparisonSeries = { name: string; source: Source; data: number[]; counts: number[] };
+
+/** As barras agrupadas de um gráfico: as categorias e uma série por fonte. */
+export type Comparison = { categories: string[]; series: ComparisonSeries[] };
+
+export type SourceCounts = { source: Source; total: number; counts?: Record<string, number> };
+
+/**
+ * As fontes lado a lado num gráfico de barras agrupadas (CVs x CVs vistos): cada série é uma fonte, cada categoria um
+ * valor do gráfico, em porcentagem da base de cada fonte (as fontes têm tamanhos diferentes, os números absolutos não
+ * se comparam). A ordem é a própria do gráfico ou a da primeira fonte (a maior primeira); nos gráficos de vários valores
+ * ficam só os MULTI_VALUE_BARS mais frequentes.
+ */
+export const comparisonOf = (chart: string, bySource: SourceCounts[]): Comparison => {
+    const keys = Array.from(new Set(bySource.flatMap((item) => Object.keys(item.counts || {}))));
+    const first = bySource[0]?.counts || {};
+    const order = fixedOrders[chart];
+    const sorted = order
+        ? keys.sort((a, b) => order.indexOf(a) - order.indexOf(b))
+        : keys.sort((a, b) => (first[b] || 0) - (first[a] || 0) || sliceLabel(chart, a).localeCompare(sliceLabel(chart, b)));
+    const ordered = isMultiValue(chart) ? sorted.slice(0, MULTI_VALUE_BARS) : sorted;
+    const series = bySource.map((item) => {
+        const base = percentBase(chart, item.total, item.counts);
+        const counts = ordered.map((key) => item.counts?.[key] || 0);
+        return { name: item.source.button, source: item.source, data: counts.map((count) => percentOf(count, base)), counts };
+    });
+    return { categories: ordered.map((key) => sliceLabel(chart, key)), series };
+};
+
+/** O perfil lado a lado: uma série por fonte, uma categoria por item de sim/não. */
+export const profileComparisonOf = (bySource: { source: Source; charts?: Record<string, Record<string, number>> }[]): Comparison => ({
+    categories: profileItems.map((item) => item.label),
+    series: bySource.map((item) => {
+        const bars = profileOf(item.charts);
+        return { name: item.source.button, source: item.source, data: bars.map((bar) => bar.percent), counts: bars.map((bar) => bar.yes) };
+    }),
+});
 
 /** O nome da região de um ddd. */
 export const regionName = (ddd: string) => (ddd == HOME_OFFICE ? 'Home office' : dddRegions.find((region) => region.id == ddd)?.nome || ddd);

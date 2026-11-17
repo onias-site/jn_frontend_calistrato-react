@@ -1,4 +1,4 @@
-import { HOME_OFFICE, OTHERS, money, regionName, regionTree, sliceLabel, slicesOf, yearsLabel, sources, countLabel, folderTotals, monthTitle, daysOfTheMonth, lastMonths, insertionSeries, sortFolders, periodTooltipLabel } from './supplyAndDemandData';
+import { HOME_OFFICE, money, regionName, regionTree, sliceLabel, yearsLabel, sources, countLabel, folderTotals, monthTitle, daysOfTheMonth, lastMonths, insertionSeries, sortFolders, periodTooltipLabel, charts, comparisonOf, distinctItems, isMultiValue, isSmallSample, percentText, profileComparisonOf, profileOf } from './supplyAndDemandData';
 
 describe('supplyAndDemandData', () => {
     it('rotula as fatias a partir dos códigos do backend', () => {
@@ -21,13 +21,6 @@ describe('supplyAndDemandData', () => {
         expect(sources.map((source) => source.ready)).toEqual([true, true, false]);
         expect(countLabel(sources[1], 1)).toBe('1 visualização');
         expect(countLabel(sources[0], 15)).toBe('15 currículos');
-    });
-
-    it('mantém a ordem própria das faixas de habilidades e das formas de contratação', () => {
-        const skills = slicesOf('skillsCount', { over50: 1, upTo5: 3, from16To30: 9 });
-        expect(skills.map((slice) => slice.label)).toEqual(['Até 5', 'De 16 a 30', 'Mais de 50']);
-        const contracts = slicesOf('contractType', { both: 106, onlyPj: 3, onlyClt: 7 });
-        expect(contracts.map((slice) => slice.label)).toEqual(['Aceita apenas CLT', 'Aceita apenas PJ', 'Aceita ambos']);
     });
 
     it('soma os totais dos ddds de uma pasta em cada fonte', () => {
@@ -61,16 +54,6 @@ describe('supplyAndDemandData', () => {
         expect(yearsLabel(0)).toBe('0 anos');
     });
 
-    it('junta em "Outras" o que passa das 7 maiores fatias', () => {
-        const counts: Record<string, number> = {};
-        for (let index = 1; index <= 10; index++) counts[`skill${index}`] = index;
-        const slices = slicesOf('skill', counts);
-        expect(slices).toHaveLength(8);
-        expect(slices[0]).toEqual({ key: 'skill10', label: 'skill10', total: 10 });
-        expect(slices[7]).toEqual({ key: OTHERS, label: OTHERS, total: 1 + 2 + 3 });
-        expect(slicesOf('pcd', { true: 1, false: 3 }).map((slice) => slice.label)).toEqual(['Não', 'Sim']);
-    });
-
     it('ordena as pastas por visualizações, currículos e nome', () => {
         const nodes = [
             { value: HOME_OFFICE, label: 'Home office' },
@@ -96,6 +79,82 @@ describe('supplyAndDemandData', () => {
         expect(sp?.children.some((region) => region.value == '11')).toBe(true);
         expect(regionName(HOME_OFFICE)).toBe('Home office');
         expect(regionName('11')).toBe(sp?.children.find((region) => region.value == '11')?.label);
+    });
+
+    it('junta os 5 gráficos de sim/não no perfil, com a porcentagem de sim sobre todos', () => {
+        const bars = profileOf({ pcd: { true: 1, false: 8, notInformed: 1 }, travel: { true: 5, false: 5 } });
+        expect(bars.map((bar) => bar.label)).toEqual(['Disponibilidade imediata', 'Negocia a pretensão salarial', 'Aceita viajar', 'Aceita trabalho temporário', 'PCD']);
+        expect(bars[2]).toEqual({ label: 'Aceita viajar', yes: 5, total: 10, percent: 50 });
+        expect(bars[4]).toEqual({ label: 'PCD', yes: 1, total: 10, percent: 10 });
+        expect(bars[0]).toEqual({ label: 'Disponibilidade imediata', yes: 0, total: 0, percent: 0 });
+        expect(charts.some((chart) => chart.id == 'pcd')).toBe(false);
+    });
+
+    const [cvs, viewed] = sources;
+
+    it('compara as fontes lado a lado em porcentagem de cada uma, com a quantidade para a dica', () => {
+        const comparison = comparisonOf('resumeType', [
+            { source: cvs, total: 10, counts: { '1': 8, '2': 2 } },
+            { source: viewed, total: 40, counts: { '1': 10, '2': 30 } },
+        ]);
+        expect(comparison.categories).toEqual(['Tecnologia da Informação', 'Recrutamento e seleção']);
+        expect(comparison.series.map((item) => item.name)).toEqual(['CVs', 'CVs vistos']);
+        expect(comparison.series[0].data).toEqual([80, 20]);
+        expect(comparison.series[1].data).toEqual([25, 75]);
+        expect(comparison.series[1].counts).toEqual([10, 30]);
+        expect(comparison.series[1].source).toBe(viewed);
+    });
+
+    it('mantém a ordem própria das faixas, da contratação e da senioridade, e põe zero onde a fonte não tem a categoria', () => {
+        const skills = comparisonOf('skillsCount', [{ source: cvs, total: 13, counts: { over50: 1, upTo5: 3, from16To30: 9 } }]);
+        expect(skills.categories).toEqual(['Até 5', 'De 16 a 30', 'Mais de 50']);
+        const contracts = comparisonOf('contractType', [{ source: cvs, total: 116, counts: { both: 106, onlyPj: 3, onlyClt: 7 } }]);
+        expect(contracts.categories).toEqual(['Aceita apenas CLT', 'Aceita apenas PJ', 'Aceita ambos']);
+        const seniority = comparisonOf('seniority', [
+            { source: cvs, total: 34, counts: { senior: 9, estag: 1, pleno: 20, junior: 4 } },
+            { source: viewed, total: 5, counts: { senior: 5 } },
+        ]);
+        expect(seniority.categories).toEqual(['Estágio', 'Júnior', 'Pleno', 'Sênior']);
+        expect(seniority.series[1].data).toEqual([0, 0, 0, 100]);
+    });
+
+    it('ordena as demais categorias pela primeira fonte e une as categorias das duas', () => {
+        const comparison = comparisonOf('anyChart', [
+            { source: cvs, total: 10, counts: { a: 2, b: 8 } },
+            { source: viewed, total: 10, counts: { c: 10 } },
+        ]);
+        expect(comparison.categories).toEqual(['b', 'a', 'c']);
+        expect(comparison.series[0].data).toEqual([80, 20, 0]);
+    });
+
+    it('calcula habilidades e idiomas sobre os registros, só com os 12 mais frequentes', () => {
+        expect(isMultiValue('skill')).toBe(true);
+        const comparison = comparisonOf('skill', [{ source: cvs, total: 8, counts: { Java: 6, SQL: 4, Docker: 2 } }]);
+        expect(comparison.series[0].data).toEqual([75, 50, 25]);
+        const many = Object.fromEntries(Array.from({ length: 20 }, (_, index) => [`S${index}`, 20 - index]));
+        const top = comparisonOf('skill', [{ source: cvs, total: 40, counts: many }]);
+        expect(top.categories.length).toBe(12);
+        expect(top.categories[0]).toBe('S0');
+        expect(distinctItems(many)).toBe(20);
+        expect(distinctItems(undefined)).toBe(0);
+    });
+
+    it('compara o perfil das fontes lado a lado', () => {
+        const comparison = profileComparisonOf([
+            { source: cvs, charts: { pcd: { true: 1, false: 9 } } },
+            { source: viewed, charts: { pcd: { true: 3, false: 1 } } },
+        ]);
+        expect(comparison.categories[4]).toBe('PCD');
+        expect(comparison.series[0].data[4]).toBe(10);
+        expect(comparison.series[1].data[4]).toBe(75);
+        expect(comparison.series[1].counts[4]).toBe(3);
+    });
+
+    it('escreve a porcentagem e avisa a amostra pequena', () => {
+        expect(percentText(12.5)).toBe('12,5%');
+        expect(isSmallSample(3)).toBe(true);
+        expect(isSmallSample(10)).toBe(false);
+        expect(isSmallSample(0)).toBe(false);
     });
 
     it('põe Dia ou Mês antes do período na dica do gráfico de linhas', () => {
