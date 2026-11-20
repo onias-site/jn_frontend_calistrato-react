@@ -43,12 +43,16 @@ const regionScopes: Record<string, string> = {
     anyRegion: 'Trabalha em qualquer região',
 };
 
+// a situação de cada sugestão do candidato (VisSuggestionStatuses no backend): sugestões de nova habilidade e itens das
+// sugestões de associação / desassociação da hierarquia de habilidades, desde 2026-11-20
+const suggestionStatuses: Record<string, string> = { approved: 'Aprovado', pending: 'Pendente', rejected: 'Rejeitado' };
+
 /** Como cada gráfico aparece: pizza (o padrão), ranking em barras (Skills Evitadas) ou origem x objetivo (barras empilhadas). */
 export type PieKind = 'pie' | 'ranking' | 'channelGoal';
 
 type Pie = { id: string; title: string; labels?: Record<string, string>; help?: string; excluded?: string[]; kind?: PieKind; maxSlices?: number };
 
-/** Os 11 gráficos da tela, na ordem pedida em 2026-11-17 (origem x objetivo e o ranking das Skills Evitadas desde a mesma data); os rótulos dos combos de onde os valores vieram, o texto do "?" e as chaves que ficam fora. */
+/** Os 14 gráficos da tela, na ordem pedida em 2026-11-17 (origem x objetivo e o ranking das Skills Evitadas desde a mesma data) e, no fim, as 3 pizzas das sugestões por situação (2026-11-20); os rótulos dos combos de onde os valores vieram, o texto do "?" e as chaves que ficam fora. */
 export const pies: Pie[] = [
     { id: 'viewerDomains', title: 'Empresas que mais veem currículos', labels: viewerDomains },
     {
@@ -71,6 +75,9 @@ export const pies: Pie[] = [
         kind: 'ranking',
     },
     { id: 'resumeRegionScopes', title: 'DDDs do currículo', labels: regionScopes },
+    { id: 'hierarchyAddStatuses', title: 'Sugestões de associação de hierarquia de habilidades', labels: suggestionStatuses },
+    { id: 'hierarchyRemoveStatuses', title: 'Sugestões de desassociação de hierarquia de habilidades', labels: suggestionStatuses },
+    { id: 'skillSuggestionStatuses', title: 'Sugestões de novas habilidades', labels: suggestionStatuses },
 ];
 
 /**

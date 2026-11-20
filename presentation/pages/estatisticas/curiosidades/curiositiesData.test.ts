@@ -57,7 +57,18 @@ describe('curiositiesData', () => {
             'Situação do Currículo',
             'Skills Evitadas',
             'DDDs do currículo',
+            'Sugestões de associação de hierarquia de habilidades',
+            'Sugestões de desassociação de hierarquia de habilidades',
+            'Sugestões de novas habilidades',
         ]);
+    });
+
+    it('rotula a situação das sugestões (2026-11-20)', () => {
+        for (const id of ['hierarchyAddStatuses', 'hierarchyRemoveStatuses', 'skillSuggestionStatuses']) {
+            const pie = pies.find((candidate) => candidate.id == id);
+            const slices = slicesOf({ pending: 3, approved: 2, rejected: 1 }, pie?.labels);
+            expect(slices.map((slice) => slice.label)).toEqual(['Pendente', 'Aprovado', 'Rejeitado']);
+        }
     });
 
     it('deixa os recrutadores legacy fora da origem dos recrutadores e do total', () => {
