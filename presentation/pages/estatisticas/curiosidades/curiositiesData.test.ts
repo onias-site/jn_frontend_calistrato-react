@@ -44,19 +44,19 @@ describe('curiositiesData', () => {
         expect(pies.find((pie) => pie.id == 'resumeSituation')?.title).toBe('Situação do Currículo');
     });
 
-    it('mostra os gráficos na ordem pedida em 2026-11-17', () => {
+    it('mostra os gráficos na ordem pedida em 2026-11-20', () => {
         expect(pies.map((pie) => pie.title)).toEqual([
             'Empresas que mais veem currículos',
             'Consultorias / Empresas já contratantes',
             'Origem dos recrutadores',
-            'Chamados abertos por tipo',
             'Objetivos dos usuários',
             'Origem do usuário',
             'Origem x objetivo do usuário',
             'Áreas dos currículos',
             'Situação do Currículo',
             'Skills Evitadas',
-            'DDDs do currículo',
+            'Regiões metropolitanas dos CVs',
+            'Chamados abertos por tipo',
             'Sugestões de associação de hierarquia de habilidades',
             'Sugestões de desassociação de hierarquia de habilidades',
             'Sugestões de novas habilidades',

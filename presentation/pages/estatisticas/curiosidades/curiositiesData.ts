@@ -52,7 +52,7 @@ export type PieKind = 'pie' | 'ranking' | 'channelGoal';
 
 type Pie = { id: string; title: string; labels?: Record<string, string>; help?: string; excluded?: string[]; kind?: PieKind; maxSlices?: number };
 
-/** Os 14 gráficos da tela, na ordem pedida em 2026-11-17 (origem x objetivo e o ranking das Skills Evitadas desde a mesma data) e, no fim, as 3 pizzas das sugestões por situação (2026-11-20); os rótulos dos combos de onde os valores vieram, o texto do "?" e as chaves que ficam fora. */
+/** Os 14 gráficos da tela, na ordem pedida em 2026-11-20 (os chamados depois das regiões e, no fim, as 3 pizzas das sugestões por situação, com o "?"); os rótulos dos combos de onde os valores vieram, o texto do "?" e as chaves que ficam fora. */
 export const pies: Pie[] = [
     { id: 'viewerDomains', title: 'Empresas que mais veem currículos', labels: viewerDomains },
     {
@@ -61,8 +61,6 @@ export const pies: Pie[] = [
         help: 'Estas são as consultorias / empresas que os candidatos mais evitam enviar currículos, pois provavelmente já trabalham ou trabalharam nelas.',
     },
     { id: 'recruiterSources', title: 'Origem dos recrutadores', labels: recruiterSources, excluded: ['legacy'] },
-    // uma fatia por opção do combo dos chamados, sem "Outras"
-    { id: 'contactUsTypes', title: 'Chamados abertos por tipo', labels: contactUsTypes, maxSlices: TICKET_KINDS.length },
     { id: 'goals', title: 'Objetivos dos usuários', labels: goals },
     { id: 'channels', title: 'Origem do usuário', labels: channels },
     { id: 'channelGoals', title: 'Origem x objetivo do usuário', kind: 'channelGoal' },
@@ -74,10 +72,27 @@ export const pies: Pie[] = [
         help: 'Habilidades / Conceitos / Ferramentas que os donos dos currículos mais cadastram para não trabalharem com elas.',
         kind: 'ranking',
     },
-    { id: 'resumeRegionScopes', title: 'DDDs do currículo', labels: regionScopes },
-    { id: 'hierarchyAddStatuses', title: 'Sugestões de associação de hierarquia de habilidades', labels: suggestionStatuses },
-    { id: 'hierarchyRemoveStatuses', title: 'Sugestões de desassociação de hierarquia de habilidades', labels: suggestionStatuses },
-    { id: 'skillSuggestionStatuses', title: 'Sugestões de novas habilidades', labels: suggestionStatuses },
+    { id: 'resumeRegionScopes', title: 'Regiões metropolitanas dos CVs', labels: regionScopes },
+    // uma fatia por opção do combo dos chamados, sem "Outras"
+    { id: 'contactUsTypes', title: 'Chamados abertos por tipo', labels: contactUsTypes, maxSlices: TICKET_KINDS.length },
+    {
+        id: 'hierarchyAddStatuses',
+        title: 'Sugestões de associação de hierarquia de habilidades',
+        labels: suggestionStatuses,
+        help: 'Na hierarquia de habilidades, cada habilidade traz as que dependem do conhecimento nela (quem sabe Spring, por exemplo, sabe Java). Estas são as sugestões dos candidatos para acrescentar a uma habilidade outras que dependem dela e ainda não estão lá, por situação. A sugestão é feita no menu Sobre Mim, aba Habilidades: ao abrir uma habilidade, clica-se em "Sugira adicionar habilidades (presentes no seu currículo) que você acredita que deveria estar aqui e não estão". O suporte aprova ou rejeita cada item.',
+    },
+    {
+        id: 'hierarchyRemoveStatuses',
+        title: 'Sugestões de desassociação de hierarquia de habilidades',
+        labels: suggestionStatuses,
+        help: 'Na hierarquia de habilidades, cada habilidade traz as que dependem do conhecimento nela (quem sabe Spring, por exemplo, sabe Java). Estas são as sugestões dos candidatos para retirar de uma habilidade outras que, na opinião deles, não dependem dela, por situação. A sugestão é feita no menu Sobre Mim, aba Habilidades: ao abrir uma habilidade, clica-se em "Sugira remover habilidades que você acredita que não dependem do conhecimento em ...". O suporte aprova ou rejeita cada item.',
+    },
+    {
+        id: 'skillSuggestionStatuses',
+        title: 'Sugestões de novas habilidades',
+        labels: suggestionStatuses,
+        help: 'Habilidades que constam no texto do currículo, mas que o sistema ainda não reconhece, e que os candidatos sugeriram incluir na lista de habilidades, por situação. A sugestão é feita no menu Sobre Mim, aba Habilidades, pelo link "Deixamos de listar alguma habilidade?". O suporte aprova (a habilidade passa a ser reconhecida nos currículos) ou rejeita.',
+    },
 ];
 
 /**
