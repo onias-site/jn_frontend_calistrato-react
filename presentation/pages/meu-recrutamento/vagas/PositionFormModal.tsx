@@ -57,7 +57,7 @@ import {
 } from './positionsData';
 
 type PositionFormModalProps = {
-    // sem vaga, "Abrir vaga": o título vem vazio e é obrigatório; com vaga, "Editar": o título (parte da chave) fica travado
+    // sem vaga, "Abrir nova vaga": o título vem vazio e é obrigatório; com vaga, "Editar": o título (parte da chave) fica travado
     position: Position | null;
     // a vaga gravada: a tela atualiza a lista e o modal continua aberto, na aba "Cvs encontrados"
     onSaved: (position: Position) => void;
@@ -73,7 +73,7 @@ const fieldLabel = 'mb-1.5 block font-semibold text-dark dark:text-white-light';
 const inside = { withinPortal: false };
 
 /**
- * O modal de "Abrir vaga" e de "Editar" da tela "Meu Recrutamento → Vagas", em abas sequenciais e com a aparência do
+ * O modal de "Abrir nova vaga" e de "Editar" da tela "Meu Recrutamento → Vagas", em abas sequenciais e com a aparência do
  * cadastro de currículo (desde 2026-11-22): rótulos com o botão de ajuda (LabelComponent), os checkboxes com explicação e
  * o erro de cada campo embaixo dele. A primeira aba, "Vaga", tem título, área, descrição, contatos, as datas de início e
  * de fim; depois vêm Filtros (regiões, com a contagem dos currículos delas, senioridade e o mais que filtra os
@@ -519,7 +519,7 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
         </Alert>
     );
 
-    const saveLabel = creating ? 'Abrir vaga' : 'Salvar dados';
+    const saveLabel = creating ? 'Abrir nova vaga' : 'Salvar dados';
     const saveShortcut = creating ? undefined : { label: 'Salvar dados', icon: <IconSave className="h-4 w-4" />, onClick: save };
 
     return (
