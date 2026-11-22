@@ -24,7 +24,7 @@ import IconDollarSign from '@/presentation/icons/icon-dollar-sign';
 import IconSave from '@/presentation/icons/icon-save';
 import IconUsers from '@/presentation/icons/icon-users';
 import IconInfoCircle from '@/presentation/icons/icon-info-circle';
-import { ResumesOfTheFiltersMessage } from './ResumesOfTheFiltersMessage';
+import { ResumesOfTheFiltersMessage, useResumesOfTheFilters } from './ResumesOfTheFiltersMessage';
 import { filtersRequestOf } from './resumesOfTheFilters';
 import {
     Contact,
@@ -108,6 +108,10 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
     const requiredSkills: string[] = (skillGroups.find((group) => group.name == REQUIRED_SKILLS)?.list || []).map((item: any) => item.skill);
     const login: any = JnAjax.getLogin() || {};
     const filtersRequest = filtersRequestOf(form, requiredSkills, login.email);
+    // uma contagem para o modal inteiro, pedida a cada filtro preenchido; a mesma mensagem aparece em cada aba com filtros
+    // (Vaga, Filtros, Idiomas, Habilidades e Salários)
+    const resumesOfTheFilters = useResumesOfTheFilters(filtersRequest);
+    const resumesMessage = <ResumesOfTheFiltersMessage request={filtersRequest} {...resumesOfTheFilters} />;
     const [hasTabSkills, setHasTabSkills] = useState(skillGroups.some((group) => group.list.length > 0));
     const showTabSkills = hasTabSkills && isTechPosition(form);
     const set = (changes: Partial<PositionForm>) => setForm((current) => ({ ...current, ...changes }));
@@ -258,6 +262,7 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
             >
                 <Select id="resumeType" error={!!fieldErrors.resumeType} data={resumeTypeOptions} value={form.resumeType} allowDeselect={false} comboboxProps={inside} onChange={(value) => set({ resumeType: value || '' })} />
             </LabelComponent>
+            {resumesMessage}
             <LabelComponent
                 explanation={`O texto completo da vaga: atividades, requisitos, benefícios e o que mais o candidato precisa saber (de ${LIMITS.descriptionMin} a ${LIMITS.descriptionMax.toLocaleString('pt-BR')} caracteres). Numa vaga de tecnologia, é deste texto que saem as listas da aba 'Habilidades' mais à frente.`}
                 labelValue={`Descrição da vaga (${form.description.trim().length} caracteres):`}
@@ -319,6 +324,7 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
     const setLanguageLevel = (name: string, level: number) => set({ spokenLanguage: form.spokenLanguage.map((language) => (language.name == name ? { ...language, level } : language)) });
     const languagesTab = (
         <div>
+            {resumesMessage}
             <div className="mb-5">
                 <Checkbox checked={form.hasLanguages} onChange={(event) => set({ hasLanguages: event.currentTarget.checked })} label="A vaga exige conhecimento em outro(s) idioma(s) além do português" />
             </div>
@@ -385,7 +391,7 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
                 )}
             </div>
             {/* a área de mensagens: os currículos que atendem a todos os filtros da vaga (spinner enquanto o backend não responde) */}
-            <ResumesOfTheFiltersMessage request={filtersRequest} />
+            {resumesMessage}
             <div className="max-w-xl">
                 <LabelComponent explanation="A senioridade dos currículos procurados." labelValue="Senioridade da vaga:" property="seniority" errors={{}}>
                     <Select id="seniority" data={seniorityOptions} value={form.seniority || null} placeholder="Escolha a senioridade" comboboxProps={inside} onChange={(value) => set({ seniority: value || '' })} />
@@ -506,6 +512,7 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
     );
     const salaryTab = (
         <div>
+            {resumesMessage}
             {salaryRange('CLT', form.hasClt, form.cltMin, form.cltMax, (hasClt, cltMin, cltMax) => ({ hasClt, cltMin, cltMax }))}
             {salaryRange('PJ', form.hasPj, form.pjMin, form.pjMax, (hasPj, pjMin, pjMax) => ({ hasPj, pjMin, pjMax }))}
             <CheckBoxComponent
@@ -540,7 +547,12 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
             {positionTab}
             {filtersTab}
             {languagesTab}
-            {showTabSkills && <TabSkills2 store={skillStore} getAccordionList={getImplicitSkills} withSuggestions={false} />}
+            {showTabSkills && (
+                <div>
+                    {resumesMessage}
+                    <TabSkills2 store={skillStore} getAccordionList={getImplicitSkills} withSuggestions={false} />
+                </div>
+            )}
             {salaryTab}
             {optionsTab}
             {savedOnce && foundResumesTab}

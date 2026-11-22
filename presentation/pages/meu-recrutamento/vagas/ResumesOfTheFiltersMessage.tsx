@@ -4,21 +4,19 @@ import { Loader } from '@mantine/core';
 import JnAjax from '@/app/JnAjax';
 import { foundResumesMessage, ResumesOfTheFilters } from './resumesOfTheFilters';
 
-type ResumesOfTheFiltersMessageProps = {
-    // o corpo do POST positions/resumes-of-the-filters; null enquanto não dá para contar (sem área ou sem região)
-    request: Record<string, any> | null;
-};
-
 // espera o usuário parar de mexer nos filtros antes de perguntar ao backend
 const DEBOUNCE_MILLISECONDS = 500;
 
+export type ResumesOfTheFiltersState = { loading: boolean; found: ResumesOfTheFilters | null; failed: boolean };
+
 /**
- * A área de mensagens dos filtros do formulário de vagas (desde 2026-11-22): a cada mudança dos filtros (área, regiões,
- * senioridade, habilidades obrigatórias, idiomas, salários e as caixas), espera meio segundo e pergunta ao backend quantos
- * currículos atendem a eles; enquanto ele não responde, mostra um spinner, e com a resposta "Foram encontrados N
- * currículos" com as médias de pretensão. Só a resposta do último pedido vale.
+ * A contagem dos currículos que atendem aos filtros da vaga (desde 2026-11-22), uma só para o modal inteiro: a cada
+ * filtro preenchido ou mudado, em qualquer aba (área, regiões, senioridade, habilidades obrigatórias, idiomas, salários
+ * e as caixas), espera meio segundo e pergunta ao POST positions/resumes-of-the-filters. Fica no modal, e não em cada
+ * aba, porque o Tabs só monta a aba aberta: trocar de aba não repete o pedido nem apaga o número. Só a resposta do
+ * último pedido vale.
  */
-export const ResumesOfTheFiltersMessage = ({ request }: ResumesOfTheFiltersMessageProps) => {
+export const useResumesOfTheFilters = (request: Record<string, any> | null): ResumesOfTheFiltersState => {
     const [loading, setLoading] = useState(false);
     const [found, setFound] = useState<ResumesOfTheFilters | null>(null);
     const [failed, setFailed] = useState(false);
@@ -28,6 +26,7 @@ export const ResumesOfTheFiltersMessage = ({ request }: ResumesOfTheFiltersMessa
 
     useEffect(() => {
         if (!request) {
+            lastRequest.current++;
             setFound(null);
             setLoading(false);
             return;
@@ -60,6 +59,16 @@ export const ResumesOfTheFiltersMessage = ({ request }: ResumesOfTheFiltersMessa
         return () => clearTimeout(timer);
     }, [requestKey]);
 
+    return { loading, found, failed };
+};
+
+type ResumesOfTheFiltersMessageProps = ResumesOfTheFiltersState & {
+    // o corpo do pedido; null enquanto não dá para contar (sem área ou sem região): a mensagem some
+    request: Record<string, any> | null;
+};
+
+/** A área de mensagens de cada aba com filtros: spinner enquanto o backend não responde, depois a contagem e as médias. */
+export const ResumesOfTheFiltersMessage = ({ request, loading, found, failed }: ResumesOfTheFiltersMessageProps) => {
     if (!request) return null;
 
     return (
