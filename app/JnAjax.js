@@ -34,7 +34,10 @@ export default class JnAjax {
         // uma requisição simples do CORS, sem o OPTIONS de preflight que sempre chegaria ao backend
         const withoutSession = callbacks['withoutSession'] == true;
         headers = withoutSession ? headers : { ...headers, sessionToken, email };
-        contentType = withoutSession ? false : contentType;
+        // só o pedido sem corpo dispensa o Content-Type: um POST público (contagem de currículos dos filtros da vaga) sem ele
+        // chegaria como text/plain e o backend responderia 415
+        const withoutBody = type == 'GET' || type == 'HEAD';
+        contentType = withoutSession && withoutBody ? false : contentType;
 
         const retryAfterAuthentication = callbacks['retryAfterAuthentication'] || (() => {});
 
