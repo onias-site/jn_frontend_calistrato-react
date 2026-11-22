@@ -74,6 +74,17 @@ export const Tabs: React.FC<TabsProps> = ({
     React.useEffect(() => {
         goToTab && tabs[goToTab.index] && goTo(goToTab.index);
     }, [goToTab]);
+    // a aba nova abre do começo: sem isto, quem avança pelo botão do fim da aba (num modal ou numa página com rolagem)
+    // cai no fim da aba seguinte e não vê o que fica no topo dela (ex.: a contagem de currículos da aba Opções da vaga)
+    const top = React.useRef<HTMLDivElement>(null);
+    const firstRender = React.useRef(true);
+    React.useEffect(() => {
+        if (firstRender.current) {
+            firstRender.current = false;
+            return;
+        }
+        top.current && top.current.scrollIntoView({ block: 'start' });
+    }, [activeIndex]);
     // "Voltar" e "Avançar" (até 2026-11-08 os botões levavam o nome da aba vizinha, o que confundia: "Idiomas" parecia um atalho)
     const previousLabel = activeIndex > 0 ? 'Voltar' : firstButtonLabel;
     const nextLabel = tabs[activeIndex + 1] ? 'Avançar' : lastButtonLabel;
@@ -126,7 +137,8 @@ export const Tabs: React.FC<TabsProps> = ({
     const panels = React.Children.toArray(children);
 
     return (
-        <div className="panel">
+        // scroll-mt: o cabeçalho fixo do modal não cobre a barra das abas
+        <div className="panel scroll-mt-24" ref={top}>
             <MantineTabs value={String(activeIndex)} onChange={(value) => changeTab(Number(value))} keepMounted={false}>
                 {/* numa tela estreita as abas rolam na horizontal em vez de quebrar o nome em duas linhas */}
                 <MantineTabs.List className="mb-5 flex-nowrap overflow-x-auto">

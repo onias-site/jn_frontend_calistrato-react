@@ -1,6 +1,6 @@
 /**
  * Os currículos ativos de cada região (ddd) da vaga, na aba "Opções" do formulário de vagas (desde 2026-11-22): o endpoint
- * recruiter/{email}/positions/resumes-of-the-ddds devolve, por ddd, os filhos do grupo do ddd no jn_grouper (parte do
+ * público GET positions/resumes-of-the-ddds/{ddds separados por vírgula} (sem sessão: a tela abre sem login) devolve, por ddd, os filhos do grupo do ddd no jn_grouper (parte do
  * currículo e o id). Cada ddd fica guardado no navegador por uma hora, e a tela só pede ao backend os que não tem. Um
  * currículo de vários ddds conta uma vez só, pelo id.
  */

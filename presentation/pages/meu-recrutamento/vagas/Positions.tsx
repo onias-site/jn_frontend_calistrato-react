@@ -1,6 +1,5 @@
 'use client';
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useEffect, useRef, useState } from 'react';
 import { Tabs } from '@mantine/core';
 import JnAjax from '@/app/JnAjax';
 import { Modal } from '@/presentation/components/source/Modal';
@@ -19,9 +18,8 @@ type Situation = 'loading' | 'loaded' | 'notLogged' | 'error';
 const PARENT_NAME = 'jn_login_email';
 const CHILD_NAME = 'vis_position';
 
-const messages: Record<Exclude<Situation, 'loaded'>, string> = {
+const messages: Record<Exclude<Situation, 'loaded' | 'notLogged'>, string> = {
     loading: 'Carregando as suas vagas...',
-    notLogged: 'Entre com o seu e-mail para ver as vagas que você cadastrou.',
     error: 'Não foi possível carregar as suas vagas agora. Tente de novo em alguns instantes.',
 };
 
@@ -61,27 +59,30 @@ export const Positions = () => {
     const [editing, setEditing] = useState<Position | null | undefined>(undefined);
     const [reactivating, setReactivating] = useState<Position | null>(null);
     const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
-    const router = useRouter();
+    // as vagas gravadas antes de a lista chegar do backend (ex.: a primeira, salva por quem fez o login só para salvar):
+    // a gravação é assíncrona e o grupo lido logo depois ainda pode vir sem elas
+    const savedBeforeTheList = useRef<Position[]>([]);
+
+    const withTheSaved = (loaded: Position[]) => savedBeforeTheList.current.reduce(replacePosition, loaded);
 
     const load = () => {
         setSituation('loading');
         const callbacks: any = {};
         callbacks[200] = (response: any) => {
-            setPositions(parsePositions(response));
+            setPositions(withTheSaved(parsePositions(response)));
             setSituation('loaded');
         };
         // nenhuma vaga ainda: o grupo do usuário não existe
         callbacks[404] = () => {
-            setPositions([]);
+            setPositions(withTheSaved([]));
             setSituation('loaded');
         };
+        // a tela abre sem login (desde 2026-11-22): mostra o convite ao login e deixa "Criar vaga" livre; o login só é
+        // exigido ao salvar a vaga
         callbacks[401] = () => {
             // sem login o JnAjax chama o 401 antes de enviar, e não desliga o carregamento que já ligou
             JnAjax.setNotLoading()();
             setSituation('notLogged');
-            // fechar o modal sem entrar leva à tela inicial: aqui ficaria só uma tela vazia
-            ModalLoginStore.getState().setDismissAction(() => router.push('/'));
-            JnAjax.getHandler401(load)();
         };
         callbacks['onUnexpectedHttpStatus'] = () => setSituation('error');
         const login: any = JnAjax.getLogin() || {};
@@ -92,8 +93,20 @@ export const Positions = () => {
 
     useEffect(load, []);
 
-    // o modal continua aberto depois de gravar (vai para a aba dos currículos encontrados): só a lista muda
-    const saved = (position: Position) => setPositions((current) => replacePosition(current, position));
+    // fechar o modal de login aberto por aqui só fecha o modal: a tela continua aberta, sem login
+    const openLogin = () => {
+        ModalLoginStore.getState().setDismissAction(null);
+        JnAjax.getHandler401(load)();
+    };
+
+    // o modal continua aberto depois de gravar (vai para a aba dos currículos encontrados): só a lista muda; quem
+    // salvou sem ter a lista (fez o login para salvar) passa a ver as suas vagas
+    const saved = (position: Position) => {
+        setPositions((current) => replacePosition(current, position));
+        if (situation == 'loaded') return;
+        savedBeforeTheList.current = [...savedBeforeTheList.current, position];
+        load();
+    };
 
     const reactivated = (title: string, expiration: { min: any; max: any }) => {
         setPositions(changeExpiration(positions, title, expiration));
@@ -138,13 +151,20 @@ export const Positions = () => {
         <div className="panel mt-6">
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                 <h5 className="text-lg font-semibold">Vagas</h5>
-                {situation == 'loaded' && (
+                {(situation == 'loaded' || situation == 'notLogged') && (
                     <button type="button" className="btn btn-primary" aria-haspopup="dialog" onClick={() => setEditing(null)}>
                         Criar vaga
                     </button>
                 )}
             </div>
-            {situation != 'loaded' ? (
+            {situation == 'notLogged' ? (
+                <div>
+                    Para ver as vagas que você cadastrou, você deve fazer{' '}
+                    <a role="button" className="cursor-pointer font-semibold text-primary underline" onClick={openLogin}>
+                        login
+                    </a>
+                </div>
+            ) : situation != 'loaded' ? (
                 <div>{messages[situation]}</div>
             ) : (
                 <Tabs value={tab} onChange={(value) => setTab((value as PositionsTab) || 'active')}>

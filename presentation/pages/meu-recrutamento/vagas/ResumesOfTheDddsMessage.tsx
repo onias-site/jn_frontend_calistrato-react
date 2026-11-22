@@ -35,6 +35,9 @@ export const ResumesOfTheDddsMessage = ({ ddds }: ResumesOfTheDddsMessageProps) 
         const callbacks: any = {};
         // o spinner fica na área de mensagens, não na tela inteira
         callbacks['setLoading'] = () => {};
+        callbacks['setNotLoading'] = () => {};
+        // rota pública: quem ainda não fez login também vê a contagem (o login só é pedido ao salvar a vaga)
+        callbacks['withoutSession'] = true;
         callbacks[200] = (response: any) => {
             const resumesByDdd = (response && response.resumes) || {};
             missing.forEach((ddd) => cacheResumesOf(ddd, resumesByDdd[ddd] || []));
@@ -42,16 +45,13 @@ export const ResumesOfTheDddsMessage = ({ ddds }: ResumesOfTheDddsMessageProps) 
             setFailed(false);
             setResumes(countResumes(currentDdds.current));
         };
-        callbacks[401] = () => {
-            JnAjax.setNotLoading()();
-            finish();
-            JnAjax.getHandler401(() => request(missingDdds(currentDdds.current)))();
-        };
-        callbacks['onUnexpectedHttpStatus'] = () => {
+        const failure = () => {
             finish();
             setFailed(true);
         };
-        JnAjax.doAnAjaxRequest('recruiter/{email}/positions/resumes-of-the-ddds', callbacks, 'POST', { ddd: missing.map(Number) }, {}, 'http://localhost:8081');
+        callbacks[422] = failure;
+        callbacks['onUnexpectedHttpStatus'] = failure;
+        JnAjax.doAnAjaxRequest(`positions/resumes-of-the-ddds/${missing.join(',')}`, callbacks, 'GET', null as any, {}, 'http://localhost:8081');
     };
 
     useEffect(() => {
