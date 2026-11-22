@@ -5,6 +5,8 @@ import JnAjax from '@/app/JnAjax';
 import { cacheAllDdds, cacheResumesOf, cachedAllDdds, countResumes, foundResumesMessage, missingDdds } from './resumesOfTheDdds';
 
 type ResumesOfTheDddsMessageProps = {
+    // a área da vaga (resumeType): só contam os currículos dela
+    resumeType: string;
     // os ddds escolhidos na aba Filtros
     ddds: string[];
     // vaga somente home office: a região não importa, contam os currículos de todos os ddds
@@ -15,35 +17,38 @@ type ResumesOfTheDddsMessageProps = {
 const ALL_DDDS = 'all';
 
 /**
- * A área de mensagens da aba "Filtros" do formulário de vagas (desde 2026-11-22): a cada mudança das regiões, pede ao
- * backend só os ddds que o navegador ainda não guardou (na vaga home office, todos os ddds de uma vez, pelo endpoint sem
- * ddds) e, enquanto ele não responde, mostra um spinner; com a resposta, "Foram encontrados N currículos", contando uma
- * vez o currículo que está em vários ddds.
+ * A área de mensagens da aba "Filtros" do formulário de vagas (desde 2026-11-22): a cada mudança das regiões ou da área
+ * da vaga, pede ao backend só os ddds que o navegador ainda não guardou para a área (na vaga home office, todos os ddds de
+ * uma vez, pelo endpoint sem ddds) e, enquanto ele não responde, mostra um spinner; com a resposta, "Foram encontrados N
+ * currículos", contando uma vez o currículo que está em vários ddds.
  */
-export const ResumesOfTheDddsMessage = ({ ddds, homeOffice }: ResumesOfTheDddsMessageProps) => {
+export const ResumesOfTheDddsMessage = ({ resumeType, ddds, homeOffice }: ResumesOfTheDddsMessageProps) => {
     const [pendingRequests, setPendingRequests] = useState(0);
     const [resumes, setResumes] = useState<number | null>(null);
     const [failed, setFailed] = useState(false);
-    // os ddds já pedidos e ainda sem resposta: uma nova mudança das regiões não os pede de novo
+    // os pares área/ddd já pedidos e ainda sem resposta: uma nova mudança das regiões não os pede de novo
     const inFlight = useRef(new Set<string>());
-    // a contagem que chega depois de uma resposta vale para as regiões escolhidas agora, não para as de quando pediu
-    const current = useRef({ ddds, homeOffice });
-    current.current = { ddds, homeOffice };
-    const searchKey = homeOffice ? ALL_DDDS : ddds.join(',');
+    // a contagem que chega depois de uma resposta vale para a área e as regiões escolhidas agora, não para as de quando pediu
+    const current = useRef({ resumeType, ddds, homeOffice });
+    current.current = { resumeType, ddds, homeOffice };
+    const searchKey = `${resumeType}/${homeOffice ? ALL_DDDS : ddds.join(',')}`;
+    const inFlightKey = (ddd: string) => `${resumeType}.${ddd}`;
 
     const countNow = () => {
-        const { ddds: currentDdds, homeOffice: currentHomeOffice } = current.current;
-        const counted = currentHomeOffice ? cachedAllDdds() || [] : currentDdds;
-        return countResumes(counted);
+        const { resumeType: currentResumeType, ddds: currentDdds, homeOffice: currentHomeOffice } = current.current;
+        const counted = currentHomeOffice ? cachedAllDdds(currentResumeType) || [] : currentDdds;
+        return countResumes(currentResumeType, counted);
     };
 
     // missing vazio: todos os ddds (vaga home office)
     const request = (missing: string[]) => {
-        const asked = missing.length ? missing : [ALL_DDDS];
-        asked.forEach((ddd) => inFlight.current.add(ddd));
+        // a resposta é guardada na área pedida, mesmo que a área do formulário mude antes de ela chegar
+        const askedResumeType = resumeType;
+        const asked = (missing.length ? missing : [ALL_DDDS]).map(inFlightKey);
+        asked.forEach((key) => inFlight.current.add(key));
         setPendingRequests((pending) => pending + 1);
         const finish = () => {
-            asked.forEach((ddd) => inFlight.current.delete(ddd));
+            asked.forEach((key) => inFlight.current.delete(key));
             setPendingRequests((pending) => pending - 1);
         };
         const callbacks: any = {};
@@ -54,7 +59,7 @@ export const ResumesOfTheDddsMessage = ({ ddds, homeOffice }: ResumesOfTheDddsMe
         callbacks['withoutSession'] = true;
         callbacks[200] = (response: any) => {
             const resumesByDdd = (response && response.resumes) || {};
-            missing.length ? missing.forEach((ddd) => cacheResumesOf(ddd, resumesByDdd[ddd] || [])) : cacheAllDdds(resumesByDdd);
+            missing.length ? missing.forEach((ddd) => cacheResumesOf(askedResumeType, ddd, resumesByDdd[ddd] || [])) : cacheAllDdds(askedResumeType, resumesByDdd);
             finish();
             setFailed(false);
             setResumes(countNow());
@@ -65,24 +70,28 @@ export const ResumesOfTheDddsMessage = ({ ddds, homeOffice }: ResumesOfTheDddsMe
         };
         callbacks[422] = failure;
         callbacks['onUnexpectedHttpStatus'] = failure;
-        const uri = missing.length ? `positions/resumes-of-the-ddds/${missing.join(',')}` : 'positions/resumes-of-the-ddds';
+        const uri = missing.length ? `positions/resumes-of-the-ddds/${askedResumeType}/${missing.join(',')}` : `positions/resumes-of-the-ddds/${askedResumeType}`;
         JnAjax.doAnAjaxRequest(uri, callbacks, 'GET', null as any, {}, 'http://localhost:8081');
     };
 
     useEffect(() => {
+        if (!resumeType) {
+            setResumes(null);
+            return;
+        }
         if (homeOffice) {
-            if (cachedAllDdds()) {
+            if (cachedAllDdds(resumeType)) {
                 setResumes(countNow());
                 return;
             }
-            !inFlight.current.has(ALL_DDDS) && request([]);
+            !inFlight.current.has(inFlightKey(ALL_DDDS)) && request([]);
             return;
         }
         if (!ddds.length) {
             setResumes(null);
             return;
         }
-        const missing = missingDdds(ddds).filter((ddd) => !inFlight.current.has(ddd));
+        const missing = missingDdds(resumeType, ddds).filter((ddd) => !inFlight.current.has(inFlightKey(ddd)));
         if (!missing.length) {
             setResumes(countNow());
             return;
@@ -90,7 +99,7 @@ export const ResumesOfTheDddsMessage = ({ ddds, homeOffice }: ResumesOfTheDddsMe
         request(missing);
     }, [searchKey]);
 
-    if (!homeOffice && !ddds.length) return null;
+    if (!resumeType || (!homeOffice && !ddds.length)) return null;
 
     return (
         <div role="status" className="mb-5 flex min-h-[2.75rem] items-center gap-2 rounded-md border border-primary/30 bg-primary-light px-4 py-2.5 text-sm text-primary dark:bg-primary-dark-light">

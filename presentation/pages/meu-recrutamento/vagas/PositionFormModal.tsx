@@ -380,7 +380,7 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
                 )}
             </div>
             {/* a área de mensagens: os currículos ativos das regiões escolhidas (spinner enquanto o backend não responde) */}
-            <ResumesOfTheDddsMessage ddds={form.ddd} homeOffice={homeOffice} />
+            <ResumesOfTheDddsMessage resumeType={form.resumeType} ddds={form.ddd} homeOffice={homeOffice} />
             <div className="max-w-xl">
                 <LabelComponent explanation="A senioridade dos currículos procurados." labelValue="Senioridade da vaga:" property="seniority" errors={{}}>
                     <Select id="seniority" data={seniorityOptions} value={form.seniority || null} placeholder="Escolha a senioridade" comboboxProps={inside} onChange={(value) => set({ seniority: value || '' })} />

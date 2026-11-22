@@ -1,9 +1,10 @@
 /**
- * Os currículos ativos de cada região (ddd) da vaga, na aba "Filtros" do formulário de vagas (desde 2026-11-22): o
- * público GET positions/resumes-of-the-ddds/{ddds separados por vírgula} (sem sessão: a tela abre sem login) devolve, por
- * ddd, os filhos do grupo do ddd no jn_grouper (parte do currículo e o id). Na vaga home office a região não importa:
- * o mesmo GET sem ddds devolve todos os ddds de uma vez. Cada ddd fica guardado no navegador por uma hora, e a tela só
- * pede ao backend os que não tem. Um currículo de vários ddds conta uma vez só, pelo id.
+ * Os currículos ativos de cada região (ddd) e da área (resumeType) da vaga, na aba "Filtros" do formulário de vagas (desde
+ * 2026-11-22): o público GET positions/resumes-of-the-ddds/{área}/{ddds separados por vírgula} (sem sessão: a tela abre
+ * sem login) devolve, por ddd, os filhos do grupo do ddd e da área no jn_grouper (parte do currículo e o id). Na vaga home
+ * office a região não importa: o mesmo GET sem ddds devolve todos os ddds da área de uma vez. Cada par área/ddd fica
+ * guardado no navegador por uma hora, e a tela só pede ao backend os que não tem. Um currículo de vários ddds conta uma
+ * vez só, pelo id.
  */
 
 export type ResumeOfTheDdd = { id: string; [field: string]: any };
@@ -14,10 +15,14 @@ type StorageLike = { getItem: (key: string) => string | null; setItem: (key: str
 
 export const CACHE_LIFETIME = 60 * 60 * 1000;
 
-const KEY_PREFIX = 'positions.resumesOfTheDdd.';
+// desde que a contagem passou a ser por área e ddd, um prefixo novo: o que foi guardado só por ddd não é relido
+const KEY_PREFIX = 'positions.resumesOfTheAreaAndDdd.';
 
 // a marca da resposta com todos os ddds (vaga home office): a lista dos ddds que vieram nela
 const ALL_DDDS = 'all';
+
+// cada área guarda os seus ddds: a chave é a área e o ddd
+const keyOf = (resumeType: string, ddd: string) => `${resumeType}.${ddd}`;
 
 // a cópia em memória vale quando o localStorage está cheio ou bloqueado (janela anônima, cota estourada)
 const memory = new Map<string, Cached<any>>();
@@ -60,37 +65,37 @@ const write = <T,>(key: string, value: T, now: number, storage: StorageLike | nu
     }
 };
 
-/** Os currículos do ddd guardados há menos de uma hora, ou null. */
-export const cachedResumesOf = (ddd: string, now: number = Date.now(), storage: StorageLike | null = browserStorage()): ResumeOfTheDdd[] | null =>
-    read<ResumeOfTheDdd[]>(ddd, now, storage);
+/** Os currículos da área no ddd guardados há menos de uma hora, ou null. */
+export const cachedResumesOf = (resumeType: string, ddd: string, now: number = Date.now(), storage: StorageLike | null = browserStorage()): ResumeOfTheDdd[] | null =>
+    read<ResumeOfTheDdd[]>(keyOf(resumeType, ddd), now, storage);
 
-/** Guarda os currículos do ddd por uma hora. */
-export const cacheResumesOf = (ddd: string, resumes: ResumeOfTheDdd[], now: number = Date.now(), storage: StorageLike | null = browserStorage()) =>
-    write(ddd, resumes, now, storage);
+/** Guarda os currículos da área no ddd por uma hora. */
+export const cacheResumesOf = (resumeType: string, ddd: string, resumes: ResumeOfTheDdd[], now: number = Date.now(), storage: StorageLike | null = browserStorage()) =>
+    write(keyOf(resumeType, ddd), resumes, now, storage);
 
-/** Guarda a resposta com todos os ddds (vaga home office): cada ddd, como os pedidos um a um, e a lista deles. */
-export const cacheAllDdds = (resumesByDdd: Record<string, ResumeOfTheDdd[]>, now: number = Date.now(), storage: StorageLike | null = browserStorage()) => {
+/** Guarda a resposta com todos os ddds da área (vaga home office): cada ddd, como os pedidos um a um, e a lista deles. */
+export const cacheAllDdds = (resumeType: string, resumesByDdd: Record<string, ResumeOfTheDdd[]>, now: number = Date.now(), storage: StorageLike | null = browserStorage()) => {
     const ddds = Object.keys(resumesByDdd);
-    ddds.forEach((ddd) => cacheResumesOf(ddd, resumesByDdd[ddd] || [], now, storage));
-    write(ALL_DDDS, ddds, now, storage);
+    ddds.forEach((ddd) => cacheResumesOf(resumeType, ddd, resumesByDdd[ddd] || [], now, storage));
+    write(keyOf(resumeType, ALL_DDDS), ddds, now, storage);
 };
 
-/** Todos os ddds, quando a resposta com todos eles (e cada um deles) foi guardada há menos de uma hora; senão null. */
-export const cachedAllDdds = (now: number = Date.now(), storage: StorageLike | null = browserStorage()): string[] | null => {
-    const ddds = read<string[]>(ALL_DDDS, now, storage);
+/** Todos os ddds, quando a resposta com todos eles da área (e cada um deles) foi guardada há menos de uma hora; senão null. */
+export const cachedAllDdds = (resumeType: string, now: number = Date.now(), storage: StorageLike | null = browserStorage()): string[] | null => {
+    const ddds = read<string[]>(keyOf(resumeType, ALL_DDDS), now, storage);
     if (!ddds) return null;
-    const everyDddCached = ddds.every((ddd) => cachedResumesOf(ddd, now, storage) != null);
+    const everyDddCached = ddds.every((ddd) => cachedResumesOf(resumeType, ddd, now, storage) != null);
     return everyDddCached ? ddds : null;
 };
 
-/** Os ddds escolhidos que o navegador ainda não tem (ou que guardou há mais de uma hora): só eles vão ao backend. */
-export const missingDdds = (ddds: string[], now: number = Date.now(), storage: StorageLike | null = browserStorage()) =>
-    ddds.filter((ddd) => cachedResumesOf(ddd, now, storage) == null);
+/** Os ddds escolhidos que o navegador ainda não tem para a área (ou que guardou há mais de uma hora): só eles vão ao backend. */
+export const missingDdds = (resumeType: string, ddds: string[], now: number = Date.now(), storage: StorageLike | null = browserStorage()) =>
+    ddds.filter((ddd) => cachedResumesOf(resumeType, ddd, now, storage) == null);
 
-/** Quantos currículos diferentes há nos ddds escolhidos (um currículo de vários ddds conta uma vez). */
-export const countResumes = (ddds: string[], now: number = Date.now(), storage: StorageLike | null = browserStorage()) => {
+/** Quantos currículos diferentes da área há nos ddds escolhidos (um currículo de vários ddds conta uma vez). */
+export const countResumes = (resumeType: string, ddds: string[], now: number = Date.now(), storage: StorageLike | null = browserStorage()) => {
     const ids = new Set<string>();
-    ddds.forEach((ddd) => (cachedResumesOf(ddd, now, storage) || []).forEach((resume) => ids.add(resume.id)));
+    ddds.forEach((ddd) => (cachedResumesOf(resumeType, ddd, now, storage) || []).forEach((resume) => ids.add(resume.id)));
     return ids.size;
 };
 
