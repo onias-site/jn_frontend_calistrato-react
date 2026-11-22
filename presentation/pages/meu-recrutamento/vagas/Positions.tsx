@@ -45,7 +45,7 @@ const confirmations = {
 
 /**
  * A tela "Meu Recrutamento → Vagas" (desde 2026-11-21): as vagas que o usuário logado cadastrou, em duas abas, as dentro
- * da data de expiração e as expiradas, lidas por id no grupo do e-mail dele (jn_grouper). "Criar vaga" e "Editar" abrem
+ * da data de expiração e as expiradas, lidas por id no grupo do e-mail dele (jn_grouper). "Abrir vaga" e "Editar" abrem
  * o mesmo modal (na edição o título fica travado, por ser parte da chave); "Excluir" (só nas vagas dentro da expiração)
  * manda a vaga para a gêmea, e ela some das duas abas; "Inativar" põe o fim da vaga um minuto antes de agora, e ela vai
  * para a aba das expiradas; "Reativar" pede o novo fim da vaga, e ela volta. As gravações são assíncronas no backend: a
@@ -55,7 +55,7 @@ export const Positions = () => {
     const [situation, setSituation] = useState<Situation>('loading');
     const [positions, setPositions] = useState<Position[]>([]);
     const [tab, setTab] = useState<PositionsTab>('active');
-    // undefined: modal fechado; null: "Criar vaga"; uma vaga: "Editar"
+    // undefined: modal fechado; null: "Abrir vaga"; uma vaga: "Editar"
     const [editing, setEditing] = useState<Position | null | undefined>(undefined);
     const [reactivating, setReactivating] = useState<Position | null>(null);
     const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
@@ -77,7 +77,7 @@ export const Positions = () => {
             setPositions(withTheSaved([]));
             setSituation('loaded');
         };
-        // a tela abre sem login (desde 2026-11-22): mostra o convite ao login e deixa "Criar vaga" livre; o login só é
+        // a tela abre sem login (desde 2026-11-22): mostra o convite ao login e deixa "Abrir vaga" livre; o login só é
         // exigido ao salvar a vaga
         callbacks[401] = () => {
             // sem login o JnAjax chama o 401 antes de enviar, e não desliga o carregamento que já ligou
@@ -153,7 +153,7 @@ export const Positions = () => {
                 <h5 className="text-lg font-semibold">Vagas</h5>
                 {(situation == 'loaded' || situation == 'notLogged') && (
                     <button type="button" className="btn btn-primary" aria-haspopup="dialog" onClick={() => setEditing(null)}>
-                        Criar vaga
+                        Abrir vaga
                     </button>
                 )}
             </div>
@@ -177,11 +177,11 @@ export const Positions = () => {
                             Vagas expiradas ({expired.length})
                         </Tabs.Tab>
                     </Tabs.List>
-                    <Tabs.Panel value="active">{grid('active', active, 'Nenhuma vaga dentro da data de expiração. Use "Criar vaga" para cadastrar uma.')}</Tabs.Panel>
+                    <Tabs.Panel value="active">{grid('active', active, 'Nenhuma vaga dentro da data de expiração. Use "Abrir vaga" para cadastrar uma.')}</Tabs.Panel>
                     <Tabs.Panel value="expired">{grid('expired', expired, 'Nenhuma vaga expirada.')}</Tabs.Panel>
                 </Tabs>
             )}
-            <Modal visible={editing !== undefined} setVisible={(visible) => !visible && setEditing(undefined)} title={editing ? 'Editar vaga' : 'Criar vaga'} size="90%" closeOnClickOutside={false}>
+            <Modal visible={editing !== undefined} setVisible={(visible) => !visible && setEditing(undefined)} title={editing ? 'Editar vaga' : 'Abrir vaga'} size="90%" closeOnClickOutside={false}>
                 {editing !== undefined && <PositionFormModal key={editing ? editing.title : 'new'} position={editing} onSaved={saved} onCancel={() => setEditing(undefined)} />}
             </Modal>
             <Modal visible={reactivating != null} setVisible={(visible) => !visible && setReactivating(null)} title="Reativar vaga" size="md">

@@ -57,7 +57,7 @@ import {
 } from './positionsData';
 
 type PositionFormModalProps = {
-    // sem vaga, "Criar vaga": o título vem vazio e é obrigatório; com vaga, "Editar": o título (parte da chave) fica travado
+    // sem vaga, "Abrir vaga": o título vem vazio e é obrigatório; com vaga, "Editar": o título (parte da chave) fica travado
     position: Position | null;
     // a vaga gravada: a tela atualiza a lista e o modal continua aberto, na aba "Cvs encontrados"
     onSaved: (position: Position) => void;
@@ -73,9 +73,9 @@ const fieldLabel = 'mb-1.5 block font-semibold text-dark dark:text-white-light';
 const inside = { withinPortal: false };
 
 /**
- * O modal de "Criar vaga" e de "Editar" da tela "Meu Recrutamento → Vagas", em abas sequenciais e com a aparência do
+ * O modal de "Abrir vaga" e de "Editar" da tela "Meu Recrutamento → Vagas", em abas sequenciais e com a aparência do
  * cadastro de currículo (desde 2026-11-22): rótulos com o botão de ajuda (LabelComponent), os checkboxes com explicação e
- * o erro de cada campo embaixo dele. A primeira aba, "Vaga", tem título, descrição, área, contatos, as datas de início e
+ * o erro de cada campo embaixo dele. A primeira aba, "Vaga", tem título, área, descrição, contatos, as datas de início e
  * de fim; depois vêm Filtros (regiões, com a contagem dos currículos delas, senioridade e o mais que filtra os
  * currículos), Idiomas, Habilidades e Salários, e por último Opções (visível aos candidatos, envio da vaga e dos
  * currículos e a ordem deles), cujo avançar grava a vaga. Como no currículo, sair da primeira aba numa vaga de tecnologia manda a
@@ -119,6 +119,8 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
         setAttempted(true);
         const errors = positionTabErrors(form, creating);
         if (errors.length) return errors;
+        // só a vaga de Tecnologia da Informação vai ao skills/fromText (e só ela tem a aba Habilidades)
+        if (!isTechPosition(form)) return [];
         if (!skillsOutdated()) return [];
         const text = form.description.trim();
         const cacheHash = sha1(text);
@@ -170,7 +172,7 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
         const callbacks: any = {};
         callbacks[200] = () => {
             setSaving(false);
-            notify({ summary: creating ? 'Vaga criada' : 'Vaga salva', detail: 'A lista já mostra a vaga como você a gravou.' });
+            notify({ summary: creating ? 'Vaga aberta' : 'Vaga salva', detail: 'A lista já mostra a vaga como você a gravou.' });
             onSaved(positionOf(body));
             !savedOnce && setGoToTab({ index: foundResumesTabIndex });
             setSavedOnce(true);
@@ -244,6 +246,14 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
                 <TextInput id="title" error={!!fieldErrors.title} value={form.title} maxLength={LIMITS.titleMax} disabled={!creating} onChange={(event) => set({ title: event.currentTarget.value })} />
             </LabelComponent>
             <LabelComponent
+                explanation="A área dos currículos procurados. A vaga de tecnologia da informação (TI) ganha a aba 'Habilidades', com as habilidades encontradas na descrição."
+                labelValue="Área da vaga:"
+                property="resumeType"
+                errors={fieldErrors}
+            >
+                <Select id="resumeType" error={!!fieldErrors.resumeType} data={resumeTypeOptions} value={form.resumeType} allowDeselect={false} comboboxProps={inside} onChange={(value) => set({ resumeType: value || '' })} />
+            </LabelComponent>
+            <LabelComponent
                 explanation={`O texto completo da vaga: atividades, requisitos, benefícios e o que mais o candidato precisa saber (de ${LIMITS.descriptionMin} a ${LIMITS.descriptionMax.toLocaleString('pt-BR')} caracteres). Numa vaga de tecnologia, é deste texto que saem as listas da aba 'Habilidades' mais à frente.`}
                 labelValue={`Descrição da vaga (${form.description.trim().length} caracteres):`}
                 property="description"
@@ -260,14 +270,6 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
                     maxRows={25}
                     onChange={(event) => set({ description: event.currentTarget.value })}
                 />
-            </LabelComponent>
-            <LabelComponent
-                explanation="A área dos currículos procurados. A vaga de tecnologia da informação (TI) ganha a aba 'Habilidades', com as habilidades encontradas na descrição."
-                labelValue="Área da vaga:"
-                property="resumeType"
-                errors={fieldErrors}
-            >
-                <Select id="resumeType" error={!!fieldErrors.resumeType} data={resumeTypeOptions} value={form.resumeType} allowDeselect={false} comboboxProps={inside} onChange={(value) => set({ resumeType: value || '' })} />
             </LabelComponent>
             <LabelComponent
                 explanation="Por onde os candidatos falam com você sobre a vaga: WhatsApp (com DDD, ex.: +5511999998888), e-mail ou um link (começando com http). Informe ao menos um."
@@ -517,7 +519,7 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
         </Alert>
     );
 
-    const saveLabel = creating ? 'Criar vaga' : 'Salvar dados';
+    const saveLabel = creating ? 'Abrir vaga' : 'Salvar dados';
     const saveShortcut = creating ? undefined : { label: 'Salvar dados', icon: <IconSave className="h-4 w-4" />, onClick: save };
 
     return (
