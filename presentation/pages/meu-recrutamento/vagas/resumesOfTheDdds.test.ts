@@ -1,4 +1,4 @@
-import { CACHE_LIFETIME, cacheResumesOf, cachedResumesOf, countResumes, forgetResumesInMemory, foundResumesMessage, missingDdds } from './resumesOfTheDdds';
+import { CACHE_LIFETIME, cacheAllDdds, cachedAllDdds, cacheResumesOf, cachedResumesOf, countResumes, forgetResumesInMemory, foundResumesMessage, missingDdds } from './resumesOfTheDdds';
 
 const fakeStorage = () => {
     const items = new Map<string, string>();
@@ -34,6 +34,21 @@ describe('resumesOfTheDdds', () => {
         const fullStorage = { ...fakeStorage(), setItem: () => { throw new Error('QuotaExceededError'); } };
         cacheResumesOf('21', [{ id: 'c' }], 5, fullStorage);
         expect(cachedResumesOf('21', 10, fullStorage)).toEqual([{ id: 'c' }]);
+    });
+
+    it('na vaga home office guarda todos os ddds de uma vez, e eles servem também aos pedidos por região', () => {
+        const storage = fakeStorage();
+        expect(cachedAllDdds(1, storage)).toBeNull();
+        cacheAllDdds({ '10': [{ id: 'a' }], '11': [{ id: 'a' }, { id: 'b' }], '21': [] }, 1, storage);
+        const all = cachedAllDdds(2, storage) as string[];
+        expect(all).toEqual(['10', '11', '21']);
+        expect(countResumes(all, 2, storage)).toBe(2);
+        expect(missingDdds(['11', '21'], 2, storage)).toEqual([]);
+        // um ddd vencido faz o pedido de todos voltar ao backend
+        cacheResumesOf('21', [], 2 - CACHE_LIFETIME, storage);
+        forgetResumesInMemory();
+        expect(cachedAllDdds(3, storage)).toBeNull();
+        expect(cachedAllDdds(1 + CACHE_LIFETIME, storage)).toBeNull();
     });
 
     it('conta uma vez o currículo que está em vários ddds', () => {

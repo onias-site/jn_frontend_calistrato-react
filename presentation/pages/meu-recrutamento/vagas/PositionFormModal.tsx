@@ -371,7 +371,7 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
                 )}
             </div>
             {/* a área de mensagens: os currículos ativos das regiões escolhidas (spinner enquanto o backend não responde) */}
-            <ResumesOfTheDddsMessage ddds={form.ddd} />
+            <ResumesOfTheDddsMessage ddds={form.ddd} homeOffice={homeOffice} />
             <CheckBoxComponent
                 explanation="Caso esta opção estiver marcada, os candidatos poderão ver esta vaga. Caso esta opção não estiver marcada, a vaga continua cadastrada e buscando currículos, mas fica escondida dos candidatos."
                 checkBoxLabel="Vaga visível para candidatos"
