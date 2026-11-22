@@ -24,7 +24,8 @@ import IconDollarSign from '@/presentation/icons/icon-dollar-sign';
 import IconSave from '@/presentation/icons/icon-save';
 import IconUsers from '@/presentation/icons/icon-users';
 import IconInfoCircle from '@/presentation/icons/icon-info-circle';
-import { ResumesOfTheDddsMessage } from './ResumesOfTheDddsMessage';
+import { ResumesOfTheFiltersMessage } from './ResumesOfTheFiltersMessage';
+import { filtersRequestOf } from './resumesOfTheFilters';
 import {
     Contact,
     DESIRED_SKILLS,
@@ -103,6 +104,10 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
         return store;
     });
     const skillGroups: any[] = skillStore((state) => state.groups);
+    // os filtros da contagem de currículos: as habilidades da lista de obrigatórias e o domínio de quem está logado
+    const requiredSkills: string[] = (skillGroups.find((group) => group.name == REQUIRED_SKILLS)?.list || []).map((item: any) => item.skill);
+    const login: any = JnAjax.getLogin() || {};
+    const filtersRequest = filtersRequestOf(form, requiredSkills, login.email);
     const [hasTabSkills, setHasTabSkills] = useState(skillGroups.some((group) => group.list.length > 0));
     const showTabSkills = hasTabSkills && isTechPosition(form);
     const set = (changes: Partial<PositionForm>) => setForm((current) => ({ ...current, ...changes }));
@@ -379,8 +384,8 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
                     />
                 )}
             </div>
-            {/* a área de mensagens: os currículos ativos das regiões escolhidas (spinner enquanto o backend não responde) */}
-            <ResumesOfTheDddsMessage resumeType={form.resumeType} ddds={form.ddd} homeOffice={homeOffice} />
+            {/* a área de mensagens: os currículos que atendem a todos os filtros da vaga (spinner enquanto o backend não responde) */}
+            <ResumesOfTheFiltersMessage request={filtersRequest} />
             <div className="max-w-xl">
                 <LabelComponent explanation="A senioridade dos currículos procurados." labelValue="Senioridade da vaga:" property="seniority" errors={{}}>
                     <Select id="seniority" data={seniorityOptions} value={form.seniority || null} placeholder="Escolha a senioridade" comboboxProps={inside} onChange={(value) => set({ seniority: value || '' })} />
