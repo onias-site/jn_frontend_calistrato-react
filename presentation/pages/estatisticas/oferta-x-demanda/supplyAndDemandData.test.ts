@@ -16,19 +16,21 @@ describe('supplyAndDemandData', () => {
         expect(sliceLabel('negotiableClaim', 'notInformed')).toBe('Não informado');
     });
 
-    it('tem as fontes CVs (padrão), CVs vistos e Vagas, esta ainda sem dados', () => {
+    it('tem as fontes CVs (padrão), CVs vistos e Vagas, esta sem anos de experiência', () => {
         expect(sources.map((source) => source.button)).toEqual(['CVs', 'CVs vistos', 'Vagas']);
-        expect(sources.map((source) => source.ready)).toEqual([true, true, false]);
+        expect(sources.map((source) => source.ready)).toEqual([true, true, true]);
+        expect(sources.map((source) => source.experience)).toEqual([true, true, false]);
+        expect(countLabel(sources[2], 2)).toBe('2 vagas');
         expect(countLabel(sources[1], 1)).toBe('1 visualização');
         expect(countLabel(sources[0], 15)).toBe('15 currículos');
     });
 
     it('soma os totais dos ddds de uma pasta em cada fonte', () => {
-        const totals = { resumes: { '11': 15, '12': 2 }, viewedResumes: { '11': 22 } };
-        expect(folderTotals(totals, ['11'])).toBe('15 currículos · 22 visualizações');
-        expect(folderTotals(totals, ['11', '12', '13'])).toBe('17 currículos · 22 visualizações');
-        expect(folderTotals(totals, ['99'])).toBe('0 currículos · 0 visualizações');
-        expect(folderTotals({}, ['11'])).toBe('0 currículos · 0 visualizações');
+        const totals = { resumes: { '11': 15, '12': 2 }, viewedResumes: { '11': 22 }, vacancies: { '12': 3 } };
+        expect(folderTotals(totals, ['11'])).toBe('15 currículos · 22 visualizações · 0 vagas');
+        expect(folderTotals(totals, ['11', '12', '13'])).toBe('17 currículos · 22 visualizações · 3 vagas');
+        expect(folderTotals(totals, ['99'])).toBe('0 currículos · 0 visualizações · 0 vagas');
+        expect(folderTotals({}, ['11'])).toBe('0 currículos · 0 visualizações · 0 vagas');
     });
 
     it('monta os dias do mês corrente e os últimos meses do gráfico de linhas', () => {
@@ -41,8 +43,9 @@ describe('supplyAndDemandData', () => {
         const months = lastMonths(now, 12);
         expect(months[0]).toEqual({ key: '202512', label: 'dez/25' });
         expect(months[11]).toEqual({ key: '202611', label: 'nov/26' });
-        const series = insertionSeries({ resumes: { '20261114': 3 }, viewedResumes: { '20261101': 37 } }, days);
-        expect(series.map((line) => line.name)).toEqual(['Currículos inseridos', 'Visualizações feitas']);
+        const series = insertionSeries({ resumes: { '20261114': 3 }, viewedResumes: { '20261101': 37 }, vacancies: { '20261110': 2 } }, days);
+        expect(series.map((line) => line.name)).toEqual(['Currículos inseridos', 'Visualizações feitas', 'Vagas publicadas']);
+        expect(series[2].data[9]).toBe(2);
         expect(series[0].data[13]).toBe(3);
         expect(series[1].data[0]).toBe(37);
         expect(insertionSeries(undefined, days)[0].data.every((value) => value == 0)).toBe(true);

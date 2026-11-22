@@ -4,12 +4,12 @@ import { ChartFrame, ReactApexChart, SmallSampleWarning, Statistics, fontFamily,
 import { salaryBySeniority, shortMoney } from './moreChartsData';
 import { money } from './supplyAndDemandData';
 
-/** CLT em tons cheios, PJ em tons claros; azul para os CVs e laranja para os vistos, como no resto da tela. */
-const colors = ['#2a78d6', '#eb6834', '#9ec5f0', '#f5b89c'];
+/** CLT em tons cheios, PJ em tons claros; azul para os CVs, laranja para os vistos e verde para as vagas, como no resto da tela. */
+const colors = ['#2a78d6', '#eb6834', '#1baf7a', '#9ec5f0', '#f5b89c', '#8fdcc0'];
 
 /**
- * Gráfico 2 (2026-11-17): a média das pretensões CLT e PJ de cada senioridade, dos currículos e dos currículos vistos
- * (as médias da tabela "Totais e médias" em colunas, para ver a escada salarial).
+ * Gráfico 2 (2026-11-17): a média das pretensões CLT e PJ de cada senioridade, dos currículos, dos currículos vistos
+ * e das vagas (o meio de cada faixa oferecida; as médias da tabela "Totais e médias" em colunas, para ver a escada salarial).
  */
 export const SalaryBySeniorityPanel = ({ title, statistics }: { title: string; statistics: Statistics }) => {
     const chart = salaryBySeniority(readySources.map((source) => ({ source, averages: statisticsOf(statistics, source)?.averages })));

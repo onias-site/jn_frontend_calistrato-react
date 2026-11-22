@@ -28,6 +28,7 @@ import {
     sortFolders,
     seniorities,
     sources,
+    Source,
     yearsLabel,
 } from './supplyAndDemandData';
 import { Average, ChartFrame, ReactApexChart, SmallSampleWarning, Statistics, fontFamily, lineColors, readySources, sourceTotalsLabel, statisticsOf } from './chartCommons';
@@ -116,10 +117,11 @@ const yearsOrDash = (resumes?: number, years?: number) => (resumes ? yearsLabel(
 
 /** As colunas da tabela: cada uma se abre em CVs, Visualizações e Vagas. */
 const columns = [
-    { title: 'Currículos', value: (average: Average) => String(average.resumes || 0) },
+    { title: 'Quantidade', value: (average: Average) => String(average.resumes || 0) },
     { title: 'Média CLT', value: (average: Average) => moneyOrDash(average.clt) },
     { title: 'Média PJ', value: (average: Average) => moneyOrDash(average.pj) },
-    { title: 'Média de experiência', value: (average: Average) => yearsOrDash(average.resumes, average.experience) },
+    // a vaga não tem anos de experiência, só a senioridade que pede
+    { title: 'Média de experiência', value: (average: Average, source: Source) => (source.experience ? yearsOrDash(average.resumes, average.experience) : '—') },
 ];
 
 /** As quantidades e as médias das pretensões CLT e PJ e da experiência, por senioridade e no geral, para cada fonte. */
@@ -156,7 +158,7 @@ const AveragesTable = ({ statistics }: { statistics: Statistics }) => {
                                     const average = statisticsOf(statistics, source)?.averages?.[row.id];
                                     return (
                                         <Table.Td key={`${column.title}-${source.id}`} className="whitespace-nowrap text-right">
-                                            {source.ready ? column.value(average || {}) : '—'}
+                                            {source.ready ? column.value(average || {}, source) : '—'}
                                         </Table.Td>
                                     );
                                 }),
@@ -217,7 +219,7 @@ const InsertionsPanel = ({ totals }: { totals: Totals }) => {
                 />
             </div>
             <ReactApexChart key={`line-${period}`} type="line" height={300} options={options} series={series} />
-            <p className="mt-1 text-sm text-white-dark">Pela data de inserção; contam só os registros ainda ativos. Vagas: em breve.</p>
+            <p className="mt-1 text-sm text-white-dark">Pela data de inserção; contam só os registros ainda ativos.</p>
         </div>
     );
 };
@@ -259,7 +261,7 @@ const RegionContent = ({ ddd, level, statistics }: { ddd: string; level: number;
             <AveragesTable statistics={statistics} />
             <p className="mt-2 text-sm text-white-dark">
                 As médias contam só quem informou a pretensão ou o início da experiência. Visualizações trazem o currículo como estava quando o recrutador
-                o viu. Vagas: em breve.
+                o viu. Vagas: o salário é o meio da faixa oferecida e a senioridade é a que a vaga pede.
             </p>
         </div>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

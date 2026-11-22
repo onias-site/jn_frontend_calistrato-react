@@ -52,12 +52,14 @@ describe('moreChartsData', () => {
     it('6. tira a média por dia da semana até ontem, contando como zero os dias sem registro', () => {
         // 2026-11-09 é segunda; hoje, 2026-11-17 (terça), fica de fora
         const now = new Date(2026, 10, 17, 15);
-        const { days, series } = weekdayAverages({ resumes: { '20261109': 4, '20261116': 2, '20261117': 99 }, viewedResumes: { '20261110': 6 } }, now);
+        const { days, series } = weekdayAverages({ resumes: { '20261109': 4, '20261116': 2, '20261117': 99 }, viewedResumes: { '20261110': 6 }, vacancies: { '20261111': 5 } }, now);
         expect(days).toBe(8);
-        expect(series.map((item) => item.name)).toEqual(['Currículos inseridos', 'Visualizações feitas']);
+        expect(series.map((item) => item.name)).toEqual(['Currículos inseridos', 'Visualizações feitas', 'Vagas publicadas']);
+        expect(series[2].data[2]).toBe(5);
         expect(series[0].data[0]).toBe(3);
         expect(series[1].data[1]).toBe(6);
         expect(series[0].data[2]).toBe(0);
+        expect(series[2].data[0]).toBe(0);
         expect(weekdayAverages({}, now)).toEqual({ days: 0, series: [] });
     });
 });

@@ -4,7 +4,7 @@ import { ChartFrame, ReactApexChart, SmallSampleWarning, Statistics, fontFamily,
 import { HeatRow, seniorityContractRows } from './moreChartsData';
 import { Source, countLabel, percentText } from './supplyAndDemandData';
 
-const shades = { blue: ['#eaf2fb', '#9ec5f0', '#2a78d6', '#1c4f8f'], orange: ['#fdf0ea', '#f5b89c', '#eb6834', '#a8441c'] };
+const shades = { blue: ['#eaf2fb', '#9ec5f0', '#2a78d6', '#1c4f8f'], orange: ['#fdf0ea', '#f5b89c', '#eb6834', '#a8441c'], green: ['#e8f7f1', '#8fdcc0', '#1baf7a', '#127a55'] };
 
 const ranges = (palette: string[]) => [
     { from: 0, to: 0, color: '#f4f5f7' },
@@ -37,15 +37,15 @@ const Heatmap = ({ source, rows, palette }: { source: Source; rows: HeatRow[]; p
 };
 
 /**
- * Gráfico 4 (2026-11-17): senioridade x forma de contratação, um mapa de calor por fonte (CVs e CVs vistos): cada
+ * Gráfico 4 (2026-11-17): senioridade x forma de contratação, um mapa de calor por fonte (CVs, CVs vistos e Vagas): cada
  * célula é a porcentagem da senioridade (a linha) que aceita aquela forma; cor mais forte, porcentagem maior.
  */
 export const SeniorityContractPanel = ({ title, statistics }: { title: string; statistics: Statistics }) => {
-    const palettes = [shades.blue, shades.orange];
+    const palettes = [shades.blue, shades.orange, shades.green];
     return (
         <ChartFrame title={title} detail={sourceTotalsLabel(statistics)} note="Em cada senioridade (linha), quanto aceita cada forma de contratação; a linha soma 100%.">
             <SmallSampleWarning statistics={statistics} />
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
                 {readySources.map((source, index) => (
                     <Heatmap key={source.id} source={source} rows={seniorityContractRows(statisticsOf(statistics, source)?.charts?.seniorityContract)} palette={palettes[index % palettes.length]} />
                 ))}

@@ -78,13 +78,13 @@ const percentOf = (count: number, base: number) => (base ? Math.round((count * 1
 
 /**
  * De onde vêm os números de cada gráfico e de cada coluna da tabela: os grupos do jn_grouper do ddd que o backend devolve
- * (resumes e viewedResumes), lado a lado em cada gráfico. Vagas ainda não têm grupo: ficam fora dos gráficos e as colunas
- * da tabela ficam com "—".
+ * (resumes, viewedResumes e vacancies), lado a lado em cada gráfico. A vaga traz a senioridade que pede e o meio de cada
+ * faixa salarial, mas não anos de experiência: a coluna de experiência das vagas fica com "—" (experience: false).
  */
 export const sources = [
-    { id: 'resumes', button: 'CVs', column: 'CVs', one: 'currículo', many: 'currículos', line: 'Currículos inseridos', ready: true },
-    { id: 'viewedResumes', button: 'CVs vistos', column: 'Visualizações', one: 'visualização', many: 'visualizações', line: 'Visualizações feitas', ready: true },
-    { id: 'vacancies', button: 'Vagas', column: 'Vagas', one: 'vaga', many: 'vagas', line: 'Vagas publicadas', ready: false },
+    { id: 'resumes', button: 'CVs', column: 'CVs', one: 'currículo', many: 'currículos', line: 'Currículos inseridos', ready: true, experience: true },
+    { id: 'viewedResumes', button: 'CVs vistos', column: 'Visualizações', one: 'visualização', many: 'visualizações', line: 'Visualizações feitas', ready: true, experience: true },
+    { id: 'vacancies', button: 'Vagas', column: 'Vagas', one: 'vaga', many: 'vagas', line: 'Vagas publicadas', ready: true, experience: false },
 ];
 
 export type Source = (typeof sources)[number];
@@ -218,7 +218,7 @@ export const regionTree = () => {
 
 export type FolderNode = { value: string; label: string; children?: FolderNode[] };
 
-/** A ordem das pastas: mais visualizações, depois mais vagas (quando houver), depois mais currículos, por fim o nome. */
+/** A ordem das pastas: mais visualizações, depois mais vagas, depois mais currículos, por fim o nome. */
 const folderSortSources = ['viewedResumes', 'vacancies', 'resumes'];
 
 const dddsOf = (node: FolderNode) => (node.children ? node.children.map((child) => child.value) : [node.value]);
