@@ -163,6 +163,9 @@ const Sidebar = () => {
                                         <li>
                                             <Link href="/meu-recrutamento/curriculos-da-semana">{t('Currículos da semana')}</Link>
                                         </li>
+                                        <li>
+                                            <Link href="/meu-recrutamento/vagas">{t('Vagas')}</Link>
+                                        </li>
                                         {/* <li>
                                             <Link href="/maintenence">{t('Comentários')}</Link>
                                         </li>

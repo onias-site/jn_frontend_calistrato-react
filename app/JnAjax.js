@@ -129,6 +129,9 @@ export default class JnAjax {
         'contact-us/': 'js_contact_us',
         'resume/{email}/skills/hierarchy': 'vis_skill_fix_hierarchy_pending',
         'resume/{email}/skills/suggestion': 'vis_skill_pending',
+        // as vagas do usuário (tela Meu Recrutamento → Vagas): criar, e editar, excluir, inativar e reativar
+        'recruiter/{email}/positions': 'vis_position',
+        'recruiter/{email}/positions/': 'vis_position',
     };
 
     static forgetWhatThisWriteChanged(uri, type, status) {

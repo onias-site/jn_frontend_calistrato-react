@@ -66,7 +66,7 @@ export const TabLanguagesStore = create<ITabLanguagesStore>((set, get) => ({
     },
 }));
 
-const languages = [
+export const languages = [
     { name: 'Alemão', id: 11, level: 1 },
     { name: 'Amárico', id: 33, level: 1 },
     { name: 'Árabe', id: 5, level: 1 },
