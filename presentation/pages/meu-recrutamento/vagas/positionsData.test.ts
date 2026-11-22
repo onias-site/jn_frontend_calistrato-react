@@ -13,6 +13,8 @@ import {
     pendingRequirements,
     positionOf,
     removePosition,
+    skillGroupsFromText,
+    skillGroupsOfThePosition,
     replacePosition,
     requestBodyOf,
     splitByExpiration,
@@ -29,8 +31,6 @@ const validForm = () => ({
     ddd: ['11', '21'],
     cltMin: 5000 as number | '',
     cltMax: 8000 as number | '',
-    requiredSkills: ['JAVA'],
-    desiredSkills: ['DOCKER'],
     hasLanguages: true,
     spokenLanguage: [{ name: 'Inglês', level: 2 }],
     contact: [{ type: 'email' as const, value: 'rh@empresa.com.br' }],
@@ -69,24 +69,22 @@ describe('positionsData', () => {
     });
 
     it('monta o corpo da requisição como o backend valida', () => {
-        const body = requestBodyOf(validForm());
+        const skills = [{ skill: 'JAVA', word: 'JAVA', type: 'skillsFromResume', category: 'skillsFromText' }];
+        const body = requestBodyOf(validForm(), skills);
         expect(body.clt).toEqual({ min: 5000, max: 8000 });
         expect(body.pj).toBeUndefined();
         expect(body.ddd).toEqual([11, 21]);
-        expect(body.skill).toEqual([
-            { skill: 'JAVA', word: 'JAVA', type: 'skillsFromResume', category: 'skillsFromText' },
-            { skill: 'DOCKER', word: 'DOCKER', type: 'shouldSkills', category: 'shouldSkills' },
-        ]);
+        expect(body.skill).toEqual(skills);
+        // como no currículo, só a vaga de tecnologia leva habilidades
+        expect(requestBodyOf({ ...validForm(), resumeType: '2' }, skills).skill).toEqual([]);
         expect(typeof body.expiration.min).toBe('string');
         expect(body.mustSendInGroups).toBe(true);
         expect(body.frequencyType).toBe('daily');
     });
 
-    it('preenche a edição com a vaga gravada, separando as habilidades obrigatórias das desejáveis', () => {
+    it('preenche a edição com a vaga gravada', () => {
         const position = positionOf(requestBodyOf(validForm()));
         const form = formOf(position);
-        expect(form.requiredSkills).toEqual(['JAVA']);
-        expect(form.desiredSkills).toEqual(['DOCKER']);
         expect(form.hasPj).toBe(false);
         expect(form.ddd).toEqual(['11', '21']);
         expect(form.expirationMin).toBe('2026-11-21');
@@ -113,6 +111,25 @@ describe('positionsData', () => {
         expect(requestBodyOf({ ...validForm(), hasLanguages: false }).spokenLanguage).toEqual([]);
         expect(optionsTabErrors({ ...validForm(), disponibility: '0' })).toEqual(['Os dias para começar devem ir de 1 a 30']);
         expect(salaryTabErrors({ ...validForm(), hasClt: false })).toEqual(['Informe ao menos uma faixa salarial (CLT ou PJ)']);
+    });
+
+    it('monta as listas da aba Habilidades pela resposta de skills/fromText e pelas habilidades gravadas', () => {
+        const groups = skillGroupsFromText({ skill: [{ skill: 'JAVA', label: 'JAVA', parent: [] }], excludedSkill: [{ skill: 'DOCKER', label: 'DOCKER', parent: [] }] });
+        expect(groups.map((group) => [group.name, group.category, group.list.length])).toEqual([
+            ['skillsFromResume', 'skillsFromText', 1],
+            ['shouldSkills', 'shouldSkills', 1],
+        ]);
+        const saved = [
+            { skill: 'ORACLE', word: 'ORACLE DB', type: 'skillsFromResume', category: 'skillsFromText', parent: ['SQL'] },
+            { skill: 'DOCKER', word: 'DOCKER', type: 'shouldSkills', category: 'shouldSkills' },
+            { skill: 'SQL', word: 'SQL', type: 'parent', category: 'parent' },
+            { skill: 'JAVA', word: 'JAVA', type: 'isPieceOfOtherWord', category: 'discardedSkills', associated: 'JAVASCRIPT' },
+        ];
+        const { groups: savedGroups, context } = skillGroupsOfThePosition(saved, 'hash');
+        expect(savedGroups[0].list.map((skill: any) => skill.label)).toEqual(['ORACLE DB (ORACLE)']);
+        expect(savedGroups[1].list.map((skill: any) => [skill.label, skill.parent])).toEqual([['DOCKER', []]]);
+        expect(Object.keys(context.discardedSkills)).toEqual(['isPieceOfOtherWord']);
+        expect(context.cacheHash).toBe('hash');
     });
 
     it('valida os contatos como o backend', () => {

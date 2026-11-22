@@ -16,7 +16,7 @@ import { TabOptions, TabOptionsStore, ITabOptionsStore } from '@/presentation/me
 import { TabLanguages, TabLanguagesStore, ITabLanguagesStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabLanguages/ChooserLanguages';
 import { TabResume, TabResumeStore, ITabResumeStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabResume/FormResume';
 import { TabSalary, TabSalaryStore, ITabSalaryStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabSalary/FormSalary';
-import { TabSkills2, TabSkillStore, ITabSkillStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabSkills/TabSkills';
+import { TabSkills2, TabSkillStore, ITabSkillStore, getImplicitSkills } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabSkills/TabSkills';
 import { NotAllowedCompanyStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabResume/NotAllowedCompany';
 import { SkillsInternalListStore, TabSkillsStore } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabSkills/ChooserSkills';
 
@@ -735,28 +735,6 @@ const putSkillsInStore = (responseFromBackEnd: any, stateSkills: any, requestSki
     //   stateSkills.setAccordionList(responseFromBackEnd.implicitSkills);
 
     stateSubMenuMyResume.setHasTabSkills(responseFromBackEnd.skill.length);
-};
-
-const getImplicitSkills = (group: any): any[] => {
-    let allParents: any[] = [];
-    group.list.forEach((item: any) => {
-        allParents = [...allParents, ...item.parent];
-    });
-
-    const skills = group.list.map((item: any) => item.skill);
-
-    const filteredParents = allParents.filter((parent: any) => !skills.includes(parent));
-
-    const set = new Set(filteredParents);
-
-    const array = [...set].map((parent: any) => {
-        const children = group.list.filter((skill: any) => skill.parent.includes(parent));
-        const skill = parent;
-        const response = { children, skill };
-        return response;
-    });
-
-    return array;
 };
 
 export default SubMenuMyResume;

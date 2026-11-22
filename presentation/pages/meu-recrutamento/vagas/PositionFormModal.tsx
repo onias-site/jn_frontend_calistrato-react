@@ -1,6 +1,7 @@
 'use client';
 import React, { useState } from 'react';
-import { Checkbox, MultiSelect, NumberInput, Select, TagsInput, Textarea, TextInput } from '@mantine/core';
+import { Checkbox, MultiSelect, NumberInput, Select, Textarea, TextInput } from '@mantine/core';
+import { sha1 } from 'js-sha1';
 import JnAjax from '@/app/JnAjax';
 import { Tabs } from '@/presentation/components/source/Tabs';
 import { HelpButton } from '@/presentation/components/source/HelpButton';
@@ -11,6 +12,7 @@ import { notify } from '@/presentation/components/source/notify';
 import { dddRegions } from '@/presentation/components/regions/dddRegions';
 import { resumeTypes } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabResume/FormResume';
 import { languages } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabLanguages/ChooserLanguages';
+import { TabSkills2, createSkillStore, getImplicitSkills } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabSkills/TabSkills';
 import { HOME_OFFICE, TODAS_AS_REGIOES } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabFilter/RegioesComponent';
 import IconFile from '@/presentation/icons/icon-file';
 import IconGlobe from '@/presentation/icons/icon-globe';
@@ -20,7 +22,9 @@ import IconDollarSign from '@/presentation/icons/icon-dollar-sign';
 import IconSave from '@/presentation/icons/icon-save';
 import {
     Contact,
+    DESIRED_SKILLS,
     LIMITS,
+    REQUIRED_SKILLS,
     Position,
     PositionForm,
     SortRule,
@@ -28,6 +32,7 @@ import {
     emptyForm,
     formOf,
     frequencyOptions,
+    isTechPosition,
     languageLevelOptions,
     languagesTabErrors,
     optionsTabErrors,
@@ -37,6 +42,8 @@ import {
     requestBodyOf,
     salaryTabErrors,
     seniorityOptions,
+    skillGroupsFromText,
+    skillGroupsOfThePosition,
     sortFieldOptions,
     sortTypeOptions,
     today,
@@ -58,7 +65,10 @@ const fieldLabel = 'mb-1.5 block font-semibold text-dark dark:text-white-light';
 /**
  * O modal de "Criar vaga" e de "Editar" da tela "Meu Recrutamento → Vagas", em abas sequenciais como o cadastro de
  * currículo (desde 2026-11-22): a primeira, "Vaga", tem título, descrição, área, contatos e as datas de início e de fim;
- * as demais são as do currículo, na mesma ordem e com os mesmos ícones: Idiomas, Habilidades, Opções e Salários. Cada
+ * as demais são as do currículo, na mesma ordem e com os mesmos ícones: Idiomas, Habilidades, Opções e Salários. Como
+ * no currículo, sair da primeira aba numa vaga de tecnologia manda a descrição ao skills/fromText, que preenche as duas
+ * listas de arrastar e soltar (obrigatórias e desejáveis) e os conhecimentos implícitos; a aba Habilidades só aparece
+ * com alguma habilidade encontrada. As listas ficam numa store só deste modal (createSkillStore). Cada
  * aba só deixa avançar com as suas pendências resolvidas; na última, o botão grava. A gravação é assíncrona no backend: a
  * tela põe na lista o que enviou, sem reler.
  */
@@ -66,17 +76,59 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
     const creating = position == null;
     const [form, setForm] = useState<PositionForm>(creating ? emptyForm() : formOf(position));
     const [saving, setSaving] = useState(false);
+    // a store das habilidades deste modal; na edição de uma vaga de tecnologia, já com as habilidades gravadas
+    const [skillStore] = useState(() => {
+        const store = createSkillStore();
+        if (position == null || String(position.resumeType) != '1') return store;
+        const { groups, context } = skillGroupsOfThePosition(position.skill, sha1(position.description.trim()));
+        store.getState().setGroups(groups as any, getImplicitSkills);
+        store.getState().setContext(context);
+        return store;
+    });
+    const skillGroups: any[] = skillStore((state) => state.groups);
+    const [hasTabSkills, setHasTabSkills] = useState(skillGroups.some((group) => group.list.length > 0));
+    const showTabSkills = hasTabSkills && isTechPosition(form);
     const set = (changes: Partial<PositionForm>) => setForm((current) => ({ ...current, ...changes }));
 
     const setSort = (index: number, changes: Partial<SortRule>) => set({ sort: form.sort.map((rule, i) => (i == index ? { ...rule, ...changes } : rule)) });
     const setContact = (index: number, changes: Partial<Contact>) => set({ contact: form.contact.map((contact, i) => (i == index ? { ...contact, ...changes } : contact)) });
 
+    // a descrição que deu as habilidades da aba já não é a do campo: falta passar pela aba Habilidades
+    const skillsOutdated = () => isTechPosition(form) && skillStore.getState().context.cacheHash != sha1(form.description.trim());
+
+    // ao sair da aba Vaga, como ao sair da aba Currículo: as habilidades da descrição, só quando ela mudou
+    const loadSkillsFromText = (): string[] => {
+        const errors = positionTabErrors(form, creating);
+        if (errors.length) return errors;
+        if (!skillsOutdated()) return [];
+        const text = form.description.trim();
+        const cacheHash = sha1(text);
+        const skillState = skillStore.getState();
+        // as desejáveis voltam como excluídas, para não reaparecerem entre as obrigatórias
+        const requestSkillsToBackEnd = { excludedSkill: skillState.getWordsFromGroup(DESIRED_SKILLS), text };
+        const callbacks: any = {};
+        callbacks[200] = (response: any) => {
+            skillState.setGroups(skillGroupsFromText(response) as any, getImplicitSkills);
+            skillState.setContext({ ...response, requestSkillsToBackEnd, cacheHash });
+            setHasTabSkills((response.skill || []).length > 0 || (response.excludedSkill || []).length > 0);
+        };
+        callbacks[401] = () => {
+            JnAjax.setNotLoading()();
+            JnAjax.getHandler401(loadSkillsFromText)();
+        };
+        callbacks['onUnexpectedHttpStatus'] = () => notify({ summary: 'Habilidades não encontradas', detail: 'Não foi possível ler as habilidades da descrição agora. Volte à aba Vaga e avance de novo.', severity: 'error' });
+        JnAjax.doAnAjaxRequest('skills/fromText', callbacks, 'POST', requestSkillsToBackEnd, {}, 'http://localhost:8081');
+        return [];
+    };
+
     // devolve as pendências de todas as abas; sem nenhuma, envia e devolve vazio (a convenção do Tabs)
     const save = (): string[] => {
-        const errors = pendingRequirements(form, creating);
+        if (skillsOutdated()) return ['Aba Vaga: a descrição mudou. Avance até a aba Habilidades para conferir as habilidades encontradas nela antes de salvar.'];
+        const skillErrors = showTabSkills ? skillStore.getState().getPendingRequirements() : [];
+        const errors = [...pendingRequirements(form, creating), ...skillErrors];
         if (errors.length || saving) return errors;
         setSaving(true);
-        const body = requestBodyOf(form);
+        const body = requestBodyOf(form, skillStore.getState().loadSkillsContext());
         const callbacks: any = {};
         callbacks[200] = () => {
             setSaving(false);
@@ -110,13 +162,23 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
         return [];
     };
 
-    const tabs = [
-        { label: 'Vaga', icon: <IconFile className="h-4 w-4" />, getPendingRequirements: () => positionTabErrors(form, creating), onMoveOnFowardTabs: () => positionTabErrors(form, creating) },
+    const tabs: any[] = [
+        { label: 'Vaga', icon: <IconFile className="h-4 w-4" />, getPendingRequirements: () => positionTabErrors(form, creating), onMoveOnFowardTabs: loadSkillsFromText },
         { label: 'Idiomas', icon: <IconGlobe className="h-4 w-4" />, getPendingRequirements: () => languagesTabErrors(form), onMoveOnFowardTabs: () => languagesTabErrors(form) },
-        { label: `${form.requiredSkills.length} Habilidades`, icon: <IconGithub className="h-4 w-4" />, getPendingRequirements: () => [], onMoveOnFowardTabs: () => [] },
         { label: 'Opções', icon: <IconSettings className="h-4 w-4" />, getPendingRequirements: () => optionsTabErrors(form), onMoveOnFowardTabs: () => optionsTabErrors(form) },
         { label: 'Salários', icon: <IconDollarSign className="h-4 w-4" />, getPendingRequirements: () => salaryTabErrors(form), onMoveOnFowardTabs: save },
     ];
+    // a aba Habilidades entra depois de Idiomas, como no currículo, com o número de habilidades obrigatórias
+    const requiredGroup = skillGroups.filter((group) => group.name == REQUIRED_SKILLS)[0];
+    const requiredCount = requiredGroup ? requiredGroup.list.length : 0;
+    const tabSkills = {
+        label: `${requiredCount} Habilidades`,
+        icon: <IconGithub className="h-4 w-4" />,
+        title: 'Caso as habilidades estiverem desatualizadas / incorretas, volte à aba Vaga e corrija a descrição, para que possamos atualizar corretamente a lista de habilidades',
+        getPendingRequirements: () => skillStore.getState().getPendingRequirements(),
+        onMoveOnFowardTabs: () => skillStore.getState().getPendingRequirements(),
+    };
+    showTabSkills && tabs.splice(2, 0, tabSkills);
 
     const removeButton = (onClick: () => void, disabled = false) => (
         <button type="button" className="btn btn-outline-danger btn-sm" onClick={onClick} disabled={disabled}>
@@ -205,25 +267,6 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
                         <Select data={languageLevelOptions} value={String(language.level)} allowDeselect={false} onChange={(value) => value && setLanguageLevel(language.name, Number(value))} comboboxProps={{ withinPortal: false }} />
                     </div>
                 ))}
-        </div>
-    );
-
-    // ---- aba Habilidades
-    const toSkillNames = (names: string[]) => names.map((name) => name.trim().toUpperCase()).filter(Boolean);
-    const skillsTab = (
-        <div className="flex flex-col gap-4">
-            <TagsInput
-                label="Habilidades obrigatórias"
-                description="Digite e tecle Enter. Os currículos encontrados precisam ter estas habilidades."
-                value={form.requiredSkills}
-                onChange={(value) => set({ requiredSkills: toSkillNames(value) })}
-            />
-            <TagsInput
-                label="Habilidades desejáveis"
-                description="Digite e tecle Enter. Contam a favor do currículo, mas não são exigidas."
-                value={form.desiredSkills}
-                onChange={(value) => set({ desiredSkills: toSkillNames(value) })}
-            />
         </div>
     );
 
@@ -339,7 +382,7 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
         <Tabs tabs={tabs} lastButtonLabel={saveLabel} lastButtonIcon={<IconSave className="h-4 w-4" />} firstButtonLabel="Cancelar" firstButtonClick={onCancel} shortcutButton={saveShortcut}>
             {positionTab}
             {languagesTab}
-            {skillsTab}
+            {showTabSkills && <TabSkills2 store={skillStore} getAccordionList={getImplicitSkills} withSuggestions={false} />}
             {optionsTab}
             {salaryTab}
         </Tabs>

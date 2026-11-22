@@ -36,7 +36,9 @@ const getSorter = (fieldName: string) => {
     return sorter;
 };
 
-export const TabSkillStore = create<ITabSkillStore>((set, get) => ({
+// uma store por formulário: a do currículo (TabSkillStore) e uma nova a cada modal de vaga (desde 2026-11-22), para as
+// habilidades de um não aparecerem no outro
+export const createSkillStore = () => create<ITabSkillStore>((set, get) => ({
     loadSkillsContext: () => {
         const { context, groups, accordionList } = get();
         const skillsContext = getSkillsContext(context, groups, accordionList);
@@ -77,12 +79,45 @@ export const TabSkillStore = create<ITabSkillStore>((set, get) => ({
     context: {},
     skillsContext: {},
 }));
+export type SkillStore = ReturnType<typeof createSkillStore>;
+export const TabSkillStore: SkillStore = createSkillStore();
+
+/**
+ * Os conhecimentos implícitos: os pais das habilidades da lista principal que não estão nela, cada um com as habilidades
+ * que o pedem (Não há como saber oracle ou mysql sem saber sql). Serve ao currículo e à vaga.
+ */
+export const getImplicitSkills = (group: any): any[] => {
+    let allParents: any[] = [];
+    group.list.forEach((item: any) => {
+        allParents = [...allParents, ...item.parent];
+    });
+
+    const skills = group.list.map((item: any) => item.skill);
+
+    const filteredParents = allParents.filter((parent: any) => !skills.includes(parent));
+
+    const set = new Set(filteredParents);
+
+    const array = [...set].map((parent: any) => {
+        const children = group.list.filter((skill: any) => skill.parent.includes(parent));
+        const skill = parent;
+        const response = { children, skill };
+        return response;
+    });
+
+    return array;
+};
+
 export interface TabSkillsProps {
     getAccordionList: (group: any) => any[];
+    // sem ela, a do currículo
+    store?: SkillStore;
+    // a sugestão de habilidade e o ajuste de hierarquia pedem o texto do currículo: a vaga não os mostra
+    withSuggestions?: boolean;
 }
 
-export const TabSkills2: React.FC<TabSkillsProps> = ({ getAccordionList }) => {
-    const { groups, setGroups } = TabSkillStore((state: ITabSkillStore) => ({
+export const TabSkills2: React.FC<TabSkillsProps> = ({ getAccordionList, store = TabSkillStore, withSuggestions = true }) => {
+    const { groups, setGroups } = store((state: ITabSkillStore) => ({
         ...state,
     }));
 
@@ -124,7 +159,7 @@ export const TabSkills2: React.FC<TabSkillsProps> = ({ getAccordionList }) => {
     return (
         // no celular as três colunas ficam uma embaixo da outra; a partir do md, lado a lado, cada uma com a sua fração
         <div className="flex flex-col md:max-h-[1000px] md:flex-row">
-            <AccordionList width={width} />
+            <AccordionList width={width} store={store} withSuggestions={withSuggestions} />
             {groups.map((group: any) => (
                 <SkillList
                     transferToAnotherList={(item: any) => transferToAnotherList(group.name, item)}
@@ -134,6 +169,8 @@ export const TabSkills2: React.FC<TabSkillsProps> = ({ getAccordionList }) => {
                     title={group.title}
                     list={group.list}
                     main={group.main}
+                    help={group.help}
+                    withSuggestions={withSuggestions}
                     key={group.name}
                     width={width}
                 />
@@ -151,6 +188,9 @@ interface SkillListProps {
     width: string;
     main: boolean;
     list: any[];
+    // a explicação da lista; sem ela, a das listas do currículo
+    help?: string;
+    withSuggestions: boolean;
 }
 
 // cada item segue o esquema de VisJsonFieldsSkills no backend: só os campos dele (o índice do currículo é estrito),
@@ -411,7 +451,7 @@ const errorHasFound = (context: any, error: any, word: string) => {
     return true;
 };
 
-const SkillList: React.FC<SkillListProps> = ({ title, width, list, filter, setFilter, setList, transferToAnotherList, main }) => {
+const SkillList: React.FC<SkillListProps> = ({ title, width, list, filter, setFilter, setList, transferToAnotherList, main, help, withSuggestions }) => {
     const filtro = (item: any) => !filter || item.label.toUpperCase().startsWith(filter.trim().toUpperCase());
     // o ReactSortable localiza o item arrastado pelo índice no DOM, então precisa receber a mesma lista que é renderizada (a filtrada)
     const filteredList = list.filter(filtro);
@@ -425,13 +465,13 @@ const SkillList: React.FC<SkillListProps> = ({ title, width, list, filter, setFi
             <div className="mb-5">
                 <div className="mb-2 flex items-start gap-1.5">
                     <label className="font-semibold leading-snug">{`${title} (${list.length})`}</label>
-                    <HelpButton title={title} explanation={main ? SKILLS_FROM_RESUME_HELP : EXCLUDED_SKILLS_FROM_RESUME_HELP} tooltip="Clique aqui para saber mais detalhes sobre esta lista" />
+                    <HelpButton title={title} explanation={help || (main ? SKILLS_FROM_RESUME_HELP : EXCLUDED_SKILLS_FROM_RESUME_HELP)} tooltip="Clique aqui para saber mais detalhes sobre esta lista" />
                 </div>
 
                 {(list.length >= 7 || filter) && (
                     <TextInput className="mb-2" placeholder="Digite a habilidade para filtrar da listagem abaixo" value={filter || ''} onChange={(e) => setFilter(e.currentTarget.value)} />
                 )}
-                {main ? (
+                {main && withSuggestions ? (
                     <SkillSuggestionModal />
                 ) : (
                     <div>
@@ -481,9 +521,11 @@ const SkillList: React.FC<SkillListProps> = ({ title, width, list, filter, setFi
 };
 interface AccordionListProps {
     width: string;
+    store: SkillStore;
+    withSuggestions: boolean;
 }
-const AccordionList: React.FC<AccordionListProps> = ({ width }) => {
-    const { accordionList } = TabSkillStore((state: ITabSkillStore) => ({
+const AccordionList: React.FC<AccordionListProps> = ({ width, store, withSuggestions }) => {
+    const { accordionList } = store((state: ITabSkillStore) => ({
         ...state,
     }));
     // mesmo filtro das outras duas listas: aparece a partir de 7 itens (ou enquanto houver texto digitado) e filtra pelo começo do nome
@@ -514,10 +556,12 @@ const AccordionList: React.FC<AccordionListProps> = ({ width }) => {
                                     {/* os botões de sugestão ficam fora do botão do accordion: um botão dentro de outro não é HTML válido */}
                                     <div className="flex items-center">
                                         <Accordion.Control className="min-w-0 flex-1">{`${item.skill} (${item.children.length})`}</Accordion.Control>
-                                        <span className="flex shrink-0 items-center gap-1 pr-2">
-                                            <AddSkillsToAccordion accordionItem={item} />
-                                            <RemoveSkillsFromAccordion accordionItem={item} />
-                                        </span>
+                                        {withSuggestions && (
+                                            <span className="flex shrink-0 items-center gap-1 pr-2">
+                                                <AddSkillsToAccordion accordionItem={item} />
+                                                <RemoveSkillsFromAccordion accordionItem={item} />
+                                            </span>
+                                        )}
                                     </div>
                                     <Accordion.Panel>
                                         <h6 className="mb-1 text-xs font-semibold text-white-dark">Habilidades associadas a {item.skill}:</h6>

@@ -54,8 +54,6 @@ export type PositionForm = {
     temporallyJobTime: number | string;
     hasLanguages: boolean;
     spokenLanguage: Language[];
-    requiredSkills: string[];
-    desiredSkills: string[];
     negotiableClaim: boolean;
     pcd: boolean;
     travel: boolean;
@@ -198,8 +196,6 @@ export const emptyForm = (now: Date = new Date()): PositionForm => {
         temporallyJobTime: 0,
         hasLanguages: false,
         spokenLanguage: [],
-        requiredSkills: [],
-        desiredSkills: [],
         negotiableClaim: false,
         pcd: false,
         travel: false,
@@ -213,7 +209,6 @@ export const emptyForm = (now: Date = new Date()): PositionForm => {
     };
 };
 
-const skillNamesOf = (skills: any[], type: string) => (skills || []).filter((skill) => skill.type == type).map((skill) => skill.skill);
 
 /** O formulário de "Editar", preenchido com a vaga. */
 export const formOf = (position: Position): PositionForm => ({
@@ -232,8 +227,6 @@ export const formOf = (position: Position): PositionForm => ({
     temporallyJobTime: position.temporallyJobTime || 0,
     hasLanguages: (position.spokenLanguage || []).length > 0,
     spokenLanguage: (position.spokenLanguage || []).map((language) => ({ name: language.name, level: Number(language.level) })),
-    requiredSkills: skillNamesOf(position.skill, 'skillsFromResume'),
-    desiredSkills: skillNamesOf(position.skill, 'shouldSkills'),
     negotiableClaim: !!position.negotiableClaim,
     pcd: !!position.pcd,
     travel: !!position.travel,
@@ -246,10 +239,12 @@ export const formOf = (position: Position): PositionForm => ({
     frequencyType: position.frequencyType || 'daily',
 });
 
-const skill = (name: string, type: string, category: string) => ({ skill: name, word: name, type, category });
 
-/** O corpo da requisição de criar ou editar: a vaga como o backend a valida (as datas como texto, em milissegundos). */
-export const requestBodyOf = (form: PositionForm) => {
+/**
+ * O corpo da requisição de criar ou editar: a vaga como o backend a valida (as datas como texto, em milissegundos). As
+ * habilidades vêm da aba Habilidades (loadSkillsContext da store), e só a vaga de tecnologia as leva.
+ */
+export const requestBodyOf = (form: PositionForm, skills: any[] = []) => {
     const body: any = {
         title: form.title.trim(),
         description: form.description.trim(),
@@ -259,7 +254,7 @@ export const requestBodyOf = (form: PositionForm) => {
         disponibility: Number(form.disponibility),
         temporallyJobTime: Number(form.temporallyJobTime),
         spokenLanguage: form.hasLanguages ? form.spokenLanguage : [],
-        skill: [...form.requiredSkills.map((name) => skill(name, 'skillsFromResume', 'skillsFromText')), ...form.desiredSkills.map((name) => skill(name, 'shouldSkills', 'shouldSkills'))],
+        skill: isTechPosition(form) ? skills : [],
         negotiableClaim: form.negotiableClaim,
         pcd: form.pcd,
         travel: form.travel,
@@ -342,3 +337,58 @@ export const pendingRequirements = (form: PositionForm, creating: boolean, now: 
     ...optionsTabErrors(form),
     ...salaryTabErrors(form),
 ];
+
+// ---- aba Habilidades (como a do currículo: as habilidades encontradas no texto, aqui a descrição da vaga, por skills/fromText)
+
+/** Como no currículo, só a vaga de tecnologia (área 1) tem a aba Habilidades. */
+export const isTechPosition = (form: PositionForm) => form.resumeType == '1';
+
+// os nomes e as categorias de VisPositionSkillTypes e VisPositionSkillCategories no backend
+export const REQUIRED_SKILLS = 'skillsFromResume';
+export const DESIRED_SKILLS = 'shouldSkills';
+
+const requiredSkillsGroup = (list: any[]) => ({
+    title: 'Habilidades OBRIGATÓRIAS da vaga',
+    help: 'As habilidades encontradas na descrição da vaga. Os currículos encontrados precisam ter todas elas; arraste para a lista de desejáveis as que não forem obrigatórias.',
+    name: REQUIRED_SKILLS,
+    category: 'skillsFromText',
+    main: true,
+    list,
+});
+
+const desiredSkillsGroup = (list: any[]) => ({
+    title: 'Habilidades DESEJÁVEIS da vaga',
+    help: 'Habilidades que contam a favor do currículo, mas não são exigidas. Arraste para cá, da lista de obrigatórias, as que forem apenas desejáveis.',
+    name: DESIRED_SKILLS,
+    category: 'shouldSkills',
+    list,
+});
+
+/**
+ * O rótulo que o backend dá a cada habilidade em skills/fromText: a própria habilidade, ou "palavra (habilidade)" quando
+ * foi encontrada por outra palavra; as listas esperam sempre o parent como array.
+ */
+export const toSkillListItem = (savedSkill: any) => {
+    const foundByAnotherWord = savedSkill.word && savedSkill.word != savedSkill.skill;
+    const label = foundByAnotherWord ? `${savedSkill.word} (${savedSkill.skill})` : savedSkill.skill;
+    const parent = savedSkill.parent || [];
+    return { ...savedSkill, label, parent };
+};
+
+/** As duas listas da aba a partir da resposta de skills/fromText: as encontradas são as obrigatórias, as excluídas as desejáveis. */
+export const skillGroupsFromText = (response: any) => [requiredSkillsGroup(response.skill || []), desiredSkillsGroup(response.excludedSkill || [])];
+
+/**
+ * As listas e o contexto da aba a partir das habilidades gravadas na vaga ("Editar"): cada uma volta à lista do seu type,
+ * as descartadas voltam ao contexto separadas pelo motivo, e as implícitas (type parent) a aba recalcula.
+ */
+export const skillGroupsOfThePosition = (skills: any[], cacheHash: string) => {
+    const savedSkills = (skills || []).map(toSkillListItem);
+    const ofType = (type: string) => savedSkills.filter((skill) => skill.type == type);
+    const discardedSkills: Record<string, any[]> = {};
+    savedSkills.filter((skill) => skill.category == 'discardedSkills').forEach((skill) => (discardedSkills[skill.type] = [...(discardedSkills[skill.type] || []), skill]));
+    return {
+        groups: [requiredSkillsGroup(ofType(REQUIRED_SKILLS)), desiredSkillsGroup(ofType(DESIRED_SKILLS))],
+        context: { discardedSkills, cacheHash },
+    };
+};
