@@ -187,7 +187,8 @@ export const emptyForm = (now: Date = new Date()): PositionForm => {
         description: '',
         resumeType: '1',
         seniority: '',
-        ddd: [],
+        // home office marcado por padrão: a aba Opções já entra contando os currículos do ddd 10
+        ddd: ['10'],
         hasClt: true,
         cltMin: '',
         cltMax: '',

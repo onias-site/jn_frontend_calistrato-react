@@ -23,6 +23,7 @@ import IconDollarSign from '@/presentation/icons/icon-dollar-sign';
 import IconSave from '@/presentation/icons/icon-save';
 import IconUsers from '@/presentation/icons/icon-users';
 import IconInfoCircle from '@/presentation/icons/icon-info-circle';
+import { ResumesOfTheDddsMessage } from './ResumesOfTheDddsMessage';
 import {
     Contact,
     DESIRED_SKILLS,
@@ -144,8 +145,8 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
             onMoveOnFowardTabs: loadSkillsFromText,
             fieldsShowPendingRequirements: true,
         },
-        { label: 'Idiomas', icon: <IconGlobe className="h-4 w-4" />, getPendingRequirements: () => languagesTabErrors(form), onMoveOnFowardTabs: () => languagesTabErrors(form) },
         { label: 'Opções', icon: <IconSettings className="h-4 w-4" />, getPendingRequirements: () => optionsTabErrors(form), onMoveOnFowardTabs: () => optionsTabErrors(form) },
+        { label: 'Idiomas', icon: <IconGlobe className="h-4 w-4" />, getPendingRequirements: () => languagesTabErrors(form), onMoveOnFowardTabs: () => languagesTabErrors(form) },
         { label: 'Salários', icon: <IconDollarSign className="h-4 w-4" />, getPendingRequirements: () => salaryTabErrors(form), onMoveOnFowardTabs: () => save() },
     ];
 
@@ -195,7 +196,7 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
         return [];
     };
 
-    // a aba Habilidades entra depois de Idiomas, como no currículo, com o número de habilidades obrigatórias
+    // a aba Habilidades entra depois de Idiomas (Vaga, Opções, Idiomas, Habilidades), com o número de habilidades obrigatórias
     const requiredGroup = skillGroups.filter((group) => group.name == REQUIRED_SKILLS)[0];
     const requiredCount = requiredGroup ? requiredGroup.list.length : 0;
     const tabSkills = {
@@ -205,7 +206,7 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
         getPendingRequirements: () => skillStore.getState().getPendingRequirements(),
         onMoveOnFowardTabs: () => skillStore.getState().getPendingRequirements(),
     };
-    showTabSkills && tabs.splice(2, 0, tabSkills);
+    showTabSkills && tabs.splice(3, 0, tabSkills);
     // depois de gravar, a aba dos currículos encontrados, a última; o botão dela fecha o modal
     const tabFoundResumes = {
         label: 'Cvs encontrados',
@@ -296,12 +297,6 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
                     <TextInput type="date" aria-label="Fim da vaga" error={!!fieldErrors.expiration} value={form.expirationMax} min={form.expirationMin || undefined} onChange={(event) => set({ expirationMax: event.currentTarget.value })} />
                 </div>
             </LabelComponent>
-            <CheckBoxComponent
-                explanation="Marcada, os candidatos podem ver esta vaga. Desmarcada, a vaga continua cadastrada e buscando currículos, mas fica escondida dos candidatos."
-                checkBoxLabel="Vaga visível para candidatos"
-                setValue={(visibleToCandidates) => set({ visibleToCandidates })}
-                value={form.visibleToCandidates}
-            />
         </div>
     );
 
@@ -375,6 +370,14 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
                     />
                 )}
             </div>
+            {/* a área de mensagens: os currículos ativos das regiões escolhidas (spinner enquanto o backend não responde) */}
+            <ResumesOfTheDddsMessage ddds={form.ddd} />
+            <CheckBoxComponent
+                explanation="Caso esta opção estiver marcada, os candidatos poderão ver esta vaga. Caso esta opção não estiver marcada, a vaga continua cadastrada e buscando currículos, mas fica escondida dos candidatos."
+                checkBoxLabel="Vaga visível para candidatos"
+                setValue={(visibleToCandidates) => set({ visibleToCandidates })}
+                value={form.visibleToCandidates}
+            />
             <div className="max-w-xl">
                 <LabelComponent explanation="A senioridade dos currículos procurados." labelValue="Senioridade da vaga:" property="seniority" errors={{}}>
                     <Select id="seniority" data={seniorityOptions} value={form.seniority || null} placeholder="Escolha a senioridade" comboboxProps={inside} onChange={(value) => set({ seniority: value || '' })} />
@@ -515,9 +518,9 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
             goToTab={goToTab}
         >
             {positionTab}
+            {optionsTab}
             {languagesTab}
             {showTabSkills && <TabSkills2 store={skillStore} getAccordionList={getImplicitSkills} withSuggestions={false} />}
-            {optionsTab}
             {salaryTab}
             {savedOnce && foundResumesTab}
         </Tabs>

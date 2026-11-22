@@ -94,8 +94,11 @@ describe('positionsData', () => {
     it('lista o que falta no formulário', () => {
         expect(pendingRequirements(validForm(), true, now)).toEqual([]);
         expect(pendingRequirements(emptyForm(now), true, now)).toEqual(
-            expect.arrayContaining(['O título deve ter de 10 a 100 caracteres', 'Escolha a senioridade', 'Escolha ao menos uma região']),
+            expect.arrayContaining(['O título deve ter de 10 a 100 caracteres', 'Escolha a senioridade']),
         );
+        // a vaga nova nasce home office
+        expect(emptyForm(now).ddd).toEqual(['10']);
+        expect(pendingRequirements({ ...validForm(), ddd: [] }, true, now)).toContain('Escolha ao menos uma região');
         expect(pendingRequirements({ ...validForm(), hasClt: false }, true, now)).toContain('Informe ao menos uma faixa salarial (CLT ou PJ)');
         expect(pendingRequirements({ ...validForm(), cltMin: 9000 }, true, now)).toContain('O máximo da faixa CLT não pode ser menor que o mínimo');
         expect(pendingRequirements({ ...validForm(), expirationMin: '2026-11-01' }, true, now)).toContain('O início da vaga não pode ser antes de hoje');
