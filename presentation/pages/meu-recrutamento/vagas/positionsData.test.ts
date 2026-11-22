@@ -1,6 +1,7 @@
 import {
     changeExpiration,
     emptyForm,
+    filtersTabErrors,
     formOf,
     foundResumesLabel,
     fromDateInput,
@@ -113,7 +114,10 @@ describe('positionsData', () => {
         // sem o "exige outro idioma" marcado, nada é pedido nem enviado
         expect(languagesTabErrors({ ...validForm(), hasLanguages: false, spokenLanguage: [] })).toEqual([]);
         expect(requestBodyOf({ ...validForm(), hasLanguages: false }).spokenLanguage).toEqual([]);
-        expect(optionsTabErrors({ ...validForm(), disponibility: '0' })).toEqual(['Os dias para começar devem ir de 1 a 30']);
+        expect(filtersTabErrors({ ...validForm(), disponibility: '0' })).toEqual(['Os dias para começar devem ir de 1 a 30']);
+        // a ordem dos currículos é da aba Opções, a última antes de salvar
+        expect(optionsTabErrors({ ...validForm(), disponibility: '0' })).toEqual([]);
+        expect(optionsTabErrors({ ...validForm(), sort: [{ type: 'asc', field: [] }] })).toEqual(['Escolha ao menos um critério de ordenação dos currículos']);
         expect(salaryTabErrors({ ...validForm(), hasClt: false })).toEqual(['Informe ao menos uma faixa salarial (CLT ou PJ)']);
     });
 

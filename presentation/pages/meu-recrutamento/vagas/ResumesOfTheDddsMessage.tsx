@@ -5,7 +5,7 @@ import JnAjax from '@/app/JnAjax';
 import { cacheAllDdds, cacheResumesOf, cachedAllDdds, countResumes, foundResumesMessage, missingDdds } from './resumesOfTheDdds';
 
 type ResumesOfTheDddsMessageProps = {
-    // os ddds escolhidos na aba Opções
+    // os ddds escolhidos na aba Filtros
     ddds: string[];
     // vaga somente home office: a região não importa, contam os currículos de todos os ddds
     homeOffice: boolean;
@@ -15,7 +15,7 @@ type ResumesOfTheDddsMessageProps = {
 const ALL_DDDS = 'all';
 
 /**
- * A área de mensagens da aba "Opções" do formulário de vagas (desde 2026-11-22): a cada mudança das regiões, pede ao
+ * A área de mensagens da aba "Filtros" do formulário de vagas (desde 2026-11-22): a cada mudança das regiões, pede ao
  * backend só os ddds que o navegador ainda não guardou (na vaga home office, todos os ddds de uma vez, pelo endpoint sem
  * ddds) e, enquanto ele não responde, mostra um spinner; com a resposta, "Foram encontrados N currículos", contando uma
  * vez o currículo que está em vários ddds.

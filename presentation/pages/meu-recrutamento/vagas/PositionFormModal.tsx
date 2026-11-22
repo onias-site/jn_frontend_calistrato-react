@@ -19,6 +19,7 @@ import IconFile from '@/presentation/icons/icon-file';
 import IconGlobe from '@/presentation/icons/icon-globe';
 import IconGithub from '@/presentation/icons/icon-github';
 import IconSettings from '@/presentation/icons/icon-settings';
+import IconFilter from '@/presentation/icons/icon-filter';
 import IconDollarSign from '@/presentation/icons/icon-dollar-sign';
 import IconSave from '@/presentation/icons/icon-save';
 import IconUsers from '@/presentation/icons/icon-users';
@@ -40,6 +41,7 @@ import {
     languageLevelOptions,
     languagesTabErrors,
     optionsTabErrors,
+    filtersTabErrors,
     pendingRequirements,
     positionOf,
     positionTabErrors,
@@ -74,8 +76,9 @@ const inside = { withinPortal: false };
  * O modal de "Criar vaga" e de "Editar" da tela "Meu Recrutamento → Vagas", em abas sequenciais e com a aparência do
  * cadastro de currículo (desde 2026-11-22): rótulos com o botão de ajuda (LabelComponent), os checkboxes com explicação e
  * o erro de cada campo embaixo dele. A primeira aba, "Vaga", tem título, descrição, área, contatos, as datas de início e
- * de fim e se a vaga é visível aos candidatos; as demais são as do currículo, na mesma ordem e com os mesmos ícones:
- * Idiomas, Habilidades, Opções e Salários. Como no currículo, sair da primeira aba numa vaga de tecnologia manda a
+ * de fim; depois vêm Filtros (regiões, com a contagem dos currículos delas, senioridade e o mais que filtra os
+ * currículos), Idiomas, Habilidades e Salários, e por último Opções (visível aos candidatos, envio da vaga e dos
+ * currículos e a ordem deles), cujo avançar grava a vaga. Como no currículo, sair da primeira aba numa vaga de tecnologia manda a
  * descrição ao skills/fromText, que preenche as duas listas de arrastar e soltar (obrigatórias e desejáveis) e os
  * conhecimentos implícitos; a aba Habilidades só aparece com alguma habilidade encontrada. As listas ficam numa store só
  * deste modal (createSkillStore). Depois de gravar, o modal continua aberto e ganha a aba "Cvs encontrados", que ainda
@@ -145,9 +148,11 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
             onMoveOnFowardTabs: loadSkillsFromText,
             fieldsShowPendingRequirements: true,
         },
-        { label: 'Opções', icon: <IconSettings className="h-4 w-4" />, getPendingRequirements: () => optionsTabErrors(form), onMoveOnFowardTabs: () => optionsTabErrors(form) },
+        { label: 'Filtros', icon: <IconFilter className="h-4 w-4" />, getPendingRequirements: () => filtersTabErrors(form), onMoveOnFowardTabs: () => filtersTabErrors(form) },
         { label: 'Idiomas', icon: <IconGlobe className="h-4 w-4" />, getPendingRequirements: () => languagesTabErrors(form), onMoveOnFowardTabs: () => languagesTabErrors(form) },
-        { label: 'Salários', icon: <IconDollarSign className="h-4 w-4" />, getPendingRequirements: () => salaryTabErrors(form), onMoveOnFowardTabs: () => save() },
+        { label: 'Salários', icon: <IconDollarSign className="h-4 w-4" />, getPendingRequirements: () => salaryTabErrors(form), onMoveOnFowardTabs: () => salaryTabErrors(form) },
+        // a última antes de gravar: o avançar dela salva a vaga
+        { label: 'Opções', icon: <IconSettings className="h-4 w-4" />, getPendingRequirements: () => optionsTabErrors(form), onMoveOnFowardTabs: () => save() },
     ];
 
     // devolve as pendências de todas as abas; sem nenhuma, envia e devolve vazio (a convenção do Tabs)
@@ -196,7 +201,7 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
         return [];
     };
 
-    // a aba Habilidades entra depois de Idiomas (Vaga, Opções, Idiomas, Habilidades), com o número de habilidades obrigatórias
+    // a aba Habilidades entra depois de Idiomas (Vaga, Filtros, Idiomas, Habilidades, Salários, Opções), com o número de habilidades obrigatórias
     const requiredGroup = skillGroups.filter((group) => group.name == REQUIRED_SKILLS)[0];
     const requiredCount = requiredGroup ? requiredGroup.list.length : 0;
     const tabSkills = {
@@ -335,7 +340,8 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
         </div>
     );
 
-    // ---- aba Opções (regiões como as do currículo, mais o que é só da vaga: senioridade, envio e ordem dos currículos)
+    // ---- aba Filtros (regiões como as do currículo, com a contagem dos currículos delas, senioridade, PCD, viagens,
+    // começo e temporário)
     const homeOffice = form.ddd.includes(HOME_OFFICE);
     const regionsValue = form.ddd.length == allRegions.length ? [TODAS_AS_REGIOES, ...form.ddd] : form.ddd;
     const selectRegions = (values: string[], changed: string) => {
@@ -345,7 +351,7 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
         }
         set({ ddd: values.filter((value) => value != TODAS_AS_REGIOES) });
     };
-    const optionsTab = (
+    const filtersTab = (
         <div>
             <div className="mb-5">
                 <label className="mb-2 block font-semibold text-dark dark:text-white-light">Onde a vaga é</label>
@@ -372,12 +378,6 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
             </div>
             {/* a área de mensagens: os currículos ativos das regiões escolhidas (spinner enquanto o backend não responde) */}
             <ResumesOfTheDddsMessage ddds={form.ddd} homeOffice={homeOffice} />
-            <CheckBoxComponent
-                explanation="Caso esta opção estiver marcada, os candidatos poderão ver esta vaga. Caso esta opção não estiver marcada, a vaga continua cadastrada e buscando currículos, mas fica escondida dos candidatos."
-                checkBoxLabel="Vaga visível para candidatos"
-                setValue={(visibleToCandidates) => set({ visibleToCandidates })}
-                value={form.visibleToCandidates}
-            />
             <div className="max-w-xl">
                 <LabelComponent explanation="A senioridade dos currículos procurados." labelValue="Senioridade da vaga:" property="seniority" errors={{}}>
                     <Select id="seniority" data={seniorityOptions} value={form.seniority || null} placeholder="Escolha a senioridade" comboboxProps={inside} onChange={(value) => set({ seniority: value || '' })} />
@@ -414,7 +414,19 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
                 defaultValue={1}
                 maxValue={LIMITS.temporallyJobTimeMax}
             />
-            <div className="mb-5 mt-6 border-t border-white-light pt-5 dark:border-[#1b2e4b]">
+        </div>
+    );
+
+    // ---- aba Opções (a última antes de gravar): visibilidade, envio da vaga e dos currículos e a ordem deles
+    const optionsTab = (
+        <div>
+            <CheckBoxComponent
+                explanation="Caso esta opção estiver marcada, os candidatos poderão ver esta vaga. Caso esta opção não estiver marcada, a vaga continua cadastrada e buscando currículos, mas fica escondida dos candidatos."
+                checkBoxLabel="Vaga visível para candidatos"
+                setValue={(visibleToCandidates) => set({ visibleToCandidates })}
+                value={form.visibleToCandidates}
+            />
+            <div className="mb-5">
                 <div className="max-w-xl">
                     <LabelComponent explanation="De quanto em quanto tempo você recebe os currículos encontrados para esta vaga." labelValue="Frequência de envio dos currículos encontrados:" property="frequencyType" errors={{}}>
                         <Select id="frequencyType" data={frequencyOptions} value={form.frequencyType} allowDeselect={false} comboboxProps={inside} onChange={(value) => set({ frequencyType: value || 'daily' })} />
@@ -518,10 +530,11 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
             goToTab={goToTab}
         >
             {positionTab}
-            {optionsTab}
+            {filtersTab}
             {languagesTab}
             {showTabSkills && <TabSkills2 store={skillStore} getAccordionList={getImplicitSkills} withSuggestions={false} />}
             {salaryTab}
+            {optionsTab}
             {savedOnce && foundResumesTab}
         </Tabs>
     );

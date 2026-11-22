@@ -1,5 +1,5 @@
 /**
- * Os currículos ativos de cada região (ddd) da vaga, na aba "Opções" do formulário de vagas (desde 2026-11-22): o
+ * Os currículos ativos de cada região (ddd) da vaga, na aba "Filtros" do formulário de vagas (desde 2026-11-22): o
  * público GET positions/resumes-of-the-ddds/{ddds separados por vírgula} (sem sessão: a tela abre sem login) devolve, por
  * ddd, os filhos do grupo do ddd no jn_grouper (parte do currículo e o id). Na vaga home office a região não importa:
  * o mesmo GET sem ddds devolve todos os ddds de uma vez. Cada ddd fica guardado no navegador por uma hora, e a tela só

@@ -327,13 +327,19 @@ export const languagesTabErrors = (form: PositionForm) => {
     return [];
 };
 
-/** Aba "Opções": regiões, senioridade, dias para começar, temporário e a ordem dos currículos encontrados. */
-export const optionsTabErrors = (form: PositionForm) => {
+/** Aba "Filtros" (a segunda): regiões, senioridade, dias para começar e temporário. */
+export const filtersTabErrors = (form: PositionForm) => {
     const errors: string[] = [];
     (form.ddd.length < 1 || form.ddd.length > LIMITS.dddMax) && errors.push('Escolha ao menos uma região');
     !form.seniority && errors.push('Escolha a senioridade');
     isOutOfIntegerRange(form.disponibility, LIMITS.disponibilityMax) && errors.push(`Os dias para começar devem ir de 1 a ${LIMITS.disponibilityMax}`);
     isOutOfIntegerRange(form.temporallyJobTime, LIMITS.temporallyJobTimeMax) && errors.push(`A duração do temporário deve ir de 1 a ${LIMITS.temporallyJobTimeMax} meses`);
+    return errors;
+};
+
+/** Aba "Opções" (depois de Salários): visibilidade, envio da vaga e dos currículos e a ordem dos currículos encontrados. */
+export const optionsTabErrors = (form: PositionForm) => {
+    const errors: string[] = [];
     (form.sort.length < 1 || form.sort.some((rule) => rule.field.length < 1)) && errors.push('Escolha ao menos um critério de ordenação dos currículos');
     return errors;
 };
@@ -350,9 +356,10 @@ export const salaryTabErrors = (form: PositionForm) => {
 /** Tudo o que falta ou está errado no formulário, aba por aba; vazio, a vaga pode ser gravada. */
 export const pendingRequirements = (form: PositionForm, creating: boolean, now: Date = new Date()) => [
     ...positionTabErrors(form, creating, now),
+    ...filtersTabErrors(form),
     ...languagesTabErrors(form),
-    ...optionsTabErrors(form),
     ...salaryTabErrors(form),
+    ...optionsTabErrors(form),
 ];
 
 // ---- aba Habilidades (como a do currículo: as habilidades encontradas no texto, aqui a descrição da vaga, por skills/fromText)
