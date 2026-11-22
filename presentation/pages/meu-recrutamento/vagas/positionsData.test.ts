@@ -9,6 +9,7 @@ import {
     optionsTabErrors,
     parsePositions,
     positionTabErrors,
+    positionTabFieldErrors,
     salaryTabErrors,
     pendingRequirements,
     positionOf,
@@ -130,6 +131,13 @@ describe('positionsData', () => {
         expect(savedGroups[1].list.map((skill: any) => [skill.label, skill.parent])).toEqual([['DOCKER', []]]);
         expect(Object.keys(context.discardedSkills)).toEqual(['isPieceOfOtherWord']);
         expect(context.cacheHash).toBe('hash');
+    });
+
+    it('a vaga nasce visível aos candidatos e o erro de cada campo da aba Vaga fica no campo', () => {
+        expect(emptyForm(now).visibleToCandidates).toBe(true);
+        expect(requestBodyOf({ ...validForm(), visibleToCandidates: false }).visibleToCandidates).toBe(false);
+        expect(formOf(positionOf(requestBodyOf({ ...validForm(), visibleToCandidates: false }))).visibleToCandidates).toBe(false);
+        expect(Object.keys(positionTabFieldErrors({ ...validForm(), title: 'curto', contact: [] }, true, now))).toEqual(['title', 'contact']);
     });
 
     it('valida os contatos como o backend', () => {

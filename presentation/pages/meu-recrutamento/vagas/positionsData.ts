@@ -34,6 +34,7 @@ export type Position = {
     contact: Contact[];
     mustSendInGroups: boolean;
     mustSendToResumes: boolean;
+    visibleToCandidates: boolean;
     frequencyType: string;
 };
 
@@ -63,6 +64,7 @@ export type PositionForm = {
     contact: Contact[];
     mustSendInGroups: boolean;
     mustSendToResumes: boolean;
+    visibleToCandidates: boolean;
     frequencyType: string;
 };
 
@@ -101,8 +103,8 @@ export const contactTypeOptions = [
 ];
 
 export const languageLevelOptions = [
-    { value: '1', label: 'Intermediário' },
-    { value: '2', label: 'Fluente' },
+    { value: '1', label: 'Intermediário (lê e escreve bem, entende parte do que lhe dizem, porém tem lentidão ao expressar ideias neste idioma)' },
+    { value: '2', label: 'Fluente (lê e escreve quase na mesma velocidade do idioma nativo, se expressa bem e entende os regionalismos em parte ou totalmente)' },
 ];
 
 // os mesmos limites de VisEntityPosition e VisJsonCommonsFields no backend
@@ -205,6 +207,7 @@ export const emptyForm = (now: Date = new Date()): PositionForm => {
         contact: [{ type: 'email', value: '' }],
         mustSendInGroups: true,
         mustSendToResumes: true,
+        visibleToCandidates: true,
         frequencyType: 'daily',
     };
 };
@@ -236,6 +239,7 @@ export const formOf = (position: Position): PositionForm => ({
     contact: position.contact && position.contact.length ? position.contact : [{ type: 'email', value: '' }],
     mustSendInGroups: position.mustSendInGroups !== false,
     mustSendToResumes: position.mustSendToResumes !== false,
+    visibleToCandidates: position.visibleToCandidates !== false,
     frequencyType: position.frequencyType || 'daily',
 });
 
@@ -263,6 +267,7 @@ export const requestBodyOf = (form: PositionForm, skills: any[] = []) => {
         contact: form.contact.map((contact) => ({ type: contact.type, value: contact.value.trim() })),
         mustSendInGroups: form.mustSendInGroups,
         mustSendToResumes: form.mustSendToResumes,
+        visibleToCandidates: form.visibleToCandidates,
         frequencyType: form.frequencyType,
     };
     if (form.hasClt) body.clt = { min: Number(form.cltMin), max: Number(form.cltMax) };
@@ -286,21 +291,32 @@ const salaryErrors = (name: string, min: number | '', max: number | '') => {
 const isOutOfIntegerRange = (value: number | string, max: number) => value === '' || value === '0' || !Number.isInteger(Number(value)) || Number(value) < 0 || Number(value) > max;
 
 /** Aba "Vaga": título, descrição, área, contatos e as datas de início e de fim da vaga. */
-export const positionTabErrors = (form: PositionForm, creating: boolean, now: Date = new Date()) => {
-    const errors: string[] = [];
+/**
+ * Os erros da aba "Vaga" por campo, mostrados embaixo de cada um, como na aba Currículo (LabelComponent): título,
+ * descrição, área, contatos e as datas (expiration).
+ */
+export const positionTabFieldErrors = (form: PositionForm, creating: boolean, now: Date = new Date()) => {
+    const fieldErrors: Record<string, string> = {};
+    const fail = (field: string, message: string) => (fieldErrors[field] = fieldErrors[field] || message);
     const title = form.title.trim();
     const description = form.description.trim();
-    (title.length < LIMITS.titleMin || title.length > LIMITS.titleMax) && errors.push(`O título deve ter de ${LIMITS.titleMin} a ${LIMITS.titleMax} caracteres`);
+    (title.length < LIMITS.titleMin || title.length > LIMITS.titleMax) && fail('title', `O título deve ter de ${LIMITS.titleMin} a ${LIMITS.titleMax} caracteres`);
     (description.length < LIMITS.descriptionMin || description.length > LIMITS.descriptionMax) &&
-        errors.push(`A descrição deve ter de ${LIMITS.descriptionMin} a ${LIMITS.descriptionMax.toLocaleString('pt-BR')} caracteres (tem ${description.length})`);
-    !form.resumeType && errors.push('Escolha a área da vaga');
-    form.contact.length < 1 && errors.push('Informe ao menos um contato');
-    form.contact.some((contact) => !isValidContact(contact) || contact.value.trim().length > LIMITS.contactValueMax) && errors.push('Confira os contatos: WhatsApp com DDD, e-mail válido ou link começando com http');
-    if (!form.expirationMin || !form.expirationMax) return [...errors, 'Informe o início e o fim da vaga'];
-    creating && form.expirationMin < today(now) && errors.push('O início da vaga não pode ser antes de hoje');
-    form.expirationMax < form.expirationMin && errors.push('O fim da vaga não pode ser antes do início');
-    return errors;
+        fail('description', `A descrição deve ter de ${LIMITS.descriptionMin} a ${LIMITS.descriptionMax.toLocaleString('pt-BR')} caracteres (tem ${description.length})`);
+    !form.resumeType && fail('resumeType', 'Escolha a área da vaga');
+    form.contact.length < 1 && fail('contact', 'Informe ao menos um contato');
+    form.contact.some((contact) => !isValidContact(contact) || contact.value.trim().length > LIMITS.contactValueMax) && fail('contact', 'Confira os contatos: WhatsApp com DDD, e-mail válido ou link começando com http');
+    if (!form.expirationMin || !form.expirationMax) {
+        fail('expiration', 'Informe o início e o fim da vaga');
+        return fieldErrors;
+    }
+    creating && form.expirationMin < today(now) && fail('expiration', 'O início da vaga não pode ser antes de hoje');
+    form.expirationMax < form.expirationMin && fail('expiration', 'O fim da vaga não pode ser antes do início');
+    return fieldErrors;
 };
+
+/** Aba "Vaga": título, descrição, área, contatos e as datas de início e de fim da vaga. */
+export const positionTabErrors = (form: PositionForm, creating: boolean, now: Date = new Date()) => Object.values(positionTabFieldErrors(form, creating, now));
 
 /** Aba "Idiomas": marcado o "exige outro idioma", ao menos um idioma, cada um com o seu nível. */
 export const languagesTabErrors = (form: PositionForm) => {

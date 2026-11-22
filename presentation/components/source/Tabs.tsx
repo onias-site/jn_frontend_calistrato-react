@@ -31,6 +31,8 @@ export interface TabsProps {
     lastButtonSiblings?: React.ReactNode;
     // cada mudança deste valor leva de volta à primeira aba (ex.: depois de salvar)
     resetSignal?: number;
+    // cada objeto novo leva à aba do índice dado (ex.: à aba que aparece depois de salvar)
+    goToTab?: { index: number };
     // atalho mostrado à esquerda do botão de avançar em todas as abas menos a última (ex.: salvar sem passar pelas
     // demais abas); devolve as pendências, mostradas como as do avançar
     shortcutButton?: TabsShortcutButton;
@@ -57,6 +59,7 @@ export const Tabs: React.FC<TabsProps> = ({
     lastButtonSiblings,
     shortcutButton,
     resetSignal = 0,
+    goToTab,
 }) => {
     const [activeIndex, setActiveIndex] = useState(0);
     // a caixa de pendências só aparece depois de o usuário tentar avançar ou salvar nesta aba: a aba não abre já em erro
@@ -68,6 +71,9 @@ export const Tabs: React.FC<TabsProps> = ({
     React.useEffect(() => {
         resetSignal && goTo(0);
     }, [resetSignal]);
+    React.useEffect(() => {
+        goToTab && tabs[goToTab.index] && goTo(goToTab.index);
+    }, [goToTab]);
     // "Voltar" e "Avançar" (até 2026-11-08 os botões levavam o nome da aba vizinha, o que confundia: "Idiomas" parecia um atalho)
     const previousLabel = activeIndex > 0 ? 'Voltar' : firstButtonLabel;
     const nextLabel = tabs[activeIndex + 1] ? 'Avançar' : lastButtonLabel;

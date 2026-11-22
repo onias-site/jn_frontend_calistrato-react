@@ -92,10 +92,8 @@ export const Positions = () => {
 
     useEffect(load, []);
 
-    const saved = (position: Position) => {
-        setPositions(replacePosition(positions, position));
-        setEditing(undefined);
-    };
+    // o modal continua aberto depois de gravar (vai para a aba dos currículos encontrados): só a lista muda
+    const saved = (position: Position) => setPositions((current) => replacePosition(current, position));
 
     const reactivated = (title: string, expiration: { min: any; max: any }) => {
         setPositions(changeExpiration(positions, title, expiration));
@@ -163,7 +161,7 @@ export const Positions = () => {
                     <Tabs.Panel value="expired">{grid('expired', expired, 'Nenhuma vaga expirada.')}</Tabs.Panel>
                 </Tabs>
             )}
-            <Modal visible={editing !== undefined} setVisible={(visible) => !visible && setEditing(undefined)} title={editing ? 'Editar vaga' : 'Criar vaga'} size="xl">
+            <Modal visible={editing !== undefined} setVisible={(visible) => !visible && setEditing(undefined)} title={editing ? 'Editar vaga' : 'Criar vaga'} size="90%" closeOnClickOutside={false}>
                 {editing !== undefined && <PositionFormModal key={editing ? editing.title : 'new'} position={editing} onSaved={saved} onCancel={() => setEditing(undefined)} />}
             </Modal>
             <Modal visible={reactivating != null} setVisible={(visible) => !visible && setReactivating(null)} title="Reativar vaga" size="md">

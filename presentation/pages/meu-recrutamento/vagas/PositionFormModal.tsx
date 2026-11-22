@@ -1,10 +1,11 @@
 'use client';
 import React, { useState } from 'react';
-import { Checkbox, MultiSelect, NumberInput, Select, Textarea, TextInput } from '@mantine/core';
+import { Alert, Checkbox, MultiSelect, NumberInput, Select, Textarea, TextInput } from '@mantine/core';
 import { sha1 } from 'js-sha1';
 import JnAjax from '@/app/JnAjax';
 import { Tabs } from '@/presentation/components/source/Tabs';
 import { HelpButton } from '@/presentation/components/source/HelpButton';
+import { LabelComponent } from '@/presentation/components/source/LabelComponent';
 import { CheckBoxComponent } from '@/presentation/components/source/CheckBoxComponent';
 import { IntegerFieldComponent } from '@/presentation/components/source/IntegerFieldComponent';
 import { SummaryMultiSelect } from '@/presentation/components/source/SummaryMultiSelect';
@@ -20,6 +21,8 @@ import IconGithub from '@/presentation/icons/icon-github';
 import IconSettings from '@/presentation/icons/icon-settings';
 import IconDollarSign from '@/presentation/icons/icon-dollar-sign';
 import IconSave from '@/presentation/icons/icon-save';
+import IconUsers from '@/presentation/icons/icon-users';
+import IconInfoCircle from '@/presentation/icons/icon-info-circle';
 import {
     Contact,
     DESIRED_SKILLS,
@@ -39,6 +42,7 @@ import {
     pendingRequirements,
     positionOf,
     positionTabErrors,
+    positionTabFieldErrors,
     requestBodyOf,
     salaryTabErrors,
     seniorityOptions,
@@ -52,6 +56,7 @@ import {
 type PositionFormModalProps = {
     // sem vaga, "Criar vaga": o título vem vazio e é obrigatório; com vaga, "Editar": o título (parte da chave) fica travado
     position: Position | null;
+    // a vaga gravada: a tela atualiza a lista e o modal continua aberto, na aba "Cvs encontrados"
     onSaved: (position: Position) => void;
     onCancel: () => void;
 };
@@ -61,21 +66,29 @@ const regionOptions = [{ value: TODAS_AS_REGIOES, label: 'Qualquer estado / cida
 const allRegions = regionOptions.map((option) => option.value).filter((value) => value != TODAS_AS_REGIOES);
 const languageOptions = languages.map((language) => ({ value: language.name, label: language.name }));
 const fieldLabel = 'mb-1.5 block font-semibold text-dark dark:text-white-light';
+// as listas abrem dentro do modal (como no formulário de currículo): fora dele, a rolagem do modal as deixaria para trás
+const inside = { withinPortal: false };
 
 /**
- * O modal de "Criar vaga" e de "Editar" da tela "Meu Recrutamento → Vagas", em abas sequenciais como o cadastro de
- * currículo (desde 2026-11-22): a primeira, "Vaga", tem título, descrição, área, contatos e as datas de início e de fim;
- * as demais são as do currículo, na mesma ordem e com os mesmos ícones: Idiomas, Habilidades, Opções e Salários. Como
- * no currículo, sair da primeira aba numa vaga de tecnologia manda a descrição ao skills/fromText, que preenche as duas
- * listas de arrastar e soltar (obrigatórias e desejáveis) e os conhecimentos implícitos; a aba Habilidades só aparece
- * com alguma habilidade encontrada. As listas ficam numa store só deste modal (createSkillStore). Cada
- * aba só deixa avançar com as suas pendências resolvidas; na última, o botão grava. A gravação é assíncrona no backend: a
- * tela põe na lista o que enviou, sem reler.
+ * O modal de "Criar vaga" e de "Editar" da tela "Meu Recrutamento → Vagas", em abas sequenciais e com a aparência do
+ * cadastro de currículo (desde 2026-11-22): rótulos com o botão de ajuda (LabelComponent), os checkboxes com explicação e
+ * o erro de cada campo embaixo dele. A primeira aba, "Vaga", tem título, descrição, área, contatos, as datas de início e
+ * de fim e se a vaga é visível aos candidatos; as demais são as do currículo, na mesma ordem e com os mesmos ícones:
+ * Idiomas, Habilidades, Opções e Salários. Como no currículo, sair da primeira aba numa vaga de tecnologia manda a
+ * descrição ao skills/fromText, que preenche as duas listas de arrastar e soltar (obrigatórias e desejáveis) e os
+ * conhecimentos implícitos; a aba Habilidades só aparece com alguma habilidade encontrada. As listas ficam numa store só
+ * deste modal (createSkillStore). Depois de gravar, o modal continua aberto e ganha a aba "Cvs encontrados", que ainda
+ * não busca os currículos. A gravação é assíncrona no backend: a tela põe na lista o que enviou, sem reler.
  */
 export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormModalProps) => {
-    const creating = position == null;
-    const [form, setForm] = useState<PositionForm>(creating ? emptyForm() : formOf(position));
+    // gravada uma vez, a vaga nova passa a ser editada: o título trava e o próximo "Salvar dados" vai ao /edit
+    const [savedOnce, setSavedOnce] = useState(false);
+    const creating = position == null && !savedOnce;
+    const [form, setForm] = useState<PositionForm>(position == null ? emptyForm() : formOf(position));
     const [saving, setSaving] = useState(false);
+    // o erro de cada campo da aba Vaga só aparece depois da primeira tentativa de avançar ou salvar
+    const [attempted, setAttempted] = useState(false);
+    const [goToTab, setGoToTab] = useState<{ index: number } | undefined>(undefined);
     // a store das habilidades deste modal; na edição de uma vaga de tecnologia, já com as habilidades gravadas
     const [skillStore] = useState(() => {
         const store = createSkillStore();
@@ -89,6 +102,7 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
     const [hasTabSkills, setHasTabSkills] = useState(skillGroups.some((group) => group.list.length > 0));
     const showTabSkills = hasTabSkills && isTechPosition(form);
     const set = (changes: Partial<PositionForm>) => setForm((current) => ({ ...current, ...changes }));
+    const fieldErrors = attempted ? positionTabFieldErrors(form, creating) : {};
 
     const setSort = (index: number, changes: Partial<SortRule>) => set({ sort: form.sort.map((rule, i) => (i == index ? { ...rule, ...changes } : rule)) });
     const setContact = (index: number, changes: Partial<Contact>) => set({ contact: form.contact.map((contact, i) => (i == index ? { ...contact, ...changes } : contact)) });
@@ -98,6 +112,7 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
 
     // ao sair da aba Vaga, como ao sair da aba Currículo: as habilidades da descrição, só quando ela mudou
     const loadSkillsFromText = (): string[] => {
+        setAttempted(true);
         const errors = positionTabErrors(form, creating);
         if (errors.length) return errors;
         if (!skillsOutdated()) return [];
@@ -121,19 +136,37 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
         return [];
     };
 
+    const tabs: any[] = [
+        {
+            label: 'Vaga',
+            icon: <IconFile className="h-4 w-4" />,
+            getPendingRequirements: () => positionTabErrors(form, creating),
+            onMoveOnFowardTabs: loadSkillsFromText,
+            fieldsShowPendingRequirements: true,
+        },
+        { label: 'Idiomas', icon: <IconGlobe className="h-4 w-4" />, getPendingRequirements: () => languagesTabErrors(form), onMoveOnFowardTabs: () => languagesTabErrors(form) },
+        { label: 'Opções', icon: <IconSettings className="h-4 w-4" />, getPendingRequirements: () => optionsTabErrors(form), onMoveOnFowardTabs: () => optionsTabErrors(form) },
+        { label: 'Salários', icon: <IconDollarSign className="h-4 w-4" />, getPendingRequirements: () => salaryTabErrors(form), onMoveOnFowardTabs: () => save() },
+    ];
+
     // devolve as pendências de todas as abas; sem nenhuma, envia e devolve vazio (a convenção do Tabs)
     const save = (): string[] => {
+        setAttempted(true);
         if (skillsOutdated()) return ['Aba Vaga: a descrição mudou. Avance até a aba Habilidades para conferir as habilidades encontradas nela antes de salvar.'];
         const skillErrors = showTabSkills ? skillStore.getState().getPendingRequirements() : [];
         const errors = [...pendingRequirements(form, creating), ...skillErrors];
         if (errors.length || saving) return errors;
         setSaving(true);
         const body = requestBodyOf(form, skillStore.getState().loadSkillsContext());
+        // a aba "Cvs encontrados" entra no fim: o índice dela é o tamanho da lista de abas antes de ela aparecer
+        const foundResumesTabIndex = tabs.length;
         const callbacks: any = {};
         callbacks[200] = () => {
             setSaving(false);
             notify({ summary: creating ? 'Vaga criada' : 'Vaga salva', detail: 'A lista já mostra a vaga como você a gravou.' });
             onSaved(positionOf(body));
+            !savedOnce && setGoToTab({ index: foundResumesTabIndex });
+            setSavedOnce(true);
         };
         callbacks[409] = () => {
             setSaving(false);
@@ -162,12 +195,6 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
         return [];
     };
 
-    const tabs: any[] = [
-        { label: 'Vaga', icon: <IconFile className="h-4 w-4" />, getPendingRequirements: () => positionTabErrors(form, creating), onMoveOnFowardTabs: loadSkillsFromText },
-        { label: 'Idiomas', icon: <IconGlobe className="h-4 w-4" />, getPendingRequirements: () => languagesTabErrors(form), onMoveOnFowardTabs: () => languagesTabErrors(form) },
-        { label: 'Opções', icon: <IconSettings className="h-4 w-4" />, getPendingRequirements: () => optionsTabErrors(form), onMoveOnFowardTabs: () => optionsTabErrors(form) },
-        { label: 'Salários', icon: <IconDollarSign className="h-4 w-4" />, getPendingRequirements: () => salaryTabErrors(form), onMoveOnFowardTabs: save },
-    ];
     // a aba Habilidades entra depois de Idiomas, como no currículo, com o número de habilidades obrigatórias
     const requiredGroup = skillGroups.filter((group) => group.name == REQUIRED_SKILLS)[0];
     const requiredCount = requiredGroup ? requiredGroup.list.length : 0;
@@ -179,6 +206,17 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
         onMoveOnFowardTabs: () => skillStore.getState().getPendingRequirements(),
     };
     showTabSkills && tabs.splice(2, 0, tabSkills);
+    // depois de gravar, a aba dos currículos encontrados, a última; o botão dela fecha o modal
+    const tabFoundResumes = {
+        label: 'Cvs encontrados',
+        icon: <IconUsers className="h-4 w-4" />,
+        getPendingRequirements: () => [],
+        onMoveOnFowardTabs: () => {
+            onCancel();
+            return [];
+        },
+    };
+    savedOnce && tabs.push(tabFoundResumes);
 
     const removeButton = (onClick: () => void, disabled = false) => (
         <button type="button" className="btn btn-outline-danger btn-sm" onClick={onClick} disabled={disabled}>
@@ -188,34 +226,53 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
 
     // ---- aba Vaga
     const positionTab = (
-        <div className="flex flex-col gap-4">
-            <TextInput
-                label="Título"
-                description={creating ? `De ${LIMITS.titleMin} a ${LIMITS.titleMax} caracteres. Não muda depois de criada.` : 'O título identifica a vaga e não pode ser alterado.'}
-                value={form.title}
-                maxLength={LIMITS.titleMax}
-                withAsterisk
-                disabled={!creating}
-                onChange={(event) => set({ title: event.currentTarget.value })}
-            />
-            <Textarea
-                label="Descrição"
-                description={`De ${LIMITS.descriptionMin} a ${LIMITS.descriptionMax.toLocaleString('pt-BR')} caracteres (${form.description.trim().length}).`}
-                value={form.description}
-                maxLength={LIMITS.descriptionMax}
-                withAsterisk
-                autosize
-                minRows={4}
-                maxRows={12}
-                onChange={(event) => set({ description: event.currentTarget.value })}
-            />
-            <Select label="Área da vaga" data={resumeTypeOptions} value={form.resumeType} withAsterisk allowDeselect={false} onChange={(value) => set({ resumeType: value || '' })} />
-            <div>
-                <label className={fieldLabel}>Contatos para os candidatos</label>
+        // largura limitada, como na aba Currículo: um campo de uma linha muito largo é desconfortável de ler e de preencher
+        <div className="max-w-4xl">
+            <LabelComponent
+                explanation={`O título identifica a vaga para você e para os candidatos (de ${LIMITS.titleMin} a ${LIMITS.titleMax} caracteres). Ele faz parte da identificação da vaga, por isso não pode ser alterado depois de criada.`}
+                labelValue="Título da vaga:"
+                property="title"
+                errors={fieldErrors}
+            >
+                <TextInput id="title" error={!!fieldErrors.title} value={form.title} maxLength={LIMITS.titleMax} disabled={!creating} onChange={(event) => set({ title: event.currentTarget.value })} />
+            </LabelComponent>
+            <LabelComponent
+                explanation={`O texto completo da vaga: atividades, requisitos, benefícios e o que mais o candidato precisa saber (de ${LIMITS.descriptionMin} a ${LIMITS.descriptionMax.toLocaleString('pt-BR')} caracteres). Numa vaga de tecnologia, é deste texto que saem as listas da aba 'Habilidades' mais à frente.`}
+                labelValue={`Descrição da vaga (${form.description.trim().length} caracteres):`}
+                property="description"
+                errors={fieldErrors}
+            >
+                <Textarea
+                    id="description"
+                    error={!!fieldErrors.description}
+                    value={form.description}
+                    maxLength={LIMITS.descriptionMax}
+                    placeholder="Cole aqui o texto da vaga."
+                    autosize
+                    minRows={10}
+                    maxRows={25}
+                    onChange={(event) => set({ description: event.currentTarget.value })}
+                />
+            </LabelComponent>
+            <LabelComponent
+                explanation="A área dos currículos procurados. A vaga de tecnologia da informação (TI) ganha a aba 'Habilidades', com as habilidades encontradas na descrição."
+                labelValue="Área da vaga:"
+                property="resumeType"
+                errors={fieldErrors}
+            >
+                <Select id="resumeType" error={!!fieldErrors.resumeType} data={resumeTypeOptions} value={form.resumeType} allowDeselect={false} comboboxProps={inside} onChange={(value) => set({ resumeType: value || '' })} />
+            </LabelComponent>
+            <LabelComponent
+                explanation="Por onde os candidatos falam com você sobre a vaga: WhatsApp (com DDD, ex.: +5511999998888), e-mail ou um link (começando com http). Informe ao menos um."
+                labelValue="Contatos para os candidatos:"
+                property="contact"
+                errors={fieldErrors}
+            >
                 {form.contact.map((contact, index) => (
-                    <div key={index} className="mb-2 grid grid-cols-1 items-end gap-2 sm:grid-cols-[1fr_2fr_auto]">
-                        <Select data={contactTypeOptions} value={contact.type} allowDeselect={false} onChange={(value) => setContact(index, { type: (value as Contact['type']) || 'email' })} />
+                    <div key={index} className="mb-2 grid grid-cols-1 items-start gap-2 sm:grid-cols-[1fr_2fr_auto]">
+                        <Select data={contactTypeOptions} value={contact.type} allowDeselect={false} comboboxProps={inside} onChange={(value) => setContact(index, { type: (value as Contact['type']) || 'email' })} />
                         <TextInput
+                            error={!!fieldErrors.contact}
                             value={contact.value}
                             maxLength={LIMITS.contactValueMax}
                             placeholder={contact.type == 'whatsapp' ? '+5511999998888' : contact.type == 'email' ? 'rh@empresa.com.br' : 'https://empresa.com.br/vaga'}
@@ -227,11 +284,24 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
                 <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => set({ contact: [...form.contact, { type: 'email', value: '' }] })}>
                     Acrescentar contato
                 </button>
-            </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <TextInput type="date" label="Início da vaga" value={form.expirationMin} min={creating ? today() : undefined} withAsterisk onChange={(event) => set({ expirationMin: event.currentTarget.value })} />
-                <TextInput type="date" label="Fim da vaga (expira em)" value={form.expirationMax} min={form.expirationMin || undefined} withAsterisk onChange={(event) => set({ expirationMax: event.currentTarget.value })} />
-            </div>
+            </LabelComponent>
+            <LabelComponent
+                explanation="A vaga recebe currículos do início até o fim do dia escolhido no fim. Depois disso ela vai para a aba das vagas expiradas, de onde pode ser reativada. Uma vaga nova não pode começar antes de hoje."
+                labelValue="Período da vaga (início e fim):"
+                property="expiration"
+                errors={fieldErrors}
+            >
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <TextInput type="date" aria-label="Início da vaga" error={!!fieldErrors.expiration} value={form.expirationMin} min={creating ? today() : undefined} onChange={(event) => set({ expirationMin: event.currentTarget.value })} />
+                    <TextInput type="date" aria-label="Fim da vaga" error={!!fieldErrors.expiration} value={form.expirationMax} min={form.expirationMin || undefined} onChange={(event) => set({ expirationMax: event.currentTarget.value })} />
+                </div>
+            </LabelComponent>
+            <CheckBoxComponent
+                explanation="Marcada, os candidatos podem ver esta vaga. Desmarcada, a vaga continua cadastrada e buscando currículos, mas fica escondida dos candidatos."
+                checkBoxLabel="Vaga visível para candidatos"
+                setValue={(visibleToCandidates) => set({ visibleToCandidates })}
+                value={form.visibleToCandidates}
+            />
         </div>
     );
 
@@ -263,8 +333,8 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
             {form.hasLanguages &&
                 form.spokenLanguage.map((language) => (
                     <div key={language.name} className="mb-4 md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] md:items-start md:gap-4">
-                        <label className="mb-1.5 block font-semibold text-dark dark:text-white-light md:mb-0 md:pt-2">Nível exigido em {language.name}:</label>
-                        <Select data={languageLevelOptions} value={String(language.level)} allowDeselect={false} onChange={(value) => value && setLanguageLevel(language.name, Number(value))} comboboxProps={{ withinPortal: false }} />
+                        <label className="mb-1.5 block font-semibold text-dark dark:text-white-light md:mb-0 md:pt-2">O nível exigido em idioma {language.name} é:</label>
+                        <Select data={languageLevelOptions} value={String(language.level)} allowDeselect={false} comboboxProps={inside} onChange={(value) => value && setLanguageLevel(language.name, Number(value))} />
                     </div>
                 ))}
         </div>
@@ -286,6 +356,11 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
                 <label className="mb-2 block font-semibold text-dark dark:text-white-light">Onde a vaga é</label>
                 <Checkbox className="mb-3" checked={homeOffice} onChange={(event) => set({ ddd: event.currentTarget.checked ? [HOME_OFFICE] : [] })} label="Vaga somente home office" />
                 {!homeOffice && (
+                    <p className="mb-2 text-sm text-white-dark">
+                        Você pode escolher <strong>mais de uma</strong> região metropolitana: marque todas onde a vaga pode ser presencial ou híbrida.
+                    </p>
+                )}
+                {!homeOffice && (
                     <SummaryMultiSelect
                         data={regionOptions}
                         value={regionsValue}
@@ -300,13 +375,25 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
                     />
                 )}
             </div>
-            <div className="mb-5 max-w-md">
-                <Select label="Senioridade" data={seniorityOptions} value={form.seniority || null} withAsterisk placeholder="Escolha" onChange={(value) => set({ seniority: value || '' })} />
+            <div className="max-w-xl">
+                <LabelComponent explanation="A senioridade dos currículos procurados." labelValue="Senioridade da vaga:" property="seniority" errors={{}}>
+                    <Select id="seniority" data={seniorityOptions} value={form.seniority || null} placeholder="Escolha a senioridade" comboboxProps={inside} onChange={(value) => set({ seniority: value || '' })} />
+                </LabelComponent>
             </div>
-            <CheckBoxComponent explanation="Marcada, a vaga é oferecida aos currículos de pessoas com deficiência (PCD)." checkBoxLabel="Vaga para pessoas com deficiência (PCD)" setValue={(pcd) => set({ pcd })} value={form.pcd} />
-            <CheckBoxComponent explanation="Marcada, a vaga só é oferecida aos currículos com disponibilidade para viagens nacionais ou internacionais." checkBoxLabel="A vaga exige disponibilidade para viagens" setValue={(travel) => set({ travel })} value={form.travel} />
+            <CheckBoxComponent
+                explanation="Caso esta opção estiver marcada, a vaga será oferecida aos currículos de pessoas com deficiência (PCD)."
+                checkBoxLabel="Vaga para pessoas com deficiência (PCD)"
+                setValue={(pcd) => set({ pcd })}
+                value={form.pcd}
+            />
+            <CheckBoxComponent
+                explanation="Caso esta opção estiver marcada, a vaga só será oferecida aos currículos de pessoas que estão disponíveis para viagens nacionais ou internacionais."
+                checkBoxLabel="A vaga exige disponibilidade para viagens nacionais ou internacionais"
+                setValue={(travel) => set({ travel })}
+                value={form.travel}
+            />
             <IntegerFieldComponent
-                explanation="Marcada, a vaga busca quem pode começar já. Desmarcada, informe em quantos dias o candidato pode começar."
+                explanation="Caso esta opção estiver marcada, a vaga será oferecida a quem pode começar já. Caso esta opção não estiver marcada, você deverá informar no campo de texto que será mostrado em quantos dias o candidato precisa começar."
                 checkBoxLabel="Contratação imediata"
                 textFieldLabel="Dias para o candidato começar"
                 setValue={(disponibility) => set({ disponibility })}
@@ -316,7 +403,7 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
                 maxValue={LIMITS.disponibilityMax}
             />
             <IntegerFieldComponent
-                explanation="Marcada, a vaga é por prazo indeterminado. Desmarcada, informe a duração, em meses, do emprego temporário."
+                explanation="Caso esta opção estiver marcada, a vaga é de prazo indeterminado. Caso esta opção não estiver marcada, você deverá informar no campo de texto que será mostrado a duração, em meses, do emprego temporário."
                 checkBoxLabel="Não é vaga temporária"
                 textFieldLabel="Duração do emprego temporário (em meses)"
                 setValue={(temporallyJobTime) => set({ temporallyJobTime })}
@@ -325,25 +412,31 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
                 maxValue={LIMITS.temporallyJobTimeMax}
             />
             <div className="mb-5 mt-6 border-t border-white-light pt-5 dark:border-[#1b2e4b]">
-                <div className="mb-4 max-w-md">
-                    <Select label="Frequência de envio dos currículos encontrados" data={frequencyOptions} value={form.frequencyType} allowDeselect={false} onChange={(value) => set({ frequencyType: value || 'daily' })} />
+                <div className="max-w-xl">
+                    <LabelComponent explanation="De quanto em quanto tempo você recebe os currículos encontrados para esta vaga." labelValue="Frequência de envio dos currículos encontrados:" property="frequencyType" errors={{}}>
+                        <Select id="frequencyType" data={frequencyOptions} value={form.frequencyType} allowDeselect={false} comboboxProps={inside} onChange={(value) => set({ frequencyType: value || 'daily' })} />
+                    </LabelComponent>
                 </div>
-                <CheckBoxComponent explanation="Marcada, a vaga é divulgada nos grupos de vagas." checkBoxLabel="Divulgar a vaga nos grupos" setValue={(mustSendInGroups) => set({ mustSendInGroups })} value={form.mustSendInGroups} />
-                <CheckBoxComponent explanation="Marcada, a vaga é enviada às pessoas cujos currículos combinam com ela." checkBoxLabel="Enviar a vaga aos currículos compatíveis" setValue={(mustSendToResumes) => set({ mustSendToResumes })} value={form.mustSendToResumes} />
+                <CheckBoxComponent explanation="Caso esta opção estiver marcada, a vaga será divulgada nos grupos de vagas." checkBoxLabel="Divulgar a vaga nos grupos" setValue={(mustSendInGroups) => set({ mustSendInGroups })} value={form.mustSendInGroups} />
+                <CheckBoxComponent
+                    explanation="Caso esta opção estiver marcada, a vaga será enviada às pessoas cujos currículos combinam com ela."
+                    checkBoxLabel="Enviar a vaga aos currículos compatíveis"
+                    setValue={(mustSendToResumes) => set({ mustSendToResumes })}
+                    value={form.mustSendToResumes}
+                />
             </div>
-            <div>
-                <label className={fieldLabel}>Ordem dos currículos encontrados</label>
+            <LabelComponent explanation="A ordem em que os currículos encontrados aparecem para você: escolha os critérios e se a ordem é crescente ou decrescente." labelValue="Ordem dos currículos encontrados:" property="sort" errors={{}}>
                 {form.sort.map((rule, index) => (
-                    <div key={index} className="mb-2 grid grid-cols-1 items-end gap-2 sm:grid-cols-[2fr_1fr_auto]">
-                        <MultiSelect data={sortFieldOptions} value={rule.field} placeholder="Critérios" onChange={(value) => setSort(index, { field: value })} />
-                        <Select data={sortTypeOptions} value={rule.type} allowDeselect={false} onChange={(value) => setSort(index, { type: (value as SortRule['type']) || 'desc' })} />
+                    <div key={index} className="mb-2 grid grid-cols-1 items-start gap-2 sm:grid-cols-[2fr_1fr_auto]">
+                        <MultiSelect data={sortFieldOptions} value={rule.field} placeholder="Critérios" comboboxProps={inside} onChange={(value) => setSort(index, { field: value })} />
+                        <Select data={sortTypeOptions} value={rule.type} allowDeselect={false} comboboxProps={inside} onChange={(value) => setSort(index, { type: (value as SortRule['type']) || 'desc' })} />
                         {removeButton(() => set({ sort: form.sort.filter((_, i) => i != index) }), form.sort.length == 1)}
                     </div>
                 ))}
                 <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => set({ sort: [...form.sort, { type: 'desc', field: [] }] })}>
                     Acrescentar critério
                 </button>
-            </div>
+            </LabelComponent>
         </div>
     );
 
@@ -351,13 +444,39 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
     const salaryRange = (name: string, offered: boolean, min: number | '', max: number | '', changes: (offered: boolean, min: number | '', max: number | '') => Partial<PositionForm>) => (
         <div className="mb-4">
             <div className="flex min-w-0 items-start gap-2">
-                <HelpButton title={`Não ofereço contratação ${name}`} explanation={`Marcada, a vaga não é de contrato ${name}. Desmarcada, informe a faixa salarial mensal ${name}, em reais.`} />
+                <HelpButton
+                    title={`Não ofereço contratação ${name}`}
+                    explanation={`Caso esta opção estiver marcada, a vaga não será de contrato ${name}. Caso esta opção não estiver marcada, você deverá informar nos campos que serão mostrados a faixa salarial mensal ${name}, em reais.`}
+                />
                 <Checkbox className="min-w-0" checked={!offered} onChange={(event) => set(changes(!event.currentTarget.checked, min, max))} label={`Não ofereço contratação ${name}`} />
             </div>
             {offered && (
+                // o recuo alinha os campos com o texto do checkbox, como no IntegerFieldComponent
                 <div className="mt-2 grid max-w-xl grid-cols-1 gap-3 pl-[3.75rem] sm:grid-cols-2">
-                    <NumberInput label="De (R$)" value={min} min={LIMITS.salaryMin} max={LIMITS.salaryMax} thousandSeparator="." decimalSeparator="," allowDecimal={false} allowNegative={false} onChange={(value) => set(changes(offered, value === '' ? '' : Number(value), max))} />
-                    <NumberInput label="Até (R$)" value={max} min={LIMITS.salaryMin} max={LIMITS.salaryMax} thousandSeparator="." decimalSeparator="," allowDecimal={false} allowNegative={false} onChange={(value) => set(changes(offered, min, value === '' ? '' : Number(value)))} />
+                    <NumberInput
+                        label={`Salário ${name} de (R$)`}
+                        classNames={{ label: 'font-semibold text-dark dark:text-white-light' }}
+                        value={min}
+                        min={LIMITS.salaryMin}
+                        max={LIMITS.salaryMax}
+                        thousandSeparator="."
+                        decimalSeparator=","
+                        allowDecimal={false}
+                        allowNegative={false}
+                        onChange={(value) => set(changes(offered, value === '' ? '' : Number(value), max))}
+                    />
+                    <NumberInput
+                        label={`Salário ${name} até (R$)`}
+                        classNames={{ label: 'font-semibold text-dark dark:text-white-light' }}
+                        value={max}
+                        min={LIMITS.salaryMin}
+                        max={LIMITS.salaryMax}
+                        thousandSeparator="."
+                        decimalSeparator=","
+                        allowDecimal={false}
+                        allowNegative={false}
+                        onChange={(value) => set(changes(offered, min, value === '' ? '' : Number(value)))}
+                    />
                 </div>
             )}
         </div>
@@ -367,24 +486,40 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
             {salaryRange('CLT', form.hasClt, form.cltMin, form.cltMax, (hasClt, cltMin, cltMax) => ({ hasClt, cltMin, cltMax }))}
             {salaryRange('PJ', form.hasPj, form.pjMin, form.pjMax, (hasPj, pjMin, pjMax) => ({ hasPj, pjMin, pjMax }))}
             <CheckBoxComponent
-                explanation="Marcada, a vaga também é oferecida aos currículos cuja pretensão salarial é negociável."
-                checkBoxLabel="O salário é negociável"
+                explanation="Caso esta opção estiver marcada, a vaga só será oferecida aos candidatos que aceitam negociar a pretensão salarial."
+                checkBoxLabel="Apenas candidatos que negociem pretensão salarial"
                 setValue={(negotiableClaim) => set({ negotiableClaim })}
                 value={form.negotiableClaim}
             />
         </div>
     );
 
+    // ---- aba Cvs encontrados (depois de gravar; a busca dos currículos da vaga vem depois)
+    const foundResumesTab = (
+        <Alert color="blue" icon={<IconInfoCircle className="h-5 w-5" />}>
+            A vaga foi gravada. Em breve esta aba mostrará os currículos compatíveis com ela.
+        </Alert>
+    );
+
     const saveLabel = creating ? 'Criar vaga' : 'Salvar dados';
     const saveShortcut = creating ? undefined : { label: 'Salvar dados', icon: <IconSave className="h-4 w-4" />, onClick: save };
 
     return (
-        <Tabs tabs={tabs} lastButtonLabel={saveLabel} lastButtonIcon={<IconSave className="h-4 w-4" />} firstButtonLabel="Cancelar" firstButtonClick={onCancel} shortcutButton={saveShortcut}>
+        <Tabs
+            tabs={tabs}
+            lastButtonLabel={savedOnce ? 'Fechar' : saveLabel}
+            lastButtonIcon={savedOnce ? undefined : <IconSave className="h-4 w-4" />}
+            firstButtonLabel="Cancelar"
+            firstButtonClick={onCancel}
+            shortcutButton={saveShortcut}
+            goToTab={goToTab}
+        >
             {positionTab}
             {languagesTab}
             {showTabSkills && <TabSkills2 store={skillStore} getAccordionList={getImplicitSkills} withSuggestions={false} />}
             {optionsTab}
             {salaryTab}
+            {savedOnce && foundResumesTab}
         </Tabs>
     );
 };
