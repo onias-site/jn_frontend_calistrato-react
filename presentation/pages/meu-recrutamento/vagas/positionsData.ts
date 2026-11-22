@@ -371,20 +371,22 @@ export const isTechPosition = (form: PositionForm) => form.resumeType == '1';
 export const REQUIRED_SKILLS = 'skillsFromResume';
 export const DESIRED_SKILLS = 'shouldSkills';
 
+// desde 2026-11-22 as encontradas na descrição vão para as desejáveis (a lista principal, de onde saem as implícitas), e
+// o recrutador arrasta para as obrigatórias as que os currículos precisam ter
 const requiredSkillsGroup = (list: any[]) => ({
     title: 'Habilidades OBRIGATÓRIAS da vaga',
-    help: 'As habilidades encontradas na descrição da vaga. Os currículos encontrados precisam ter todas elas; arraste para a lista de desejáveis as que não forem obrigatórias.',
+    help: 'Os currículos encontrados precisam ter todas estas habilidades. Arraste para cá, da lista de desejáveis, as que forem obrigatórias.',
     name: REQUIRED_SKILLS,
     category: 'skillsFromText',
-    main: true,
     list,
 });
 
 const desiredSkillsGroup = (list: any[]) => ({
     title: 'Habilidades DESEJÁVEIS da vaga',
-    help: 'Habilidades que contam a favor do currículo, mas não são exigidas. Arraste para cá, da lista de obrigatórias, as que forem apenas desejáveis.',
+    help: 'As habilidades encontradas na descrição da vaga. Elas contam a favor do currículo, mas não são exigidas; arraste para a lista de obrigatórias as que os currículos precisam ter.',
     name: DESIRED_SKILLS,
     category: 'shouldSkills',
+    main: true,
     list,
 });
 
@@ -399,8 +401,11 @@ export const toSkillListItem = (savedSkill: any) => {
     return { ...savedSkill, label, parent };
 };
 
-/** As duas listas da aba a partir da resposta de skills/fromText: as encontradas são as obrigatórias, as excluídas as desejáveis. */
-export const skillGroupsFromText = (response: any) => [requiredSkillsGroup(response.skill || []), desiredSkillsGroup(response.excludedSkill || [])];
+/**
+ * As duas listas da aba a partir da resposta de skills/fromText: as encontradas são as desejáveis; as obrigatórias (que a
+ * tela mandou como excluídas, para não reaparecerem entre as desejáveis) voltam como excluídas.
+ */
+export const skillGroupsFromText = (response: any) => [desiredSkillsGroup(response.skill || []), requiredSkillsGroup(response.excludedSkill || [])];
 
 /**
  * As listas e o contexto da aba a partir das habilidades gravadas na vaga ("Editar"): cada uma volta à lista do seu type,
@@ -412,7 +417,7 @@ export const skillGroupsOfThePosition = (skills: any[], cacheHash: string) => {
     const discardedSkills: Record<string, any[]> = {};
     savedSkills.filter((skill) => skill.category == 'discardedSkills').forEach((skill) => (discardedSkills[skill.type] = [...(discardedSkills[skill.type] || []), skill]));
     return {
-        groups: [requiredSkillsGroup(ofType(REQUIRED_SKILLS)), desiredSkillsGroup(ofType(DESIRED_SKILLS))],
+        groups: [desiredSkillsGroup(ofType(DESIRED_SKILLS)), requiredSkillsGroup(ofType(REQUIRED_SKILLS))],
         context: { discardedSkills, cacheHash },
     };
 };

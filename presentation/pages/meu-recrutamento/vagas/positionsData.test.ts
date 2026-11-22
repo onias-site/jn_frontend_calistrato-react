@@ -122,10 +122,11 @@ describe('positionsData', () => {
     });
 
     it('monta as listas da aba Habilidades pela resposta de skills/fromText e pelas habilidades gravadas', () => {
-        const groups = skillGroupsFromText({ skill: [{ skill: 'JAVA', label: 'JAVA', parent: [] }], excludedSkill: [{ skill: 'DOCKER', label: 'DOCKER', parent: [] }] });
-        expect(groups.map((group) => [group.name, group.category, group.list.length])).toEqual([
-            ['skillsFromResume', 'skillsFromText', 1],
-            ['shouldSkills', 'shouldSkills', 1],
+        // as encontradas no texto vão para as desejáveis (a lista principal); as já obrigatórias voltam como excluídas
+        const groups = skillGroupsFromText({ skill: [{ skill: 'JAVA', label: 'JAVA', parent: [] }, { skill: 'SQL', label: 'SQL', parent: [] }], excludedSkill: [{ skill: 'DOCKER', label: 'DOCKER', parent: [] }] });
+        expect(groups.map((group: any) => [group.name, group.category, group.list.length, !!group.main])).toEqual([
+            ['shouldSkills', 'shouldSkills', 2, true],
+            ['skillsFromResume', 'skillsFromText', 1, false],
         ]);
         const saved = [
             { skill: 'ORACLE', word: 'ORACLE DB', type: 'skillsFromResume', category: 'skillsFromText', parent: ['SQL'] },
@@ -134,8 +135,8 @@ describe('positionsData', () => {
             { skill: 'JAVA', word: 'JAVA', type: 'isPieceOfOtherWord', category: 'discardedSkills', associated: 'JAVASCRIPT' },
         ];
         const { groups: savedGroups, context } = skillGroupsOfThePosition(saved, 'hash');
-        expect(savedGroups[0].list.map((skill: any) => skill.label)).toEqual(['ORACLE DB (ORACLE)']);
-        expect(savedGroups[1].list.map((skill: any) => [skill.label, skill.parent])).toEqual([['DOCKER', []]]);
+        expect(savedGroups[0].list.map((skill: any) => [skill.label, skill.parent])).toEqual([['DOCKER', []]]);
+        expect(savedGroups[1].list.map((skill: any) => skill.label)).toEqual(['ORACLE DB (ORACLE)']);
         expect(Object.keys(context.discardedSkills)).toEqual(['isPieceOfOtherWord']);
         expect(context.cacheHash).toBe('hash');
     });

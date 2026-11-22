@@ -123,8 +123,9 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
         const text = form.description.trim();
         const cacheHash = sha1(text);
         const skillState = skillStore.getState();
-        // as desejáveis voltam como excluídas, para não reaparecerem entre as obrigatórias
-        const requestSkillsToBackEnd = { excludedSkill: skillState.getWordsFromGroup(DESIRED_SKILLS), text };
+        // as encontradas vão para as desejáveis; as já arrastadas para as obrigatórias vão como excluídas, para não reaparecerem
+        // entre as desejáveis
+        const requestSkillsToBackEnd = { excludedSkill: skillState.getWordsFromGroup(REQUIRED_SKILLS), text };
         const callbacks: any = {};
         callbacks[200] = (response: any) => {
             skillState.setGroups(skillGroupsFromText(response) as any, getImplicitSkills);
@@ -201,11 +202,11 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
         return [];
     };
 
-    // a aba Habilidades entra depois de Idiomas (Vaga, Filtros, Idiomas, Habilidades, Salários, Opções), com o número de habilidades obrigatórias
-    const requiredGroup = skillGroups.filter((group) => group.name == REQUIRED_SKILLS)[0];
-    const requiredCount = requiredGroup ? requiredGroup.list.length : 0;
+    // a aba Habilidades entra depois de Idiomas (Vaga, Filtros, Idiomas, Habilidades, Salários, Opções), com o número de
+    // habilidades da vaga (desejáveis e obrigatórias: as encontradas começam todas nas desejáveis)
+    const skillsCount = skillGroups.filter((group) => group.name == REQUIRED_SKILLS || group.name == DESIRED_SKILLS).reduce((total, group) => total + group.list.length, 0);
     const tabSkills = {
-        label: `${requiredCount} Habilidades`,
+        label: `${skillsCount} Habilidades`,
         icon: <IconGithub className="h-4 w-4" />,
         title: 'Caso as habilidades estiverem desatualizadas / incorretas, volte à aba Vaga e corrija a descrição, para que possamos atualizar corretamente a lista de habilidades',
         getPendingRequirements: () => skillStore.getState().getPendingRequirements(),
