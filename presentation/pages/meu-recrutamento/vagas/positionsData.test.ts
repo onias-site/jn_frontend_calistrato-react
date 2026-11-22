@@ -5,7 +5,11 @@ import {
     foundResumesLabel,
     fromDateInput,
     isValidContact,
+    languagesTabErrors,
+    optionsTabErrors,
     parsePositions,
+    positionTabErrors,
+    salaryTabErrors,
     pendingRequirements,
     positionOf,
     removePosition,
@@ -27,6 +31,7 @@ const validForm = () => ({
     cltMax: 8000 as number | '',
     requiredSkills: ['JAVA'],
     desiredSkills: ['DOCKER'],
+    hasLanguages: true,
     spokenLanguage: [{ name: 'Inglês', level: 2 }],
     contact: [{ type: 'email' as const, value: 'rh@empresa.com.br' }],
 });
@@ -98,6 +103,16 @@ describe('positionsData', () => {
         // uma vaga antiga editada guarda o início que já passou
         expect(pendingRequirements({ ...validForm(), expirationMin: '2026-11-01' }, false, now)).toEqual([]);
         expect(pendingRequirements({ ...validForm(), sort: [{ type: 'asc', field: [] }] }, true, now)).toContain('Escolha ao menos um critério de ordenação dos currículos');
+    });
+
+    it('separa as pendências pelas abas do formulário, as mesmas do currículo', () => {
+        expect(positionTabErrors({ ...validForm(), contact: [] }, true, now)).toEqual(['Informe ao menos um contato']);
+        expect(languagesTabErrors({ ...validForm(), spokenLanguage: [] })).toEqual(['Escolha ao menos um idioma']);
+        // sem o "exige outro idioma" marcado, nada é pedido nem enviado
+        expect(languagesTabErrors({ ...validForm(), hasLanguages: false, spokenLanguage: [] })).toEqual([]);
+        expect(requestBodyOf({ ...validForm(), hasLanguages: false }).spokenLanguage).toEqual([]);
+        expect(optionsTabErrors({ ...validForm(), disponibility: '0' })).toEqual(['Os dias para começar devem ir de 1 a 30']);
+        expect(salaryTabErrors({ ...validForm(), hasClt: false })).toEqual(['Informe ao menos uma faixa salarial (CLT ou PJ)']);
     });
 
     it('valida os contatos como o backend', () => {

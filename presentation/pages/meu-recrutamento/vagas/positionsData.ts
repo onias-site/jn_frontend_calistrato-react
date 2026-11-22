@@ -50,8 +50,9 @@ export type PositionForm = {
     hasPj: boolean;
     pjMin: number | '';
     pjMax: number | '';
-    disponibility: number | '';
-    temporallyJobTime: number | '';
+    disponibility: number | string;
+    temporallyJobTime: number | string;
+    hasLanguages: boolean;
     spokenLanguage: Language[];
     requiredSkills: string[];
     desiredSkills: string[];
@@ -195,6 +196,7 @@ export const emptyForm = (now: Date = new Date()): PositionForm => {
         pjMax: '',
         disponibility: 0,
         temporallyJobTime: 0,
+        hasLanguages: false,
         spokenLanguage: [],
         requiredSkills: [],
         desiredSkills: [],
@@ -228,6 +230,7 @@ export const formOf = (position: Position): PositionForm => ({
     pjMax: position.pj ? position.pj.max : '',
     disponibility: position.disponibility || 0,
     temporallyJobTime: position.temporallyJobTime || 0,
+    hasLanguages: (position.spokenLanguage || []).length > 0,
     spokenLanguage: (position.spokenLanguage || []).map((language) => ({ name: language.name, level: Number(language.level) })),
     requiredSkills: skillNamesOf(position.skill, 'skillsFromResume'),
     desiredSkills: skillNamesOf(position.skill, 'shouldSkills'),
@@ -255,7 +258,7 @@ export const requestBodyOf = (form: PositionForm) => {
         ddd: form.ddd.map(Number),
         disponibility: Number(form.disponibility),
         temporallyJobTime: Number(form.temporallyJobTime),
-        spokenLanguage: form.spokenLanguage,
+        spokenLanguage: form.hasLanguages ? form.spokenLanguage : [],
         skill: [...form.requiredSkills.map((name) => skill(name, 'skillsFromResume', 'skillsFromText')), ...form.desiredSkills.map((name) => skill(name, 'shouldSkills', 'shouldSkills'))],
         negotiableClaim: form.negotiableClaim,
         pcd: form.pcd,
@@ -283,8 +286,12 @@ const salaryErrors = (name: string, min: number | '', max: number | '') => {
     return [];
 };
 
-/** O que falta ou está errado no formulário; vazio, o botão de gravar fica liberado. */
-export const pendingRequirements = (form: PositionForm, creating: boolean, now: Date = new Date()) => {
+
+// o campo apagado ('') e o 0 digitado ('0') ficam fora da faixa, como no currículo (IntegerFieldComponent); só o checkbox põe o 0
+const isOutOfIntegerRange = (value: number | string, max: number) => value === '' || value === '0' || !Number.isInteger(Number(value)) || Number(value) < 0 || Number(value) > max;
+
+/** Aba "Vaga": título, descrição, área, contatos e as datas de início e de fim da vaga. */
+export const positionTabErrors = (form: PositionForm, creating: boolean, now: Date = new Date()) => {
     const errors: string[] = [];
     const title = form.title.trim();
     const description = form.description.trim();
@@ -292,23 +299,46 @@ export const pendingRequirements = (form: PositionForm, creating: boolean, now: 
     (description.length < LIMITS.descriptionMin || description.length > LIMITS.descriptionMax) &&
         errors.push(`A descrição deve ter de ${LIMITS.descriptionMin} a ${LIMITS.descriptionMax.toLocaleString('pt-BR')} caracteres (tem ${description.length})`);
     !form.resumeType && errors.push('Escolha a área da vaga');
-    !form.seniority && errors.push('Escolha a senioridade');
+    form.contact.length < 1 && errors.push('Informe ao menos um contato');
+    form.contact.some((contact) => !isValidContact(contact) || contact.value.trim().length > LIMITS.contactValueMax) && errors.push('Confira os contatos: WhatsApp com DDD, e-mail válido ou link começando com http');
+    if (!form.expirationMin || !form.expirationMax) return [...errors, 'Informe o início e o fim da vaga'];
+    creating && form.expirationMin < today(now) && errors.push('O início da vaga não pode ser antes de hoje');
+    form.expirationMax < form.expirationMin && errors.push('O fim da vaga não pode ser antes do início');
+    return errors;
+};
+
+/** Aba "Idiomas": marcado o "exige outro idioma", ao menos um idioma, cada um com o seu nível. */
+export const languagesTabErrors = (form: PositionForm) => {
+    if (!form.hasLanguages) return [];
+    if (!form.spokenLanguage.length) return ['Escolha ao menos um idioma'];
+    if (form.spokenLanguage.some((language) => !language.name || ![1, 2].includes(language.level))) return ['Escolha o nível de cada idioma'];
+    return [];
+};
+
+/** Aba "Opções": regiões, senioridade, dias para começar, temporário e a ordem dos currículos encontrados. */
+export const optionsTabErrors = (form: PositionForm) => {
+    const errors: string[] = [];
     (form.ddd.length < 1 || form.ddd.length > LIMITS.dddMax) && errors.push('Escolha ao menos uma região');
+    !form.seniority && errors.push('Escolha a senioridade');
+    isOutOfIntegerRange(form.disponibility, LIMITS.disponibilityMax) && errors.push(`Os dias para começar devem ir de 1 a ${LIMITS.disponibilityMax}`);
+    isOutOfIntegerRange(form.temporallyJobTime, LIMITS.temporallyJobTimeMax) && errors.push(`A duração do temporário deve ir de 1 a ${LIMITS.temporallyJobTimeMax} meses`);
+    (form.sort.length < 1 || form.sort.some((rule) => rule.field.length < 1)) && errors.push('Escolha ao menos um critério de ordenação dos currículos');
+    return errors;
+};
+
+/** Aba "Salários": ao menos uma faixa (CLT ou PJ), cada uma dentro dos limites. */
+export const salaryTabErrors = (form: PositionForm) => {
+    const errors: string[] = [];
     !form.hasClt && !form.hasPj && errors.push('Informe ao menos uma faixa salarial (CLT ou PJ)');
     form.hasClt && errors.push(...salaryErrors('CLT', form.cltMin, form.cltMax));
     form.hasPj && errors.push(...salaryErrors('PJ', form.pjMin, form.pjMax));
-    const outOfRange = (value: number | '', max: number) => value === '' || !Number.isInteger(Number(value)) || Number(value) < 0 || Number(value) > max;
-    outOfRange(form.disponibility, LIMITS.disponibilityMax) && errors.push(`Os dias para começar devem ir de 0 a ${LIMITS.disponibilityMax}`);
-    outOfRange(form.temporallyJobTime, LIMITS.temporallyJobTimeMax) && errors.push(`A duração do temporário deve ir de 0 a ${LIMITS.temporallyJobTimeMax} meses`);
-    form.spokenLanguage.some((language) => !language.name || ![1, 2].includes(language.level)) && errors.push('Escolha o idioma e o nível de cada idioma');
-    if (!form.expirationMin || !form.expirationMax) {
-        errors.push('Informe o início e o fim da vaga');
-    } else {
-        creating && form.expirationMin < today(now) && errors.push('O início da vaga não pode ser antes de hoje');
-        form.expirationMax < form.expirationMin && errors.push('O fim da vaga não pode ser antes do início');
-    }
-    (form.sort.length < 1 || form.sort.some((rule) => rule.field.length < 1)) && errors.push('Escolha ao menos um critério de ordenação dos currículos');
-    form.contact.length < 1 && errors.push('Informe ao menos um contato');
-    form.contact.some((contact) => !isValidContact(contact) || contact.value.trim().length > LIMITS.contactValueMax) && errors.push('Confira os contatos: WhatsApp com DDD, e-mail válido ou link começando com http');
     return errors;
 };
+
+/** Tudo o que falta ou está errado no formulário, aba por aba; vazio, a vaga pode ser gravada. */
+export const pendingRequirements = (form: PositionForm, creating: boolean, now: Date = new Date()) => [
+    ...positionTabErrors(form, creating, now),
+    ...languagesTabErrors(form),
+    ...optionsTabErrors(form),
+    ...salaryTabErrors(form),
+];

@@ -1,12 +1,23 @@
 'use client';
 import React, { useState } from 'react';
-import { Checkbox, MultiSelect, NumberInput, Select, Tabs, TagsInput, Textarea, TextInput } from '@mantine/core';
+import { Checkbox, MultiSelect, NumberInput, Select, TagsInput, Textarea, TextInput } from '@mantine/core';
 import JnAjax from '@/app/JnAjax';
-import { LoadingButton } from '@/presentation/components/source/LoadingButton';
+import { Tabs } from '@/presentation/components/source/Tabs';
+import { HelpButton } from '@/presentation/components/source/HelpButton';
+import { CheckBoxComponent } from '@/presentation/components/source/CheckBoxComponent';
+import { IntegerFieldComponent } from '@/presentation/components/source/IntegerFieldComponent';
+import { SummaryMultiSelect } from '@/presentation/components/source/SummaryMultiSelect';
 import { notify } from '@/presentation/components/source/notify';
 import { dddRegions } from '@/presentation/components/regions/dddRegions';
 import { resumeTypes } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabResume/FormResume';
 import { languages } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabLanguages/ChooserLanguages';
+import { HOME_OFFICE, TODAS_AS_REGIOES } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabFilter/RegioesComponent';
+import IconFile from '@/presentation/icons/icon-file';
+import IconGlobe from '@/presentation/icons/icon-globe';
+import IconGithub from '@/presentation/icons/icon-github';
+import IconSettings from '@/presentation/icons/icon-settings';
+import IconDollarSign from '@/presentation/icons/icon-dollar-sign';
+import IconSave from '@/presentation/icons/icon-save';
 import {
     Contact,
     LIMITS,
@@ -18,9 +29,13 @@ import {
     formOf,
     frequencyOptions,
     languageLevelOptions,
+    languagesTabErrors,
+    optionsTabErrors,
     pendingRequirements,
     positionOf,
+    positionTabErrors,
     requestBodyOf,
+    salaryTabErrors,
     seniorityOptions,
     sortFieldOptions,
     sortTypeOptions,
@@ -35,27 +50,31 @@ type PositionFormModalProps = {
 };
 
 const resumeTypeOptions = resumeTypes.map((type) => ({ value: String(type.id), label: type.label }));
-const dddOptions = dddRegions.map((region) => ({ value: region.id, label: `${region.id} – ${region.nome}` }));
-const languageOptions = languages.map((language) => language.name);
+const regionOptions = [{ value: TODAS_AS_REGIOES, label: 'Qualquer estado / cidade' }, ...dddRegions.filter((region) => region.id != HOME_OFFICE).map((region) => ({ value: region.id, label: region.nome }))];
+const allRegions = regionOptions.map((option) => option.value).filter((value) => value != TODAS_AS_REGIOES);
+const languageOptions = languages.map((language) => ({ value: language.name, label: language.name }));
+const fieldLabel = 'mb-1.5 block font-semibold text-dark dark:text-white-light';
 
 /**
- * O modal de "Criar vaga" e de "Editar" da tela "Meu Recrutamento → Vagas" (desde 2026-11-21), em abas: a vaga, os
- * requisitos, a faixa salarial e o envio dos currículos com os contatos. A lista do que falta fica embaixo e trava o
- * botão de gravar. A gravação é assíncrona no backend: a tela põe na lista o que enviou, sem reler.
+ * O modal de "Criar vaga" e de "Editar" da tela "Meu Recrutamento → Vagas", em abas sequenciais como o cadastro de
+ * currículo (desde 2026-11-22): a primeira, "Vaga", tem título, descrição, área, contatos e as datas de início e de fim;
+ * as demais são as do currículo, na mesma ordem e com os mesmos ícones: Idiomas, Habilidades, Opções e Salários. Cada
+ * aba só deixa avançar com as suas pendências resolvidas; na última, o botão grava. A gravação é assíncrona no backend: a
+ * tela põe na lista o que enviou, sem reler.
  */
 export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormModalProps) => {
     const creating = position == null;
     const [form, setForm] = useState<PositionForm>(creating ? emptyForm() : formOf(position));
     const [saving, setSaving] = useState(false);
-    const errors = pendingRequirements(form, creating);
-    const set = (changes: Partial<PositionForm>) => setForm({ ...form, ...changes });
+    const set = (changes: Partial<PositionForm>) => setForm((current) => ({ ...current, ...changes }));
 
     const setSort = (index: number, changes: Partial<SortRule>) => set({ sort: form.sort.map((rule, i) => (i == index ? { ...rule, ...changes } : rule)) });
     const setContact = (index: number, changes: Partial<Contact>) => set({ contact: form.contact.map((contact, i) => (i == index ? { ...contact, ...changes } : contact)) });
-    const setLanguage = (index: number, changes: any) => set({ spokenLanguage: form.spokenLanguage.map((language, i) => (i == index ? { ...language, ...changes } : language)) });
 
-    const save = () => {
-        if (errors.length) return;
+    // devolve as pendências de todas as abas; sem nenhuma, envia e devolve vazio (a convenção do Tabs)
+    const save = (): string[] => {
+        const errors = pendingRequirements(form, creating);
+        if (errors.length || saving) return errors;
         setSaving(true);
         const body = requestBodyOf(form);
         const callbacks: any = {};
@@ -88,7 +107,16 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
         };
         const uri = creating ? 'recruiter/{email}/positions' : 'recruiter/{email}/positions/edit';
         JnAjax.doAnAjaxRequest(uri, callbacks, 'POST', body, {}, 'http://localhost:8081');
+        return [];
     };
+
+    const tabs = [
+        { label: 'Vaga', icon: <IconFile className="h-4 w-4" />, getPendingRequirements: () => positionTabErrors(form, creating), onMoveOnFowardTabs: () => positionTabErrors(form, creating) },
+        { label: 'Idiomas', icon: <IconGlobe className="h-4 w-4" />, getPendingRequirements: () => languagesTabErrors(form), onMoveOnFowardTabs: () => languagesTabErrors(form) },
+        { label: `${form.requiredSkills.length} Habilidades`, icon: <IconGithub className="h-4 w-4" />, getPendingRequirements: () => [], onMoveOnFowardTabs: () => [] },
+        { label: 'Opções', icon: <IconSettings className="h-4 w-4" />, getPendingRequirements: () => optionsTabErrors(form), onMoveOnFowardTabs: () => optionsTabErrors(form) },
+        { label: 'Salários', icon: <IconDollarSign className="h-4 w-4" />, getPendingRequirements: () => salaryTabErrors(form), onMoveOnFowardTabs: save },
+    ];
 
     const removeButton = (onClick: () => void, disabled = false) => (
         <button type="button" className="btn btn-outline-danger btn-sm" onClick={onClick} disabled={disabled}>
@@ -96,171 +124,224 @@ export const PositionFormModal = ({ position, onSaved, onCancel }: PositionFormM
         </button>
     );
 
-    const salaryRange = (name: string, checked: boolean, min: number | '', max: number | '', onCheck: (value: boolean) => void, onMin: (value: number | '') => void, onMax: (value: number | '') => void) => (
+    // ---- aba Vaga
+    const positionTab = (
+        <div className="flex flex-col gap-4">
+            <TextInput
+                label="Título"
+                description={creating ? `De ${LIMITS.titleMin} a ${LIMITS.titleMax} caracteres. Não muda depois de criada.` : 'O título identifica a vaga e não pode ser alterado.'}
+                value={form.title}
+                maxLength={LIMITS.titleMax}
+                withAsterisk
+                disabled={!creating}
+                onChange={(event) => set({ title: event.currentTarget.value })}
+            />
+            <Textarea
+                label="Descrição"
+                description={`De ${LIMITS.descriptionMin} a ${LIMITS.descriptionMax.toLocaleString('pt-BR')} caracteres (${form.description.trim().length}).`}
+                value={form.description}
+                maxLength={LIMITS.descriptionMax}
+                withAsterisk
+                autosize
+                minRows={4}
+                maxRows={12}
+                onChange={(event) => set({ description: event.currentTarget.value })}
+            />
+            <Select label="Área da vaga" data={resumeTypeOptions} value={form.resumeType} withAsterisk allowDeselect={false} onChange={(value) => set({ resumeType: value || '' })} />
+            <div>
+                <label className={fieldLabel}>Contatos para os candidatos</label>
+                {form.contact.map((contact, index) => (
+                    <div key={index} className="mb-2 grid grid-cols-1 items-end gap-2 sm:grid-cols-[1fr_2fr_auto]">
+                        <Select data={contactTypeOptions} value={contact.type} allowDeselect={false} onChange={(value) => setContact(index, { type: (value as Contact['type']) || 'email' })} />
+                        <TextInput
+                            value={contact.value}
+                            maxLength={LIMITS.contactValueMax}
+                            placeholder={contact.type == 'whatsapp' ? '+5511999998888' : contact.type == 'email' ? 'rh@empresa.com.br' : 'https://empresa.com.br/vaga'}
+                            onChange={(event) => setContact(index, { value: event.currentTarget.value })}
+                        />
+                        {removeButton(() => set({ contact: form.contact.filter((_, i) => i != index) }), form.contact.length == 1)}
+                    </div>
+                ))}
+                <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => set({ contact: [...form.contact, { type: 'email', value: '' }] })}>
+                    Acrescentar contato
+                </button>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <TextInput type="date" label="Início da vaga" value={form.expirationMin} min={creating ? today() : undefined} withAsterisk onChange={(event) => set({ expirationMin: event.currentTarget.value })} />
+                <TextInput type="date" label="Fim da vaga (expira em)" value={form.expirationMax} min={form.expirationMin || undefined} withAsterisk onChange={(event) => set({ expirationMax: event.currentTarget.value })} />
+            </div>
+        </div>
+    );
+
+    // ---- aba Idiomas (como a do currículo: o checkbox abre a lista, e cada idioma escolhido pede o nível)
+    const selectLanguages = (names: string[]) =>
+        set({ spokenLanguage: names.map((name) => form.spokenLanguage.filter((language) => language.name == name)[0] || { name, level: 1 }) });
+    const setLanguageLevel = (name: string, level: number) => set({ spokenLanguage: form.spokenLanguage.map((language) => (language.name == name ? { ...language, level } : language)) });
+    const languagesTab = (
+        <div>
+            <div className="mb-5">
+                <Checkbox checked={form.hasLanguages} onChange={(event) => set({ hasLanguages: event.currentTarget.checked })} label="A vaga exige conhecimento em outro(s) idioma(s) além do português" />
+            </div>
+            {form.hasLanguages && (
+                <div className="mb-6">
+                    <label className={fieldLabel}>Idiomas exigidos</label>
+                    <SummaryMultiSelect
+                        data={languageOptions}
+                        value={form.spokenLanguage.map((language) => language.name)}
+                        onChange={selectLanguages}
+                        placeholder="Selecione os idiomas que a vaga exige"
+                        searchPlaceholder="Digite o idioma que você procura"
+                        nothingFoundMessage="Nenhum idioma encontrado"
+                        summaryLabel={(count) => `${count} idiomas selecionados`}
+                        maxDisplayedPills={6}
+                        error={!form.spokenLanguage.length}
+                    />
+                </div>
+            )}
+            {form.hasLanguages &&
+                form.spokenLanguage.map((language) => (
+                    <div key={language.name} className="mb-4 md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] md:items-start md:gap-4">
+                        <label className="mb-1.5 block font-semibold text-dark dark:text-white-light md:mb-0 md:pt-2">Nível exigido em {language.name}:</label>
+                        <Select data={languageLevelOptions} value={String(language.level)} allowDeselect={false} onChange={(value) => value && setLanguageLevel(language.name, Number(value))} comboboxProps={{ withinPortal: false }} />
+                    </div>
+                ))}
+        </div>
+    );
+
+    // ---- aba Habilidades
+    const toSkillNames = (names: string[]) => names.map((name) => name.trim().toUpperCase()).filter(Boolean);
+    const skillsTab = (
+        <div className="flex flex-col gap-4">
+            <TagsInput
+                label="Habilidades obrigatórias"
+                description="Digite e tecle Enter. Os currículos encontrados precisam ter estas habilidades."
+                value={form.requiredSkills}
+                onChange={(value) => set({ requiredSkills: toSkillNames(value) })}
+            />
+            <TagsInput
+                label="Habilidades desejáveis"
+                description="Digite e tecle Enter. Contam a favor do currículo, mas não são exigidas."
+                value={form.desiredSkills}
+                onChange={(value) => set({ desiredSkills: toSkillNames(value) })}
+            />
+        </div>
+    );
+
+    // ---- aba Opções (regiões como as do currículo, mais o que é só da vaga: senioridade, envio e ordem dos currículos)
+    const homeOffice = form.ddd.includes(HOME_OFFICE);
+    const regionsValue = form.ddd.length == allRegions.length ? [TODAS_AS_REGIOES, ...form.ddd] : form.ddd;
+    const selectRegions = (values: string[], changed: string) => {
+        if (changed == TODAS_AS_REGIOES) {
+            set({ ddd: values.includes(TODAS_AS_REGIOES) ? allRegions : [] });
+            return;
+        }
+        set({ ddd: values.filter((value) => value != TODAS_AS_REGIOES) });
+    };
+    const optionsTab = (
+        <div>
+            <div className="mb-5">
+                <label className="mb-2 block font-semibold text-dark dark:text-white-light">Onde a vaga é</label>
+                <Checkbox className="mb-3" checked={homeOffice} onChange={(event) => set({ ddd: event.currentTarget.checked ? [HOME_OFFICE] : [] })} label="Vaga somente home office" />
+                {!homeOffice && (
+                    <SummaryMultiSelect
+                        data={regionOptions}
+                        value={regionsValue}
+                        onChange={selectRegions}
+                        placeholder="Selecione uma ou mais regiões onde a vaga é presencial ou híbrida"
+                        searchPlaceholder="Digite a cidade ou o estado que você procura"
+                        nothingFoundMessage="Nenhuma região encontrada"
+                        summaryLabel={(count) => `${count} ${count == 1 ? 'região selecionada' : 'regiões selecionadas'}`}
+                        countValue={(value) => value != TODAS_AS_REGIOES}
+                        maxDisplayedPills={2}
+                        error={!form.ddd.length}
+                    />
+                )}
+            </div>
+            <div className="mb-5 max-w-md">
+                <Select label="Senioridade" data={seniorityOptions} value={form.seniority || null} withAsterisk placeholder="Escolha" onChange={(value) => set({ seniority: value || '' })} />
+            </div>
+            <CheckBoxComponent explanation="Marcada, a vaga é oferecida aos currículos de pessoas com deficiência (PCD)." checkBoxLabel="Vaga para pessoas com deficiência (PCD)" setValue={(pcd) => set({ pcd })} value={form.pcd} />
+            <CheckBoxComponent explanation="Marcada, a vaga só é oferecida aos currículos com disponibilidade para viagens nacionais ou internacionais." checkBoxLabel="A vaga exige disponibilidade para viagens" setValue={(travel) => set({ travel })} value={form.travel} />
+            <IntegerFieldComponent
+                explanation="Marcada, a vaga busca quem pode começar já. Desmarcada, informe em quantos dias o candidato pode começar."
+                checkBoxLabel="Contratação imediata"
+                textFieldLabel="Dias para o candidato começar"
+                setValue={(disponibility) => set({ disponibility })}
+                value={form.disponibility}
+                defaultValue={7}
+                minValue={1}
+                maxValue={LIMITS.disponibilityMax}
+            />
+            <IntegerFieldComponent
+                explanation="Marcada, a vaga é por prazo indeterminado. Desmarcada, informe a duração, em meses, do emprego temporário."
+                checkBoxLabel="Não é vaga temporária"
+                textFieldLabel="Duração do emprego temporário (em meses)"
+                setValue={(temporallyJobTime) => set({ temporallyJobTime })}
+                value={form.temporallyJobTime}
+                defaultValue={1}
+                maxValue={LIMITS.temporallyJobTimeMax}
+            />
+            <div className="mb-5 mt-6 border-t border-white-light pt-5 dark:border-[#1b2e4b]">
+                <div className="mb-4 max-w-md">
+                    <Select label="Frequência de envio dos currículos encontrados" data={frequencyOptions} value={form.frequencyType} allowDeselect={false} onChange={(value) => set({ frequencyType: value || 'daily' })} />
+                </div>
+                <CheckBoxComponent explanation="Marcada, a vaga é divulgada nos grupos de vagas." checkBoxLabel="Divulgar a vaga nos grupos" setValue={(mustSendInGroups) => set({ mustSendInGroups })} value={form.mustSendInGroups} />
+                <CheckBoxComponent explanation="Marcada, a vaga é enviada às pessoas cujos currículos combinam com ela." checkBoxLabel="Enviar a vaga aos currículos compatíveis" setValue={(mustSendToResumes) => set({ mustSendToResumes })} value={form.mustSendToResumes} />
+            </div>
+            <div>
+                <label className={fieldLabel}>Ordem dos currículos encontrados</label>
+                {form.sort.map((rule, index) => (
+                    <div key={index} className="mb-2 grid grid-cols-1 items-end gap-2 sm:grid-cols-[2fr_1fr_auto]">
+                        <MultiSelect data={sortFieldOptions} value={rule.field} placeholder="Critérios" onChange={(value) => setSort(index, { field: value })} />
+                        <Select data={sortTypeOptions} value={rule.type} allowDeselect={false} onChange={(value) => setSort(index, { type: (value as SortRule['type']) || 'desc' })} />
+                        {removeButton(() => set({ sort: form.sort.filter((_, i) => i != index) }), form.sort.length == 1)}
+                    </div>
+                ))}
+                <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => set({ sort: [...form.sort, { type: 'desc', field: [] }] })}>
+                    Acrescentar critério
+                </button>
+            </div>
+        </div>
+    );
+
+    // ---- aba Salários (o checkbox "não ofereço" como o "não aceito" do currículo; desmarcado, a faixa de e até)
+    const salaryRange = (name: string, offered: boolean, min: number | '', max: number | '', changes: (offered: boolean, min: number | '', max: number | '') => Partial<PositionForm>) => (
         <div className="mb-4">
-            <Checkbox label={`Contratação ${name}`} checked={checked} onChange={(event) => onCheck(event.currentTarget.checked)} />
-            {checked && (
-                <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <NumberInput label="De (R$)" value={min} min={LIMITS.salaryMin} max={LIMITS.salaryMax} thousandSeparator="." decimalSeparator="," allowDecimal={false} onChange={(value) => onMin(value === '' ? '' : Number(value))} />
-                    <NumberInput label="Até (R$)" value={max} min={LIMITS.salaryMin} max={LIMITS.salaryMax} thousandSeparator="." decimalSeparator="," allowDecimal={false} onChange={(value) => onMax(value === '' ? '' : Number(value))} />
+            <div className="flex min-w-0 items-start gap-2">
+                <HelpButton title={`Não ofereço contratação ${name}`} explanation={`Marcada, a vaga não é de contrato ${name}. Desmarcada, informe a faixa salarial mensal ${name}, em reais.`} />
+                <Checkbox className="min-w-0" checked={!offered} onChange={(event) => set(changes(!event.currentTarget.checked, min, max))} label={`Não ofereço contratação ${name}`} />
+            </div>
+            {offered && (
+                <div className="mt-2 grid max-w-xl grid-cols-1 gap-3 pl-[3.75rem] sm:grid-cols-2">
+                    <NumberInput label="De (R$)" value={min} min={LIMITS.salaryMin} max={LIMITS.salaryMax} thousandSeparator="." decimalSeparator="," allowDecimal={false} allowNegative={false} onChange={(value) => set(changes(offered, value === '' ? '' : Number(value), max))} />
+                    <NumberInput label="Até (R$)" value={max} min={LIMITS.salaryMin} max={LIMITS.salaryMax} thousandSeparator="." decimalSeparator="," allowDecimal={false} allowNegative={false} onChange={(value) => set(changes(offered, min, value === '' ? '' : Number(value)))} />
                 </div>
             )}
         </div>
     );
+    const salaryTab = (
+        <div>
+            {salaryRange('CLT', form.hasClt, form.cltMin, form.cltMax, (hasClt, cltMin, cltMax) => ({ hasClt, cltMin, cltMax }))}
+            {salaryRange('PJ', form.hasPj, form.pjMin, form.pjMax, (hasPj, pjMin, pjMax) => ({ hasPj, pjMin, pjMax }))}
+            <CheckBoxComponent
+                explanation="Marcada, a vaga também é oferecida aos currículos cuja pretensão salarial é negociável."
+                checkBoxLabel="O salário é negociável"
+                setValue={(negotiableClaim) => set({ negotiableClaim })}
+                value={form.negotiableClaim}
+            />
+        </div>
+    );
+
+    const saveLabel = creating ? 'Criar vaga' : 'Salvar dados';
+    const saveShortcut = creating ? undefined : { label: 'Salvar dados', icon: <IconSave className="h-4 w-4" />, onClick: save };
 
     return (
-        <div className="flex flex-col gap-4">
-            <Tabs defaultValue="position">
-                <Tabs.List className="mb-4 flex-nowrap overflow-x-auto">
-                    <Tabs.Tab value="position" className="whitespace-nowrap font-semibold">Vaga</Tabs.Tab>
-                    <Tabs.Tab value="requirements" className="whitespace-nowrap font-semibold">Requisitos</Tabs.Tab>
-                    <Tabs.Tab value="salary" className="whitespace-nowrap font-semibold">Salário</Tabs.Tab>
-                    <Tabs.Tab value="sending" className="whitespace-nowrap font-semibold">Envio e contatos</Tabs.Tab>
-                </Tabs.List>
-
-                <Tabs.Panel value="position">
-                    <div className="flex flex-col gap-3">
-                        <TextInput
-                            label="Título"
-                            description={creating ? `De ${LIMITS.titleMin} a ${LIMITS.titleMax} caracteres. Não muda depois de criada.` : 'O título identifica a vaga e não pode ser alterado.'}
-                            value={form.title}
-                            maxLength={LIMITS.titleMax}
-                            withAsterisk
-                            disabled={!creating}
-                            onChange={(event) => set({ title: event.currentTarget.value })}
-                        />
-                        <Textarea
-                            label="Descrição"
-                            description={`De ${LIMITS.descriptionMin} a ${LIMITS.descriptionMax.toLocaleString('pt-BR')} caracteres (${form.description.trim().length}).`}
-                            value={form.description}
-                            maxLength={LIMITS.descriptionMax}
-                            withAsterisk
-                            autosize
-                            minRows={4}
-                            maxRows={12}
-                            onChange={(event) => set({ description: event.currentTarget.value })}
-                        />
-                        <Select label="Área" data={resumeTypeOptions} value={form.resumeType} withAsterisk allowDeselect={false} onChange={(value) => set({ resumeType: value || '' })} />
-                        <Select label="Senioridade" data={seniorityOptions} value={form.seniority || null} withAsterisk placeholder="Escolha" onChange={(value) => set({ seniority: value || '' })} />
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                            <TextInput type="date" label="Início" value={form.expirationMin} min={creating ? today() : undefined} withAsterisk onChange={(event) => set({ expirationMin: event.currentTarget.value })} />
-                            <TextInput type="date" label="Expira em" value={form.expirationMax} min={form.expirationMin || undefined} withAsterisk onChange={(event) => set({ expirationMax: event.currentTarget.value })} />
-                        </div>
-                    </div>
-                </Tabs.Panel>
-
-                <Tabs.Panel value="requirements">
-                    <div className="flex flex-col gap-3">
-                        <MultiSelect label="Regiões (DDD)" data={dddOptions} value={form.ddd} searchable withAsterisk placeholder="Escolha as regiões" maxValues={LIMITS.dddMax} onChange={(value) => set({ ddd: value })} />
-                        <TagsInput
-                            label="Habilidades obrigatórias"
-                            description="Digite e tecle Enter. O currículo precisa ter estas habilidades."
-                            value={form.requiredSkills}
-                            onChange={(value) => set({ requiredSkills: value.map((name) => name.trim().toUpperCase()).filter(Boolean) })}
-                        />
-                        <TagsInput
-                            label="Habilidades desejáveis"
-                            description="Digite e tecle Enter. Contam a favor do currículo, mas não são exigidas."
-                            value={form.desiredSkills}
-                            onChange={(value) => set({ desiredSkills: value.map((name) => name.trim().toUpperCase()).filter(Boolean) })}
-                        />
-                        <div>
-                            <div className="mb-2 text-sm font-medium">Idiomas</div>
-                            {form.spokenLanguage.map((language, index) => (
-                                <div key={index} className="mb-2 grid grid-cols-1 items-end gap-2 sm:grid-cols-[1fr_1fr_auto]">
-                                    <Select data={languageOptions} value={language.name || null} searchable placeholder="Idioma" onChange={(value) => setLanguage(index, { name: value || '' })} />
-                                    <Select data={languageLevelOptions} value={String(language.level)} allowDeselect={false} onChange={(value) => setLanguage(index, { level: Number(value) })} />
-                                    {removeButton(() => set({ spokenLanguage: form.spokenLanguage.filter((_, i) => i != index) }))}
-                                </div>
-                            ))}
-                            <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => set({ spokenLanguage: [...form.spokenLanguage, { name: '', level: 1 }] })}>
-                                Acrescentar idioma
-                            </button>
-                        </div>
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                            <NumberInput
-                                label="Dias para começar"
-                                description={`0 = imediato; até ${LIMITS.disponibilityMax}`}
-                                value={form.disponibility}
-                                min={0}
-                                max={LIMITS.disponibilityMax}
-                                allowDecimal={false}
-                                onChange={(value) => set({ disponibility: value === '' ? '' : Number(value) })}
-                            />
-                            <NumberInput
-                                label="Duração do temporário (meses)"
-                                description={`0 = não é temporário; até ${LIMITS.temporallyJobTimeMax}`}
-                                value={form.temporallyJobTime}
-                                min={0}
-                                max={LIMITS.temporallyJobTimeMax}
-                                allowDecimal={false}
-                                onChange={(value) => set({ temporallyJobTime: value === '' ? '' : Number(value) })}
-                            />
-                        </div>
-                        <Checkbox label="Vaga para pessoas com deficiência (PCD)" checked={form.pcd} onChange={(event) => set({ pcd: event.currentTarget.checked })} />
-                        <Checkbox label="Exige disponibilidade para viagens" checked={form.travel} onChange={(event) => set({ travel: event.currentTarget.checked })} />
-                    </div>
-                </Tabs.Panel>
-
-                <Tabs.Panel value="salary">
-                    {salaryRange('CLT', form.hasClt, form.cltMin, form.cltMax, (hasClt) => set({ hasClt }), (cltMin) => set({ cltMin }), (cltMax) => set({ cltMax }))}
-                    {salaryRange('PJ', form.hasPj, form.pjMin, form.pjMax, (hasPj) => set({ hasPj }), (pjMin) => set({ pjMin }), (pjMax) => set({ pjMax }))}
-                    <Checkbox label="Salário negociável" checked={form.negotiableClaim} onChange={(event) => set({ negotiableClaim: event.currentTarget.checked })} />
-                </Tabs.Panel>
-
-                <Tabs.Panel value="sending">
-                    <div className="flex flex-col gap-3">
-                        <Select label="Frequência de envio dos currículos" data={frequencyOptions} value={form.frequencyType} allowDeselect={false} onChange={(value) => set({ frequencyType: value || 'daily' })} />
-                        <Checkbox label="Divulgar a vaga nos grupos" checked={form.mustSendInGroups} onChange={(event) => set({ mustSendInGroups: event.currentTarget.checked })} />
-                        <Checkbox label="Enviar a vaga aos currículos compatíveis" checked={form.mustSendToResumes} onChange={(event) => set({ mustSendToResumes: event.currentTarget.checked })} />
-                        <div>
-                            <div className="mb-2 text-sm font-medium">Ordem dos currículos encontrados</div>
-                            {form.sort.map((rule, index) => (
-                                <div key={index} className="mb-2 grid grid-cols-1 items-end gap-2 sm:grid-cols-[2fr_1fr_auto]">
-                                    <MultiSelect data={sortFieldOptions} value={rule.field} placeholder="Critérios" onChange={(value) => setSort(index, { field: value })} />
-                                    <Select data={sortTypeOptions} value={rule.type} allowDeselect={false} onChange={(value) => setSort(index, { type: (value as SortRule['type']) || 'desc' })} />
-                                    {removeButton(() => set({ sort: form.sort.filter((_, i) => i != index) }), form.sort.length == 1)}
-                                </div>
-                            ))}
-                            <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => set({ sort: [...form.sort, { type: 'desc', field: [] }] })}>
-                                Acrescentar critério
-                            </button>
-                        </div>
-                        <div>
-                            <div className="mb-2 text-sm font-medium">Contatos para os candidatos</div>
-                            {form.contact.map((contact, index) => (
-                                <div key={index} className="mb-2 grid grid-cols-1 items-end gap-2 sm:grid-cols-[1fr_2fr_auto]">
-                                    <Select data={contactTypeOptions} value={contact.type} allowDeselect={false} onChange={(value) => setContact(index, { type: (value as Contact['type']) || 'email' })} />
-                                    <TextInput
-                                        value={contact.value}
-                                        maxLength={LIMITS.contactValueMax}
-                                        placeholder={contact.type == 'whatsapp' ? '+5511999998888' : contact.type == 'email' ? 'rh@empresa.com.br' : 'https://empresa.com.br/vaga'}
-                                        onChange={(event) => setContact(index, { value: event.currentTarget.value })}
-                                    />
-                                    {removeButton(() => set({ contact: form.contact.filter((_, i) => i != index) }), form.contact.length == 1)}
-                                </div>
-                            ))}
-                            <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => set({ contact: [...form.contact, { type: 'email', value: '' }] })}>
-                                Acrescentar contato
-                            </button>
-                        </div>
-                    </div>
-                </Tabs.Panel>
-            </Tabs>
-
-            {errors.length > 0 && (
-                <ul className="list-inside list-disc text-sm text-danger">
-                    {errors.map((error) => (
-                        <li key={error}>{error}</li>
-                    ))}
-                </ul>
-            )}
-            <div className="flex justify-end gap-2">
-                <button type="button" className="btn btn-outline-dark" onClick={onCancel} disabled={saving}>
-                    Cancelar
-                </button>
-                <LoadingButton className="btn btn-primary" label={creating ? 'Criar vaga' : 'Salvar'} loading={saving} invalid={errors.length > 0} onClick={save} />
-            </div>
-        </div>
+        <Tabs tabs={tabs} lastButtonLabel={saveLabel} lastButtonIcon={<IconSave className="h-4 w-4" />} firstButtonLabel="Cancelar" firstButtonClick={onCancel} shortcutButton={saveShortcut}>
+            {positionTab}
+            {languagesTab}
+            {skillsTab}
+            {optionsTab}
+            {salaryTab}
+        </Tabs>
     );
 };
