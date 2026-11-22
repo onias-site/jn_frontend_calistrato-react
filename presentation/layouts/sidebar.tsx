@@ -163,9 +163,10 @@ const Sidebar = () => {
                                         <li>
                                             <Link href="/meu-recrutamento/curriculos-da-semana">{t('Currículos da semana')}</Link>
                                         </li>
-                                        <li>
+                                        {/* invisível até a tela de vagas ficar pronta (2026-11-22) */}
+                                        {/* <li>
                                             <Link href="/meu-recrutamento/vagas">{t('Vagas')}</Link>
-                                        </li>
+                                        </li> */}
                                         {/* <li>
                                             <Link href="/maintenence">{t('Comentários')}</Link>
                                         </li>
