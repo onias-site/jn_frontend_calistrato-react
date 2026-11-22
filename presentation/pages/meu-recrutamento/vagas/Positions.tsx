@@ -181,7 +181,7 @@ export const Positions = () => {
                     <Tabs.Panel value="expired">{grid('expired', expired, 'Nenhuma vaga expirada.')}</Tabs.Panel>
                 </Tabs>
             )}
-            <Modal visible={editing !== undefined} setVisible={(visible) => !visible && setEditing(undefined)} title={editing ? 'Editar vaga' : 'Abrir nova vaga'} size="90%" closeOnClickOutside={false}>
+            <Modal visible={editing !== undefined} setVisible={(visible) => !visible && setEditing(undefined)} title={editing ? 'Editar vaga' : 'Abrir nova vaga'} size="90%" closeOnClickOutside={false} closeOnEscape={false}>
                 {editing !== undefined && <PositionFormModal key={editing ? editing.title : 'new'} position={editing} onSaved={saved} onCancel={() => setEditing(undefined)} />}
             </Modal>
             <Modal visible={reactivating != null} setVisible={(visible) => !visible && setReactivating(null)} title="Reativar vaga" size="md">

@@ -36,6 +36,7 @@ export type Position = {
     mustSendToResumes: boolean;
     visibleToCandidates: boolean;
     frequencyType: string;
+    resumesEmail?: string;
 };
 
 /** O formulário do modal de criar e de editar: as datas como yyyy-mm-dd e as habilidades como listas de nomes. */
@@ -66,6 +67,8 @@ export type PositionForm = {
     mustSendToResumes: boolean;
     visibleToCandidates: boolean;
     frequencyType: string;
+    // o e-mail que recebe os currículos encontrados (o do recrutador logado, por padrão); sem uso na frequência 'none'
+    resumesEmail: string;
 };
 
 export const seniorityOptions = [
@@ -77,8 +80,8 @@ export const seniorityOptions = [
 ];
 
 export const frequencyOptions = [
-    { value: 'none', label: 'Não enviar' },
-    { value: 'instantly', label: 'Na hora' },
+    { value: 'none', label: 'Não receber currículos' },
+    { value: 'instantly', label: 'Instantâneamente' },
     { value: 'hourly', label: 'De hora em hora' },
     { value: 'daily', label: 'Uma vez por dia' },
     { value: 'weekly', label: 'Uma vez por semana' },
@@ -210,6 +213,7 @@ export const emptyForm = (now: Date = new Date()): PositionForm => {
         mustSendToResumes: true,
         visibleToCandidates: true,
         frequencyType: 'daily',
+        resumesEmail: '',
     };
 };
 
@@ -242,6 +246,7 @@ export const formOf = (position: Position): PositionForm => ({
     mustSendToResumes: position.mustSendToResumes !== false,
     visibleToCandidates: position.visibleToCandidates !== false,
     frequencyType: position.frequencyType || 'daily',
+    resumesEmail: position.resumesEmail || '',
 });
 
 
@@ -271,6 +276,7 @@ export const requestBodyOf = (form: PositionForm, skills: any[] = []) => {
         visibleToCandidates: form.visibleToCandidates,
         frequencyType: form.frequencyType,
     };
+    if (sendsTheResumes(form)) body.resumesEmail = form.resumesEmail.trim();
     if (form.hasClt) body.clt = { min: Number(form.cltMin), max: Number(form.cltMax) };
     if (form.hasPj) body.pj = { min: Number(form.pjMin), max: Number(form.pjMax) };
     return body;
@@ -338,8 +344,22 @@ export const filtersTabErrors = (form: PositionForm) => {
 };
 
 /** Aba "Opções" (depois de Salários): visibilidade, envio da vaga e dos currículos e a ordem dos currículos encontrados. */
+/** Toda frequência, menos 'none', envia os currículos encontrados ao resumesEmail. */
+export const sendsTheResumes = (form: PositionForm) => form.frequencyType != 'none';
+
+/** O erro do e-mail que recebe os currículos (vazio quando não há): obrigatório e válido, salvo na frequência 'none'. */
+export const resumesEmailError = (form: PositionForm) => {
+    if (!sendsTheResumes(form)) return '';
+    const email = form.resumesEmail.trim();
+    if (!email) return 'Informe o e-mail para o qual enviar os currículos';
+    if (email.length > 100 || !contactPatterns.email.test(email)) return 'Informe um e-mail válido para receber os currículos';
+    return '';
+};
+
 export const optionsTabErrors = (form: PositionForm) => {
     const errors: string[] = [];
+    const emailError = resumesEmailError(form);
+    emailError && errors.push(emailError);
     (form.sort.length < 1 || form.sort.some((rule) => rule.field.length < 1)) && errors.push('Escolha ao menos um critério de ordenação dos currículos');
     return errors;
 };
@@ -383,7 +403,9 @@ const requiredSkillsGroup = (list: any[]) => ({
 
 const desiredSkillsGroup = (list: any[]) => ({
     title: 'Habilidades DESEJÁVEIS da vaga',
-    help: 'As habilidades encontradas na descrição da vaga. Elas contam a favor do currículo, mas não são exigidas; arraste para a lista de obrigatórias as que os currículos precisam ter.',
+    help:
+        'As habilidades encontradas na descrição da vaga. Elas contam a favor do currículo, mas não são exigidas; arraste para a lista de obrigatórias as que os currículos precisam ter. ' +
+        'Se faltar alguma habilidade que consta na descrição, use o link "Deixamos de listar alguma habilidade?" para sugeri-la.',
     name: DESIRED_SKILLS,
     category: 'shouldSkills',
     main: true,

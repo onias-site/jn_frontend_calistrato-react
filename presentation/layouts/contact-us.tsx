@@ -19,6 +19,9 @@ const loggedEmail = (): string => {
  * mensagem); o X, o Cancelar e a tecla Esc o limpam e fecham. O Enviar grava o ticket (POST /contact-us/{email}, API js,
  * com a sessão) com o último stack trace de JavaScript da aba; o usuário recebe um e-mail e o suporte, o ticket no bot.
  */
+// a confirmação do envio fica acima do painel do Fale Conosco (300)
+const CONTACT_US_CONFIRMATION_Z_INDEX = 350;
+
 const ContactUs = () => {
     const [open, setOpen] = useState(false);
     const [email, setEmail] = useState('');
@@ -118,9 +121,12 @@ const ContactUs = () => {
     };
 
     return (
-        <div className="fixed bottom-20 z-50 ltr:right-6 rtl:left-6">
+        // acima dos modais (o Modal do Mantine fica em 200), para acompanhar também a tela aberta num modal (desde
+        // 2026-11-22), e abaixo do login (400), que ele abre sem sessão
+        <div className="fixed bottom-20 z-[300] ltr:right-6 rtl:left-6">
             {contactType && (
                 <ConfirmModal
+                    zIndex={CONTACT_US_CONFIRMATION_Z_INDEX}
                     visible={confirming}
                     onHide={hideConfirmation}
                     header="Confirmar envio"

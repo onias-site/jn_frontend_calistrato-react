@@ -62,6 +62,7 @@ const money = (value: number) => value.toLocaleString('pt-BR', { style: 'currenc
 
 /** "Foram encontrados N currículos", com as médias de pretensão dos que as informaram. */
 export const foundResumesMessage = (found: ResumesOfTheFilters) => {
+    if (found.resumes == 0) return 'Não foram encontrados currículos para os seus critérios de busca';
     const averages = [found.cltAverage != null && `média CLT ${money(found.cltAverage)}`, found.pjAverage != null && `média PJ ${money(found.pjAverage)}`].filter(Boolean);
     const count = `Foram encontrados ${found.resumes} currículos`;
     return averages.length ? `${count} (${averages.join(', ')})` : count;

@@ -167,6 +167,9 @@ export const ModalLoginStore = create<IModalLoginStore>((set, get) => ({
     reasonMessage: '',
 }));
 
+// acima dos modais das telas (200, o padrão do Mantine): o login pode ser pedido de dentro de um deles
+const LOGIN_MODAL_Z_INDEX = 400;
+
 export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
     const { setLockedToken, lockedToken, invalid, title, selectedScreen, visible, dismissModal, showModal, email, loading, setDetailMessage, detailMessage, reasonMessage } = ModalLoginStore(
         (state: IModalLoginStore) => ({
@@ -248,7 +251,7 @@ export const ModalLogin: React.FC<ModalLoginProps> = ({}) => {
     };
 
     return (
-        <Modal title={title || screen.headerLabel} visible={visible} size="md" closeOnClickOutside={false} setVisible={(show) => (show ? showModal(selectedScreen, title) : dismissModal())}>
+        <Modal title={title || screen.headerLabel} visible={visible} size="md" closeOnClickOutside={false} zIndex={LOGIN_MODAL_Z_INDEX} setVisible={(show) => (show ? showModal(selectedScreen, title) : dismissModal())}>
             <form onSubmit={(e) => e.preventDefault()} onKeyDown={handleEnter}>
                 {/* o motivo de o usuário ter sido trazido a esta tela (login aberto em outro lugar, senha bloqueada): fica
                     à parte do detailMessage, que o envio do token e a validação dos campos reescrevem (até 2026-11-09 o

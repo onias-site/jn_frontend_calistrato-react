@@ -30,6 +30,7 @@ const validForm = () => ({
     title: 'Desenvolvedor Java pleno',
     description: 'x'.repeat(120),
     seniority: 'pleno',
+    resumesEmail: 'rh@empresa.com.br',
     ddd: ['11', '21'],
     cltMin: 5000 as number | '',
     cltMax: 8000 as number | '',
@@ -119,6 +120,15 @@ describe('positionsData', () => {
         expect(optionsTabErrors({ ...validForm(), disponibility: '0' })).toEqual([]);
         expect(optionsTabErrors({ ...validForm(), sort: [{ type: 'asc', field: [] }] })).toEqual(['Escolha ao menos um critério de ordenação dos currículos']);
         expect(salaryTabErrors({ ...validForm(), hasClt: false })).toEqual(['Informe ao menos uma faixa salarial (CLT ou PJ)']);
+    });
+
+    it('pede o e-mail que recebe os currículos, salvo em "Não receber currículos"', () => {
+        expect(optionsTabErrors({ ...validForm(), resumesEmail: '' })).toEqual(['Informe o e-mail para o qual enviar os currículos']);
+        expect(optionsTabErrors({ ...validForm(), frequencyType: 'instantly', resumesEmail: 'rh@' })).toEqual(['Informe um e-mail válido para receber os currículos']);
+        expect(optionsTabErrors({ ...validForm(), frequencyType: 'none', resumesEmail: '' })).toEqual([]);
+        expect(requestBodyOf(validForm()).resumesEmail).toBe('rh@empresa.com.br');
+        // sem envio, o e-mail não vai
+        expect(requestBodyOf({ ...validForm(), frequencyType: 'none' }).resumesEmail).toBeUndefined();
     });
 
     it('monta as listas da aba Habilidades pela resposta de skills/fromText e pelas habilidades gravadas', () => {

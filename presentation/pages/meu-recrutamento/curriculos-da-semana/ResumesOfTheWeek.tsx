@@ -1,13 +1,11 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import { Checkbox } from '@mantine/core';
 import JnAjax from '@/app/JnAjax';
-import { ResumeRowCells, ResumeRowHeaders } from '../ResumeRowCells';
+import { ResumeRowsGrid } from '../ResumeRowsGrid';
 import PageTitle from '@/presentation/layouts/page-title';
 import { decideSeeAll, getRecipientFromQuery, getSeeAllTitle, prefillTheLoginWithTheRecipient } from './seeAllRecipient';
 import { ModalLoginStore } from '@/presentation/auth/ModalLogin';
 import { registerTheRecipientAnswers } from './registerTheRecipientAnswers';
-import { GridPagination, paginate } from '@/presentation/components/source/GridPagination';
 
 type Situation = 'loading' | 'loaded' | 'noEmail' | 'notLogged' | 'error' | 'wrongAccount';
 
@@ -27,19 +25,15 @@ const messages: Record<Exclude<Situation, 'loaded' | 'wrongAccount'>, string> = 
  * coluna # numerando a lista inteira, na ordem do e-mail.
  * O checkbox "Mostrar apenas os currículos que ainda não vi" (desde 2026-11-15, desmarcado ao abrir) deixa no grid só os
  * currículos sem visualização do recrutador (o campo viewed da lista, gravado no envio do e-mail: uma visualização feita
- * depois do envio só aparece na lista do próximo e-mail); a coluna # numera as linhas que ficaram.
+ * depois do envio só aparece na lista do próximo e-mail); a coluna # numera as linhas que ficaram. O grid, o checkbox e a
+ * paginação ficam no ResumeRowsGrid (desde 2026-11-22), que a lista dos currículos dos filtros da vaga também usa.
  */
-/** Quantas linhas cada página da lista mostra. */
-const PAGE_SIZE = 50;
-
 export const ResumesOfTheWeek = () => {
     const [situation, setSituation] = useState<Situation>('loading');
     const [resumes, setResumes] = useState<any[]>([]);
     const [email, setEmail] = useState('');
     const [recipient, setRecipient] = useState('');
     const [wrongEmail, setWrongEmail] = useState('');
-    const [page, setPage] = useState(1);
-    const [onlyNotViewed, setOnlyNotViewed] = useState(false);
 
     // abre o login já com o e-mail do destinatário do link; ao entrar, repete a busca
     const askTheRecipientLogin = (expected: string) => {
@@ -72,7 +66,6 @@ export const ResumesOfTheWeek = () => {
         callbacks[200] = (response: any) => {
             setResumes(response.resumes || []);
             setEmail((JnAjax.getLogin() as any).email || '');
-            setPage(1);
             setSituation('loaded');
         };
         callbacks[404] = () => setSituation('noEmail');
@@ -94,8 +87,6 @@ export const ResumesOfTheWeek = () => {
         registerTheRecipientAnswers(expected);
         load(expected);
     }, []);
-
-    const viewLink = (resume: any) => `/recrutador/ver-curriculo?email=${encodeURIComponent(email)}&resume=${encodeURIComponent(resume.resumeId)}&token=${encodeURIComponent(resume.token)}`;
 
     // o título fica aqui, e não na página, porque o e-mail do recrutador só existe no navegador
     const title = <PageTitle>{getSeeAllTitle(situation == 'loaded' ? email : '', recipient)}</PageTitle>;
@@ -120,62 +111,21 @@ export const ResumesOfTheWeek = () => {
         );
     }
 
-    const shownResumes = onlyNotViewed ? resumes.filter((resume) => !resume.viewed) : resumes;
-    const { first, pageRows } = paginate(shownResumes, page, PAGE_SIZE);
-
-    // marcar ou desmarcar muda a lista: volta à primeira página
-    const changeOnlyNotViewed = (checked: boolean) => {
-        setOnlyNotViewed(checked);
-        setPage(1);
-    };
-
     return (
         <div>
             {title}
             <div className="panel mt-6">
-                <h5 className="mb-4 text-lg font-semibold">
-                    {resumes.length} {resumes.length == 1 ? 'currículo inserido ou alterado' : 'currículos inseridos ou alterados'} nos últimos 7 dias
-                    {onlyNotViewed && `, ${shownResumes.length} ${shownResumes.length == 1 ? 'ainda não visto' : 'ainda não vistos'}`}
-                </h5>
-                <Checkbox
-                    id="resumesOfTheWeekOnlyNotViewed"
-                    className="mb-4"
-                    label="Mostrar apenas os currículos que ainda não vi"
-                    checked={onlyNotViewed}
-                    onChange={(event) => changeOnlyNotViewed(event.currentTarget.checked)}
+                <ResumeRowsGrid
+                    resumes={resumes}
+                    email={email}
+                    checkboxId="resumesOfTheWeekOnlyNotViewed"
+                    title={(total, shown, onlyNotViewed) => (
+                        <>
+                            {total} {total == 1 ? 'currículo inserido ou alterado' : 'currículos inseridos ou alterados'} nos últimos 7 dias
+                            {onlyNotViewed && `, ${shown} ${shown == 1 ? 'ainda não visto' : 'ainda não vistos'}`}
+                        </>
+                    )}
                 />
-                {shownResumes.length == 0 ? (
-                    <div>Você já viu todos os currículos desta lista.</div>
-                ) : (
-                    <div className="table-responsive">
-                        <table className="table-hover">
-                            <thead>
-                                <tr>
-                                    <th className="text-center">#</th>
-                                    <ResumeRowHeaders />
-                                    <th>Datas e visualização</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {pageRows.map((resume, pageIndex) => (
-                                    <tr key={resume.resumeId}>
-                                        <td className="text-center align-top">{first + pageIndex + 1}</td>
-                                        <ResumeRowCells resume={resume} />
-                                        <td className="align-top">
-                                            <div className={resume.viewed ? '' : 'font-semibold text-danger'}>{resume.lastView}</div>
-                                            <a href={viewLink(resume)} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                                                {resume.viewLabel}
-                                            </a>
-                                            <div>{resume.insertion}</div>
-                                            <div>{resume.lastChange}</div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-                <GridPagination total={shownResumes.length} page={page} onChange={setPage} pageSize={PAGE_SIZE} />
             </div>
         </div>
     );

@@ -15,16 +15,18 @@ export interface ConfirmModalProps {
     reject?: () => void;
     // ação destrutiva (excluir, desistir): o botão de confirmar fica vermelho e o ícone é o de alerta
     danger?: boolean;
+    // para ficar acima de algo que já está acima dos modais (a confirmação do Fale Conosco); sem ele, o padrão do Mantine
+    zIndex?: number;
 }
 
 /** Pergunta de sim ou não antes de uma ação. Fechar pelo X ou pelo Esc vale como "não". */
-export const ConfirmModal: React.FC<ConfirmModalProps> = ({ visible, onHide, header, message, acceptLabel = 'Sim', rejectLabel = 'Não', accept, reject, danger = false }) => {
+export const ConfirmModal: React.FC<ConfirmModalProps> = ({ visible, onHide, header, message, acceptLabel = 'Sim', rejectLabel = 'Não', accept, reject, danger = false, zIndex }) => {
     const close = () => {
         reject && reject();
         onHide();
     };
     return (
-        <Modal opened={visible} onClose={close} title={header} size="md">
+        <Modal opened={visible} onClose={close} title={header} size="md" zIndex={zIndex}>
             <div className="flex items-start gap-3">
                 <span className={`mt-0.5 shrink-0 ${danger ? 'text-danger' : 'text-primary'}`}>
                     {danger ? <IconInfoTriangle className="h-7 w-7" /> : <IconHelpCircle className="h-7 w-7" />}

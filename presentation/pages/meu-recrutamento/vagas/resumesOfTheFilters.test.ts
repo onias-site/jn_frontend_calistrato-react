@@ -68,7 +68,7 @@ describe('resumesOfTheFilters', () => {
     });
 
     it('a mensagem traz a contagem e as médias que houver', () => {
-        expect(foundResumesMessage({ ids: [], resumes: 0 })).toBe('Foram encontrados 0 currículos');
+        expect(foundResumesMessage({ ids: [], resumes: 0 })).toBe('Não foram encontrados currículos para os seus critérios de busca');
         const message = foundResumesMessage({ ids: ['a', 'b'], resumes: 2, cltAverage: 8000, pjAverage: 12500.4 });
         expect(message.startsWith('Foram encontrados 2 currículos (média CLT R$')).toBe(true);
         expect(message).toContain('8.000');

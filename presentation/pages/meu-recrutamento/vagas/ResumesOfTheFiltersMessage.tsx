@@ -65,10 +65,15 @@ export const useResumesOfTheFilters = (request: Record<string, any> | null): Res
 type ResumesOfTheFiltersMessageProps = ResumesOfTheFiltersState & {
     // o corpo do pedido; null enquanto não dá para contar (sem área ou sem região): a mensagem some
     request: Record<string, any> | null;
+    // o link "Ver quais são estes currículos" (desde 2026-11-22): abre a aba dos currículos aderentes, pedindo o login antes
+    onSeeTheResumes: () => void;
 };
 
-/** A área de mensagens de cada aba com filtros: spinner enquanto o backend não responde, depois a contagem e as médias. */
-export const ResumesOfTheFiltersMessage = ({ request, loading, found, failed }: ResumesOfTheFiltersMessageProps) => {
+/**
+ * A área de mensagens de cada aba com filtros: spinner enquanto o backend não responde, depois a contagem e as médias e,
+ * quando há currículos, o link que os lista.
+ */
+export const ResumesOfTheFiltersMessage = ({ request, loading, found, failed, onSeeTheResumes }: ResumesOfTheFiltersMessageProps) => {
     if (!request) return null;
 
     return (
@@ -81,7 +86,19 @@ export const ResumesOfTheFiltersMessage = ({ request, loading, found, failed }: 
             ) : failed ? (
                 <span className="text-danger">Não foi possível contar os currículos agora. Mude os filtros ou tente de novo em alguns instantes.</span>
             ) : (
-                found && <span className="font-semibold">{foundResumesMessage(found)}</span>
+                found && (
+                    <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <span className="font-semibold">{foundResumesMessage(found)}</span>
+                        {found.resumes > 0 && (
+                            <span>
+                                <button type="button" className="text-primary underline hover:no-underline" onClick={onSeeTheResumes}>
+                                    Ver quais são estes currículos
+                                </button>{' '}
+                                ou preencha / altere filtros para uma listagem mais assertiva à sua necessidade
+                            </span>
+                        )}
+                    </span>
+                )
             )}
         </div>
     );

@@ -62,7 +62,10 @@ export const createSkillStore = () => create<ITabSkillStore>((set, get) => ({
 
         accordionList.sort(getSorter('skill'));
 
-        set({ groups, accordionList });
+        // um array novo a cada chamada: o arraste e a transferência mexem nos grupos e devolvem o mesmo array, e quem lê
+        // os grupos por seletor (a contagem de currículos do modal da vaga, pelas habilidades obrigatórias) só renderiza
+        // de novo quando a referência muda
+        set({ groups: [...groups], accordionList });
     },
     getWordsFromGroup: (name: string) => {
         const { groups } = get();
@@ -81,6 +84,38 @@ export const createSkillStore = () => create<ITabSkillStore>((set, get) => ({
 }));
 export type SkillStore = ReturnType<typeof createSkillStore>;
 export const TabSkillStore: SkillStore = createSkillStore();
+
+/**
+ * O texto de onde saíram as habilidades (desde 2026-11-22): o do currículo ou a descrição da vaga. A habilidade sugerida
+ * precisa constar nele, e os modais de sugestão de habilidade e de ajuste de hierarquia falam dele.
+ */
+export interface SkillsSource {
+    text: string;
+    // a dica do link de sugerir habilidade enquanto o texto está vazio (o link não abre)
+    textMissing: string;
+    // de quem são as habilidades: 'do seu currículo', 'da vaga'
+    owner: string;
+    // onde a habilidade precisa constar: 'no texto do seu currículo', 'na descrição da vaga'
+    inText: string;
+}
+
+// O texto do currículo não é gravado (LGPD): depois de recarregar a página ele vem vazio, e sem ele não há como conferir
+// que a habilidade consta no currículo. Até 2026-10-15 o modal deixava digitar e recusava toda habilidade como "fora do
+// currículo", culpando a palavra quando faltava o texto (achado 26). Desde 2026-11-12, sem o texto no memo o modal fica
+// todo desabilitado (o link não abre), mesmo com currículo de tecnologia já salvo, e a dica do link diz o que fazer.
+// Declarada antes do contexto abaixo, cujo valor padrão a usa ao carregar o módulo.
+const RESUME_TEXT_MISSING =
+    'Para sugerir uma habilidade, cole o texto do seu currículo na aba Currículo: só por ele dá para conferir que a habilidade consta no currículo. O texto não fica gravado, então é preciso colá-lo de novo depois de recarregar a página.';
+
+const resumeSkillsSource = (resumeText: string): SkillsSource => ({
+    text: resumeText,
+    textMissing: RESUME_TEXT_MISSING,
+    owner: 'do seu currículo',
+    inText: 'no texto do seu currículo',
+});
+
+// a store e o texto da aba aberta, para os modais de sugestão, que ficam fundo na árvore
+const SkillsSourceContext = React.createContext<{ store: SkillStore; source: SkillsSource }>({ store: TabSkillStore, source: resumeSkillsSource('') });
 
 /**
  * Os conhecimentos implícitos: os pais das habilidades da lista principal que não estão nela, cada um com as habilidades
@@ -108,18 +143,55 @@ export const getImplicitSkills = (group: any): any[] => {
     return array;
 };
 
+/**
+ * O que a coluna de acordeões da aba mostra (desde 2026-11-22): no currículo, os conhecimentos implícitos (a lista que a
+ * store calcula e grava com as habilidades); na vaga, as ferramentas abrangentes que o skills/fromText aponta.
+ */
+export interface SkillsAccordionView {
+    title: string;
+    helpTitle: string;
+    tooltip: string;
+    explanation: string;
+    // o título da lista de habilidades dentro de cada acordeão
+    childrenHeader: (skill: string) => string;
+    // cada item com skill e children ({ label, skill })
+    items: (state: ITabSkillStore) => any[];
+    // os botões de associar e desassociar habilidades (ajuste de hierarquia) em cada acordeão: só no currículo. Na vaga os
+    // filhos são todos os descendentes do termo, e desassociar um indireto seria aprovado sem efeito
+    withHierarchyFix: boolean;
+    // um botão ao lado de cada habilidade do acordeão (na vaga, acrescentar a especificação como filtro)
+    childAction?: (child: any, item: any) => React.ReactNode;
+}
+
+export const IMPLICIT_SKILLS_VIEW: SkillsAccordionView = {
+    title: 'Conhecimentos implícitos',
+    helpTitle: 'O que são conhecimentos implícitos?',
+    tooltip: 'Clique aqui para saber o que são conhecimentos implícitos',
+    explanation:
+        'São conhecimentos que você não mencionou no seu currículo, porém subentende-se que você os tem, pois estes conhecimentos são pré requisitos para outros conhecimentos, exemplo: Não há como você saber oracle ou mysql sem saber sql.',
+    childrenHeader: (skill) => `Habilidades associadas a ${skill}:`,
+    items: (state) => state.accordionList || [],
+    withHierarchyFix: true,
+};
+
 export interface TabSkillsProps {
     getAccordionList: (group: any) => any[];
     // sem ela, a do currículo
     store?: SkillStore;
-    // a sugestão de habilidade e o ajuste de hierarquia pedem o texto do currículo: a vaga não os mostra
+    // a sugestão de habilidade e o ajuste de hierarquia
     withSuggestions?: boolean;
+    // o texto de onde saíram as habilidades; sem ele, o do currículo
+    source?: SkillsSource;
+    // o que a coluna de acordeões mostra; sem ela, os conhecimentos implícitos
+    accordionView?: SkillsAccordionView;
 }
 
-export const TabSkills2: React.FC<TabSkillsProps> = ({ getAccordionList, store = TabSkillStore, withSuggestions = true }) => {
+export const TabSkills2: React.FC<TabSkillsProps> = ({ getAccordionList, store = TabSkillStore, withSuggestions = true, source, accordionView = IMPLICIT_SKILLS_VIEW }) => {
     const { groups, setGroups } = store((state: ITabSkillStore) => ({
         ...state,
     }));
+    const resumeText = TabResumeStore((state) => state.resumeText) || '';
+    const sourceContext = { store, source: source || resumeSkillsSource(resumeText) };
 
     const transferToAnotherList = (name: string, item: any) => {
         let allItems: any[] = [];
@@ -158,8 +230,9 @@ export const TabSkills2: React.FC<TabSkillsProps> = ({ getAccordionList, store =
     const width = groups.length ? 100 / (groups.length + 1) + '%' : '';
     return (
         // no celular as três colunas ficam uma embaixo da outra; a partir do md, lado a lado, cada uma com a sua fração
+        <SkillsSourceContext.Provider value={sourceContext}>
         <div className="flex flex-col md:max-h-[1000px] md:flex-row">
-            <AccordionList width={width} store={store} withSuggestions={withSuggestions} />
+            <AccordionList width={width} store={store} withSuggestions={withSuggestions} view={accordionView} />
             {groups.map((group: any) => (
                 <SkillList
                     transferToAnotherList={(item: any) => transferToAnotherList(group.name, item)}
@@ -176,6 +249,7 @@ export const TabSkills2: React.FC<TabSkillsProps> = ({ getAccordionList, store =
                 />
             ))}
         </div>
+        </SkillsSourceContext.Provider>
     );
 };
 
@@ -269,27 +343,26 @@ const getSkillsContext = (context: any, groups: any[], accordionList: any[]) => 
     return skillsContext;
 };
 
-// A habilidade sugerida precisa constar no texto do currículo exatamente como foi escrita: a frase inteira, sem ser
-// pedaço de outra palavra (maiúsculas e espaços repetidos não contam). Devolve true (e avisa o candidato) quando não consta.
-// O modal só abre com o texto colado no memo da aba Currículo (RESUME_TEXT_MISSING).
-const isSkillOutOfTheResume = (word: string) => {
-    const resumeText = TabResumeStore.getState().resumeText || '';
-    const normalizedResume = resumeText.toUpperCase().replace(/\s+/g, ' ');
+// A habilidade sugerida precisa constar no texto (do currículo ou da vaga) exatamente como foi escrita: a frase inteira,
+// sem ser pedaço de outra palavra (maiúsculas e espaços repetidos não contam). Devolve true (e avisa) quando não consta.
+// O modal só abre com o texto preenchido (textMissing).
+const isSkillOutOfTheText = (word: string, source: SkillsSource) => {
+    const normalizedResume = source.text.toUpperCase().replace(/\s+/g, ' ');
     const escapedWord = word.toUpperCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/ /g, '\\s');
     const wholePhrase = new RegExp(`(?<![\\p{L}\\p{N}])${escapedWord}(?![\\p{L}\\p{N}])`, 'u');
     if (wholePhrase.test(normalizedResume)) {
         return false;
     }
     PubSub.publish('showMessage', {
-        summary: 'Habilidade fora do currículo',
-        detail: `A habilidade '${word}' não aparece no texto do seu currículo. Só é possível sugerir uma habilidade escrita exatamente como consta nele.`,
+        summary: `Habilidade fora ${source.owner}`,
+        detail: `A habilidade '${word}' não aparece ${source.inText}. Só é possível sugerir uma habilidade escrita exatamente como consta ali.`,
         severity: 'warn',
     });
     return true;
 };
 
 // Checagens locais antes de sugerir uma habilidade: devolve true (e avisa o candidato) quando ela já aparece no currículo
-const isSkillSuggestionBlocked = (word: string, context: any, groups: any[], accordionList: any[]) => {
+const isSkillSuggestionBlocked = (word: string, context: any, groups: any[], accordionList: any[], source: SkillsSource) => {
     const skillsContext = getSkillsContext(context, groups, accordionList);
 
     const numbers = {};
@@ -371,7 +444,7 @@ const isSkillSuggestionBlocked = (word: string, context: any, groups: any[], acc
             },
             {
                 fieldName: 'isPieceOfOtherWord',
-                summary: 'O nome desta ferramenta é parte de uma outra palavra "{associated}" presente no texto do seu currículo',
+                summary: 'O nome desta ferramenta é parte de uma outra palavra "{associated}" presente {inText}',
             },
             {
                 fieldName: 'skillAlreadyAdded',
@@ -382,7 +455,7 @@ const isSkillSuggestionBlocked = (word: string, context: any, groups: any[], acc
         for (let index in errors) {
             const error = errors[index];
 
-            if (errorHasFound(context, error, word)) {
+            if (errorHasFound(context, error, word, source)) {
                 return true;
             }
         }
@@ -419,7 +492,7 @@ const isSynonymOfAListedSkill = (word: string, groups: any[]) => {
     return false;
 };
 
-const errorHasFound = (context: any, error: any, word: string) => {
+const errorHasFound = (context: any, error: any, word: string, source: SkillsSource) => {
     const discardedSkills = context.discardedSkills;
     const { summary, fieldName } = { ...error };
     if (!discardedSkills) {
@@ -444,7 +517,7 @@ const errorHasFound = (context: any, error: any, word: string) => {
     // título curto e o motivo no corpo: até 2026-10-15 os dois traziam o mesmo texto (achado 29)
     PubSub.publish('showMessage', {
         summary: 'Habilidade não adicionada',
-        detail: summary.replace('{associated}', filtered.associated),
+        detail: summary.replace('{associated}', filtered.associated).replace('{inText}', source.inText),
         severity: 'warn',
     });
 
@@ -523,11 +596,13 @@ interface AccordionListProps {
     width: string;
     store: SkillStore;
     withSuggestions: boolean;
+    view: SkillsAccordionView;
 }
-const AccordionList: React.FC<AccordionListProps> = ({ width, store, withSuggestions }) => {
-    const { accordionList } = store((state: ITabSkillStore) => ({
+const AccordionList: React.FC<AccordionListProps> = ({ width, store, withSuggestions, view }) => {
+    const state = store((state: ITabSkillStore) => ({
         ...state,
     }));
+    const accordionList = view.items(state);
     // mesmo filtro das outras duas listas: aparece a partir de 7 itens (ou enquanto houver texto digitado) e filtra pelo começo do nome
     const [filter, setFilter] = useState('');
     const filteredAccordionList = (accordionList || []).filter((item: any) => !filter || ('' + item.skill).toUpperCase().startsWith(filter.trim().toUpperCase()));
@@ -537,12 +612,8 @@ const AccordionList: React.FC<AccordionListProps> = ({ width, store, withSuggest
                 <div>
                     <div className="mb-5">
                         <div className="mb-2 flex items-start gap-1.5">
-                            <label className="font-semibold leading-snug">{`Conhecimentos implícitos (${accordionList.length})`}</label>
-                            <HelpButton
-                                title="O que são conhecimentos implícitos?"
-                                tooltip="Clique aqui para saber o que são conhecimentos implícitos"
-                                explanation="São conhecimentos que você não mencionou no seu currículo, porém subentende-se que você os tem, pois estes conhecimentos são pré requisitos para outros conhecimentos, exemplo: Não há como você saber oracle ou mysql sem saber sql."
-                            />
+                            <label className="font-semibold leading-snug">{`${view.title} (${accordionList.length})`}</label>
+                            <HelpButton title={view.helpTitle} tooltip={view.tooltip} explanation={view.explanation} />
                         </div>
 
                         {(accordionList.length >= 7 || filter) && (
@@ -556,7 +627,7 @@ const AccordionList: React.FC<AccordionListProps> = ({ width, store, withSuggest
                                     {/* os botões de sugestão ficam fora do botão do accordion: um botão dentro de outro não é HTML válido */}
                                     <div className="flex items-center">
                                         <Accordion.Control className="min-w-0 flex-1">{`${item.skill} (${item.children.length})`}</Accordion.Control>
-                                        {withSuggestions && (
+                                        {withSuggestions && view.withHierarchyFix && (
                                             <span className="flex shrink-0 items-center gap-1 pr-2">
                                                 <AddSkillsToAccordion accordionItem={item} />
                                                 <RemoveSkillsFromAccordion accordionItem={item} />
@@ -564,12 +635,19 @@ const AccordionList: React.FC<AccordionListProps> = ({ width, store, withSuggest
                                         )}
                                     </div>
                                     <Accordion.Panel>
-                                        <h6 className="mb-1 text-xs font-semibold text-white-dark">Habilidades associadas a {item.skill}:</h6>
-                                        {item.children.map((child: any, counter: any) => (
-                                            <p className="m-0 text-sm" key={child.label}>
-                                                {counter + 1 + ': ' + child.label}
-                                            </p>
-                                        ))}
+                                        <h6 className="mb-1 text-xs font-semibold text-white-dark">{view.childrenHeader(item.skill)}</h6>
+                                        {item.children.map((child: any, counter: any) =>
+                                            view.childAction ? (
+                                                <div className="flex items-center justify-between gap-2 text-sm" key={child.label}>
+                                                    <span>{counter + 1 + ': ' + child.label}</span>
+                                                    {view.childAction(child, item)}
+                                                </div>
+                                            ) : (
+                                                <p className="m-0 text-sm" key={child.label}>
+                                                    {counter + 1 + ': ' + child.label}
+                                                </p>
+                                            ),
+                                        )}
                                     </Accordion.Panel>
                                 </Accordion.Item>
                             ))}
@@ -660,13 +738,6 @@ const PendingSuggestionHint: React.FC = () => (
         Esta sugestão está em análise. Para alterá-la, desista dela e envie uma nova.
     </p>
 );
-
-// O texto do currículo não é gravado (LGPD): depois de recarregar a página ele vem vazio, e sem ele não há como conferir
-// que a habilidade consta no currículo. Até 2026-10-15 o modal deixava digitar e recusava toda habilidade como "fora do
-// currículo", culpando a palavra quando faltava o texto (achado 26). Desde 2026-11-12, sem o texto no memo o modal fica
-// todo desabilitado (o link não abre), mesmo com currículo de tecnologia já salvo, e a dica do link diz o que fazer.
-const RESUME_TEXT_MISSING =
-    'Para sugerir uma habilidade, cole o texto do seu currículo na aba Currículo: só por ele dá para conferir que a habilidade consta no currículo. O texto não fica gravado, então é preciso colá-lo de novo depois de recarregar a página.';
 
 // Cada sugestão manda um e-mail ao candidato e abre um chamado ao suporte, por isso o backend aceita um chamado a cada 24
 // horas, contadas do envio anterior, somando sugestão de habilidade, ajuste de hierarquia e fale conosco (429 a partir do
@@ -1017,7 +1088,8 @@ interface AccordionSkillsProps {
     accordionItem: any;
 }
 const AddSkillsToAccordion: React.FC<AccordionSkillsProps> = ({ accordionItem }) => {
-    const { groups } = TabSkillStore((state: ITabSkillStore) => ({
+    const { store, source } = React.useContext(SkillsSourceContext);
+    const { groups } = store((state: ITabSkillStore) => ({
         ...state,
     }));
 
@@ -1031,16 +1103,16 @@ const AddSkillsToAccordion: React.FC<AccordionSkillsProps> = ({ accordionItem })
             type="add"
             options={availableSkills}
             icon={<IconPlusCircle className="h-5 w-5" />}
-            linkText="Sugira adicionar habilidades (presentes no seu currículo) que você acredita que deveria estar aqui e não estão"
-            headerModal={`Sugira adicionar (presentes no seu currículo) que você acredita que dependem do conhecimento em ${accordionItem.skill}`}
+            linkText={`Sugira adicionar habilidades ${source.owner} que você acredita que deveriam estar aqui e não estão`}
+            headerModal={`Sugira adicionar habilidades ${source.owner} que você acredita que dependem do conhecimento em ${accordionItem.skill}`}
             reasonExplanation={`Explique por que as habilidades selecionadas acima deveriam ser associadas a ${accordionItem.skill}`}
-            multiSelectPlaceholder="Selecione as habilidades do seu currículo"
+            multiSelectPlaceholder={`Selecione as habilidades ${source.owner}`}
             noSkillSelectedDetail={`Selecione ao menos uma habilidade para associar a ${accordionItem.skill}.`}
             skillsHelp={
-                `São as habilidades do seu currículo que, na sua opinião, dependem do conhecimento em ${accordionItem.skill}: quem domina cada uma delas precisa conhecer ${accordionItem.skill} ` +
+                `São as habilidades ${source.owner} que, na sua opinião, dependem do conhecimento em ${accordionItem.skill}: quem domina cada uma delas precisa conhecer ${accordionItem.skill} ` +
                 '(ex.: SPRING BOOT depende de JAVA), mas hoje elas não aparecem associadas a ele. ' +
                 'Como usar: abra a lista e marque uma ou mais habilidades; a busca no topo da lista encontra cada uma pelo nome. ' +
-                `A lista mostra só as habilidades do seu currículo que ainda não estão associadas a ${accordionItem.skill}. Selecione ao menos uma.`
+                `A lista mostra só as habilidades ${source.owner} que ainda não estão associadas a ${accordionItem.skill}. Selecione ao menos uma.`
             }
             reasonHelp={
                 'É a sua explicação para o nosso time de suporte, que vai avaliar a sugestão. ' +
@@ -1255,11 +1327,11 @@ const EXCLUDED_SKILLS_FROM_RESUME_HELP =
     'Com 7 habilidades ou mais, aparece um campo para filtrar a lista pelo começo do nome.';
 
 // textos do botão de ajuda de cada campo do modal de sugestão de habilidade: o que é o campo e como usá-lo
-const SKILL_SUGGESTION_SKILL_HELP =
-    'É a habilidade técnica (ferramenta, linguagem, framework, metodologia) que CONSTA no texto do seu currículo e que deixamos de listar entre as suas habilidades. ' +
-    'Como usar: digite-a exatamente como está escrita no currículo (ex.: REACT NATIVE); o texto vira maiúsculas e os espaços repetidos são removidos. ' +
-    'Ao sair do campo, a habilidade é validada: precisa ter ao menos 2 caracteres, não pode estar na sua lista (nem como sinônimo de uma habilidade dela) e precisa constar no currículo. ' +
-    'Se ela já foi sugerida antes, por você ou por outro candidato, ou se é sinônimo de uma habilidade que você já sugeriu, mostramos a situação dela e, se já foi avaliada, o motivo da decisão. ' +
+const skillSuggestionSkillHelp = (source: SkillsSource) =>
+    `É a habilidade técnica (ferramenta, linguagem, framework, metodologia) que CONSTA ${source.inText} e que deixamos de listar entre as habilidades ${source.owner}. ` +
+    `Como usar: digite-a exatamente como está escrita ${source.inText} (ex.: REACT NATIVE); o texto vira maiúsculas e os espaços repetidos são removidos. ` +
+    `Ao sair do campo, a habilidade é validada: precisa ter ao menos 2 caracteres, não pode estar nas listas (nem como sinônimo de uma habilidade delas) e precisa constar ${source.inText}. ` +
+    'Se ela já foi sugerida antes, por você ou por outro usuário, ou se é sinônimo de uma habilidade que você já sugeriu, mostramos a situação dela e, se já foi avaliada, o motivo da decisão. ' +
     'Os sinônimos e a justificativa só ficam disponíveis depois de uma habilidade válida.';
 
 const SKILL_SUGGESTION_SYNONYMS_HELP =
@@ -1270,7 +1342,7 @@ const SKILL_SUGGESTION_SYNONYMS_HELP =
 
 const SKILL_SUGGESTION_REASON_HELP =
     'É a sua explicação para o nosso time de suporte, que vai avaliar a sugestão. ' +
-    'Como usar: conte por que esta habilidade deveria ser reconhecida e em que parte do currículo ela aparece (ex.: o projeto, a empresa, o período). ' +
+    'Como usar: conte por que esta habilidade deveria ser reconhecida e em que trecho do texto ela aparece (ex.: o projeto, a empresa, o período, a atividade). ' +
     `Escreva entre ${DESCRIPTION_MIN_LENGTH} e ${DESCRIPTION_MAX_LENGTH} caracteres. ` +
     'O resultado da avaliação chega por e-mail e também aparece aqui, no painel Motivo, quando você digitar a habilidade de novo.';
 
@@ -1280,12 +1352,13 @@ const SKILL_SUGGESTION_REASON_HELP =
  * sugestão que ele já tenha feito dela, com o status; enquanto pendente, ele pode desistir.
  */
 const SkillSuggestionModal: React.FC = () => {
-    const { context, groups, accordionList } = TabSkillStore((state: ITabSkillStore) => ({
+    const { store, source } = React.useContext(SkillsSourceContext);
+    const { context, groups, accordionList } = store((state: ITabSkillStore) => ({
         ...state,
     }));
-    // sem o texto do currículo no memo não dá para sugerir: o link não abre o modal e a dica dele diz o que fazer
-    const resumeText = TabResumeStore((state) => state.resumeText) || '';
-    const resumeTextMissing = !resumeText.trim();
+    // sem o texto (o do currículo no memo, a descrição da vaga) não dá para sugerir: o link não abre o modal e a dica dele
+    // diz o que fazer
+    const textMissing = !source.text.trim();
     const [skill, setSkill] = useState('');
     const [synonyms, setSynonyms] = useState<string[]>([]);
     const [reason, setReason] = useState('');
@@ -1312,7 +1385,7 @@ const SkillSuggestionModal: React.FC = () => {
     // Validações que não dependem do servidor: o tamanho (depois do trim) e as da lista do currículo (já está na lista,
     // é sinônimo de uma da lista, é pedaço de outra palavra...), as mesmas que o botão Enviar faz
     const isSkillAllowedByTheScreen = (normalizedSkill: string) =>
-        isValidSkillName(normalizedSkill, 'Habilidade inválida') && !isSkillSuggestionBlocked(normalizedSkill, context, groups, accordionList);
+        isValidSkillName(normalizedSkill, 'Habilidade inválida') && !isSkillSuggestionBlocked(normalizedSkill, context, groups, accordionList, source);
 
     const loadSuggestion = (skillToSearch: string) => {
         setSuggestion(null);
@@ -1335,7 +1408,7 @@ const SkillSuggestionModal: React.FC = () => {
             },
             // ainda não sugerida: falta conferir se ela consta no currículo (depois da busca, para que um sinônimo de
             // uma sugestão anterior, que pode não constar no currículo, seja reconhecido como tal)
-            () => setSkillValid(!isSkillOutOfTheResume(skillToSearch)),
+            () => setSkillValid(!isSkillOutOfTheText(skillToSearch, source)),
             setLoadingOf('load'),
         );
     };
@@ -1393,7 +1466,7 @@ const SkillSuggestionModal: React.FC = () => {
             return;
         }
         // depois das checagens acima: elas explicam melhor os casos que também ficariam fora (ASP dentro de ASPECTJ)
-        if (isSkillOutOfTheResume(normalizedSkill)) {
+        if (isSkillOutOfTheText(normalizedSkill, source)) {
             return;
         }
         if (sharedQuotaAlreadySpent()) {
@@ -1488,17 +1561,17 @@ const SkillSuggestionModal: React.FC = () => {
             saveDisabled={busy || (!hasSuggestion && !skillValid)}
             extraActions={extraActions}
             onOpen={startNewSuggestion}
-            disabledReason={resumeTextMissing ? RESUME_TEXT_MISSING : ''}
+            disabledReason={textMissing ? source.textMissing : ''}
             fieldsHaveOwnHelp
-            headerModal="Descreva a habilidade técnica que CONSTA no texto do seu currículo e que deixamos de listar aqui"
+            headerModal={`Descreva a habilidade técnica que CONSTA ${source.inText} e que deixamos de listar aqui`}
             labelText=""
             linkText="Deixamos de listar alguma habilidade?"
         >
             <div className="flex w-full flex-col items-stretch">
-                <LabelComponent explanation={SKILL_SUGGESTION_SKILL_HELP} labelValue="Habilidade" property="skillSuggestionSkill" errors={{}} stacked>
+                <LabelComponent explanation={skillSuggestionSkillHelp(source)} labelValue="Habilidade" property="skillSuggestionSkill" errors={{}} stacked>
                     <TextInput
                         id="skillSuggestionSkill"
-                        placeholder="Habilidade que consta no seu currículo (ex.: REACT NATIVE)"
+                        placeholder={`Habilidade que consta ${source.inText} (ex.: REACT NATIVE)`}
                         value={skill}
                         disabled={hasSuggestion}
                         maxLength={SKILL_MAX_LENGTH}
@@ -1524,7 +1597,7 @@ const SkillSuggestionModal: React.FC = () => {
                 <LabelComponent explanation={SKILL_SUGGESTION_REASON_HELP} labelValue="Justificativa" property="skillSuggestionReason" errors={{}} stacked>
                     <Textarea
                         id="skillSuggestionReason"
-                        placeholder="Explique por que esta habilidade deveria ser reconhecida (ex.: em que parte do currículo ela aparece)"
+                        placeholder="Explique por que esta habilidade deveria ser reconhecida (ex.: em que trecho do texto ela aparece)"
                         value={reason}
                         disabled={otherFieldsDisabled}
                         onChange={(e) => setReason(e.currentTarget.value)}

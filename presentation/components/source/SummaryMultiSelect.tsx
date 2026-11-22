@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { CheckIcon, Combobox, Group, Input, Pill, PillsInput, ScrollArea, useCombobox } from '@mantine/core';
 
 export interface SummaryMultiSelectOption {
@@ -24,6 +24,10 @@ export interface SummaryMultiSelectProps {
     disabled?: boolean;
     // os valores que contam no resumo (por padrão todos); serve para não contar opções que são só atalhos da tela
     countValue?: (value: string) => boolean;
+    // a lista de opções abre sempre para baixo. Dentro de um modal (o da vaga), numa aba curta, ela abria para cima e a borda
+    // do modal cortava a busca e as primeiras opções (o Inglês). Para baixo, o corpo do modal rola até ela. Em portal não dá:
+    // a armadilha de foco do modal tira o foco da busca, que fica fora dele.
+    openDownwards?: boolean;
 }
 
 /**
@@ -43,12 +47,21 @@ export const SummaryMultiSelect: React.FC<SummaryMultiSelectProps> = ({
     error,
     disabled,
     countValue = () => true,
+    openDownwards = false,
 }) => {
     const combobox = useCombobox({
         onDropdownClose: () => combobox.resetSelectedOption(),
         onDropdownOpen: () => combobox.updateSelectedOptionIndex('active'),
     });
     const [search, setSearch] = useState('');
+    // a lista fecha quando o campo perde o foco, menos quando o foco vai para a própria lista (a busca): até 2026-11-22
+    // clicar na busca fechava a lista, e não dava para filtrar
+    const dropdownRef = useRef<HTMLDivElement>(null);
+    const closeUnlessFocusWentToTheDropdown = (event: React.FocusEvent) => {
+        const focused = event.relatedTarget as Node | null;
+        if (focused && dropdownRef.current?.contains(focused)) return;
+        combobox.closeDropdown();
+    };
 
     const toggle = (optionValue: string) => {
         const newValues = value.includes(optionValue) ? value.filter((item) => item !== optionValue) : [...value, optionValue];
@@ -77,7 +90,7 @@ export const SummaryMultiSelect: React.FC<SummaryMultiSelectProps> = ({
     ));
 
     return (
-        <Combobox store={combobox} onOptionSubmit={toggle} withinPortal={false} disabled={disabled}>
+        <Combobox store={combobox} onOptionSubmit={toggle} withinPortal={false} disabled={disabled} position="bottom" middlewares={{ flip: !openDownwards, shift: true }}>
             <Combobox.DropdownTarget>
                 <PillsInput
                     id={id}
@@ -93,13 +106,13 @@ export const SummaryMultiSelect: React.FC<SummaryMultiSelectProps> = ({
                         {value.length > 0 && showSummary && <span className="py-0.5 font-semibold">{summaryLabel(counted.length)}</span>}
                         {value.length > 0 && !showSummary && pills}
                         <Combobox.EventsTarget>
-                            <PillsInput.Field type="hidden" onBlur={() => combobox.closeDropdown()} onKeyDown={(event) => event.key === 'Backspace' && event.preventDefault()} />
+                            <PillsInput.Field type="hidden" onBlur={closeUnlessFocusWentToTheDropdown} onKeyDown={(event) => event.key === 'Backspace' && event.preventDefault()} />
                         </Combobox.EventsTarget>
                     </Pill.Group>
                 </PillsInput>
             </Combobox.DropdownTarget>
 
-            <Combobox.Dropdown>
+            <Combobox.Dropdown ref={dropdownRef}>
                 <Combobox.Search value={search} onChange={(event) => setSearch(event.currentTarget.value)} placeholder={searchPlaceholder} />
                 <Combobox.Options>
                     <ScrollArea.Autosize mah={260} type="scroll">
