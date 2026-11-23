@@ -1,8 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import JnAjax from '@/app/JnAjax';
-import { ModalLoginStore } from '@/presentation/auth/ModalLogin';
+import { NotLoggedMessage } from '@/presentation/components/not-logged/NotLoggedMessage';
 import { GridPagination, paginate } from '@/presentation/components/source/GridPagination';
 import { Access, CHILD_NAME, PARENT_NAME, accessesFromGroups, currentSessionIndex, groupParentId } from './accessesReconciliation';
 
@@ -19,9 +18,8 @@ const LogoutCell = ({ access, isCurrentSession }: { access: Access; isCurrentSes
 
 type Situation = 'loading' | 'loaded' | 'notLogged' | 'error';
 
-const messages: Record<Exclude<Situation, 'loaded'>, string> = {
+const messages: Record<Exclude<Situation, 'loaded' | 'notLogged'>, string> = {
     loading: 'Carregando os seus acessos...',
-    notLogged: 'Entre com o seu e-mail para ver os seus acessos.',
     error: 'Não foi possível carregar os seus acessos agora. Tente de novo em alguns instantes.',
 };
 
@@ -29,14 +27,13 @@ const messages: Record<Exclude<Situation, 'loaded'>, string> = {
  * Os acessos do usuário logado: cada login (IP, navegador e data) com a data do logout que lhe corresponde, do mais
  * recente ao mais antigo; um login sem logout é uma sessão que expirou (ou a que está aberta). Lê, numa requisição só, os
  * dois lados do grupo do e-mail no jn_grouper (os logins no ativo, os logouts no inativo) e casa um com o outro aqui. O
- * grupo guarda os 100 últimos de cada lado. Exige login: quem não está logado vê o modal de login, que repete a busca ao entrar;
- * fechar o modal sem entrar leva à tela inicial.
+ * grupo guarda os 100 últimos de cada lado. Exige login: quem não está logado vê a faixa com o link que abre o modal de
+ * login (desde 2026-11-23; antes o modal abria sozinho), e a busca é repetida ao entrar.
  */
 export const LoginHistory = () => {
     const [situation, setSituation] = useState<Situation>('loading');
     const [accesses, setAccesses] = useState<Access[]>([]);
     const [page, setPage] = useState(1);
-    const router = useRouter();
 
     const load = () => {
         setSituation('loading');
@@ -55,9 +52,6 @@ export const LoginHistory = () => {
             // sem login o JnAjax chama o 401 antes de enviar, e não desliga o carregamento que já ligou
             JnAjax.setNotLoading()();
             setSituation('notLogged');
-            // fechar o modal sem entrar leva à tela inicial: aqui ficaria só uma tela vazia
-            ModalLoginStore.getState().setDismissAction(() => router.push('/'));
-            JnAjax.getHandler401(load)();
         };
         callbacks['onUnexpectedHttpStatus'] = () => setSituation('error');
         const login: any = JnAjax.getLogin() || {};
@@ -75,7 +69,9 @@ export const LoginHistory = () => {
 
     return (
         <div className="panel mt-6">
-            {situation != 'loaded' ? (
+            {situation == 'notLogged' ? (
+                <NotLoggedMessage before="Você não está logado!" after="para ver os seus acessos." onLoggedIn={load} />
+            ) : situation != 'loaded' ? (
                 <div>{messages[situation]}</div>
             ) : accesses.length == 0 ? (
                 <div>Nenhum acesso registrado ainda.</div>

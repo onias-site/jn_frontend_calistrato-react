@@ -1,12 +1,11 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Checkbox, Tabs } from '@mantine/core';
 import JnAjax from '@/app/JnAjax';
 import { Modal } from '@/presentation/components/source/Modal';
 import { ConfirmModal } from '@/presentation/components/source/ConfirmModal';
 import { notify } from '@/presentation/components/source/notify';
-import { ModalLoginStore } from '@/presentation/auth/ModalLogin';
+import { NotLoggedMessage } from '@/presentation/components/not-logged/NotLoggedMessage';
 import { MonthPicker, currentMonth, monthParameter } from '@/presentation/components/month-picker/MonthPicker';
 import { ViewedResumeDetails } from './ViewedResumeDetails';
 import { EditViewedResumeDetails } from './EditViewedResumeDetails';
@@ -23,9 +22,8 @@ const ALL_MONTHS = 'all';
 // as linhas de cada página do grid quando "Listar todos" está marcado
 const ALL_MONTHS_PAGE_SIZE = 50;
 
-const messages: Record<Exclude<Situation, 'loaded'>, string> = {
+const messages: Record<Exclude<Situation, 'loaded' | 'notLogged'>, string> = {
     loading: 'Carregando os currículos visualizados...',
-    notLogged: 'Entre com o seu e-mail de recrutador para ver os currículos que você visualizou.',
     error: 'Não foi possível carregar os currículos visualizados agora. Tente de novo em alguns instantes.',
 };
 
@@ -55,7 +53,8 @@ const moves: Record<Tab, { path: string; label: string; header: string; message:
  * como a de um currículo cujo LinkedIn o recrutador reportou como inválido. Um item por currículo, com o apelido, o
  * comentário e a data da última visualização no mês; o LinkedIn fica nos detalhes. O mês é escolhido na tela, vale para as
  * duas abas e começa no mês corrente. As duas listas vêm numa só leitura pelo id do grupo do recrutador no mês (os dois
- * lados do grouper); por isso exige login, e quem não está logado vê o modal de login, que repete a busca ao entrar.
+ * lados do grouper); por isso exige login: quem não está logado vê a faixa com o link que abre o modal de login (desde
+ * 2026-11-23; antes o modal abria sozinho), e a busca é repetida ao entrar.
  * Cada linha tem "ver detalhes" (o currículo como a prévia do candidato o mostra), "Editar detalhes" (apelido e
  * comentário, gravados no lado em que a visualização está) e "Negativar CV" / "Positivar CV", que, depois de confirmar,
  * troca o currículo de aba. As gravações são assíncronas no back end: a tela atualiza as listas com o que enviou e
@@ -74,7 +73,6 @@ export const ViewedResumesOfTheMonth = () => {
     const [selected, setSelected] = useState<ViewedResume | null>(null);
     const [editing, setEditing] = useState<ViewedResume | null>(null);
     const [moving, setMoving] = useState<ViewedResume | null>(null);
-    const router = useRouter();
 
     // o mês que vai para a API: o escolhido (yyyyMM) ou "all", com "Listar todos" marcado
     const period = listAll ? ALL_MONTHS : monthParameter(month);
@@ -92,9 +90,6 @@ export const ViewedResumesOfTheMonth = () => {
             // sem login o JnAjax chama o 401 antes de enviar, e não desliga o carregamento que já ligou
             JnAjax.setNotLoading()();
             setSituation('notLogged');
-            // fechar o modal sem entrar leva à tela inicial: aqui ficaria só uma tela vazia
-            ModalLoginStore.getState().setDismissAction(() => router.push('/'));
-            JnAjax.getHandler401(load(chosenPeriod))();
         };
         callbacks['onUnexpectedHttpStatus'] = () => setSituation('error');
         // GET sem corpo: com {} o jQuery poria "?{}" na URL
@@ -163,7 +158,9 @@ export const ViewedResumesOfTheMonth = () => {
                     {listAllCheckbox}
                 </MonthPicker>
             )}
-            {situation != 'loaded' ? (
+            {situation == 'notLogged' ? (
+                <NotLoggedMessage before="Você não está logado!" after="com o seu e-mail de recrutador para ver os currículos que você visualizou." onLoggedIn={load(period)} />
+            ) : situation != 'loaded' ? (
                 <div>{messages[situation]}</div>
             ) : (
                 <Tabs value={tab} onChange={(value) => setTab((value as Tab) || 'viewed')}>

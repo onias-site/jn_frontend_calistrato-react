@@ -1,0 +1,18 @@
+/* as mesmas cores da faixa "não logado" de Sobre mim (resume-status-not-logged) */
+.not-logged-message {
+    font-size: 0.875rem;
+    text-align: center;
+    padding: 8px 12px;
+    border-radius: 6px;
+    color: #0d47a1;
+    background-color: #e3f2fd;
+}
+body.dark .not-logged-message {
+    color: #90caf9;
+    background-color: rgba(33, 150, 243, 0.15);
+}
+.not-logged-message-link {
+    font-weight: bold;
+    text-decoration: underline;
+    cursor: pointer;
+}

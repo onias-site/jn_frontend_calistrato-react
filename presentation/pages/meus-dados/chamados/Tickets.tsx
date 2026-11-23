@@ -1,9 +1,8 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { Modal } from '@mantine/core';
-import { useRouter } from 'next/navigation';
 import JnAjax from '@/app/JnAjax';
-import { ModalLoginStore } from '@/presentation/auth/ModalLogin';
+import { NotLoggedMessage } from '@/presentation/components/not-logged/NotLoggedMessage';
 import { GridPagination, paginate } from '@/presentation/components/source/GridPagination';
 import { groupParentId } from '../acessos/accessesReconciliation';
 import { TICKET_KINDS, Ticket, abbreviate, ticketsFromGroups } from './ticketsFromGroups';
@@ -12,25 +11,27 @@ type Situation = 'choosing' | 'loading' | 'loaded' | 'notLogged' | 'error';
 
 const PARENT_NAME = 'jn_login_email';
 
-const messages: Record<Exclude<Situation, 'loaded'>, string> = {
+const messages: Record<Exclude<Situation, 'loaded' | 'notLogged'>, string> = {
     choosing: 'Escolha o tipo de chamado para ver os seus.',
     loading: 'Carregando os seus chamados...',
-    notLogged: 'Entre com o seu e-mail para ver os seus chamados.',
     error: 'Não foi possível carregar os seus chamados agora. Tente de novo em alguns instantes.',
 };
 
 /**
  * Os chamados do usuário logado de um tipo escolhido no combo (os do Fale Conosco, as associações e dissociações de
  * hierarquia, as sugestões de habilidade e os LinkedIns inválidos reportados pelo recrutador): em análise e encerrados, do mais recente ao mais antigo, com as colunas
- * próprias do tipo. Exige login: quem não está logado vê o modal de login, que repete a busca ao entrar;
- * fechar o modal sem entrar leva à tela inicial.
+ * próprias do tipo. Exige login: quem não está logado vê, já ao entrar na tela, a faixa com o link que abre o modal de login (desde
+ * 2026-11-23; antes o modal abria sozinho ao escolher o tipo); depois de entrar, a busca do tipo escolhido é refeita.
  */
 export const Tickets = () => {
     const [kindValue, setKindValue] = useState('');
     const [situation, setSituation] = useState<Situation>('choosing');
+    // sem login, a faixa aparece já ao entrar na tela (lido depois da montagem: o localStorage não existe no servidor)
+    useEffect(() => {
+        !JnAjax.hasLogin() && setSituation('notLogged');
+    }, []);
     const [tickets, setTickets] = useState<Ticket[]>([]);
     const [page, setPage] = useState(1);
-    const router = useRouter();
     // a célula comprida demais para a grade, mostrada inteira no modal
     const [fullCell, setFullCell] = useState<{ title: string; text: string } | null>(null);
 
@@ -54,9 +55,6 @@ export const Tickets = () => {
             // sem login o JnAjax chama o 401 antes de enviar, e não desliga o carregamento que já ligou
             JnAjax.setNotLoading()();
             setSituation('notLogged');
-            // fechar o modal sem entrar leva à tela inicial: aqui ficaria só uma tela vazia
-            ModalLoginStore.getState().setDismissAction(() => router.push('/'));
-            JnAjax.getHandler401(load)();
         };
         callbacks['onUnexpectedHttpStatus'] = () => setSituation('error');
         const login: any = JnAjax.getLogin() || {};
@@ -66,6 +64,9 @@ export const Tickets = () => {
     };
 
     useEffect(load, [kindValue]);
+
+    // depois de entrar: busca o tipo escolhido, ou volta a pedir a escolha
+    const loggedIn = () => (kind ? load() : setSituation('choosing'));
 
     const { first, pageRows } = paginate(tickets, page);
 
@@ -83,7 +84,9 @@ export const Tickets = () => {
                     ))}
                 </select>
             </div>
-            {situation != 'loaded' || !kind ? (
+            {situation == 'notLogged' ? (
+                <NotLoggedMessage before="Você não está logado!" after="para ver os seus chamados." onLoggedIn={loggedIn} />
+            ) : situation != 'loaded' || !kind ? (
                 <div>{messages[situation == 'loaded' ? 'choosing' : situation]}</div>
             ) : tickets.length == 0 ? (
                 <div>Nenhum chamado deste tipo.</div>

@@ -6,20 +6,21 @@ import PageTitle from '@/presentation/layouts/page-title';
 import { decideSeeAll, getRecipientFromQuery, getSeeAllTitle, prefillTheLoginWithTheRecipient } from './seeAllRecipient';
 import { ModalLoginStore } from '@/presentation/auth/ModalLogin';
 import { registerTheRecipientAnswers } from './registerTheRecipientAnswers';
+import { NotLoggedMessage } from '@/presentation/components/not-logged/NotLoggedMessage';
 
 type Situation = 'loading' | 'loaded' | 'noEmail' | 'notLogged' | 'error' | 'wrongAccount';
 
-const messages: Record<Exclude<Situation, 'loaded' | 'wrongAccount'>, string> = {
+const messages: Record<Exclude<Situation, 'loaded' | 'wrongAccount' | 'notLogged'>, string> = {
     loading: 'Carregando os currículos...',
     noEmail: 'Não há e-mail de currículos seu do último dia. A lista completa fica disponível por um dia após cada e-mail.',
-    notLogged: 'Entre com o e-mail em que você recebe os currículos para ver a lista completa.',
     error: 'Não foi possível carregar os currículos agora. Tente de novo em alguns instantes.',
 };
 
 /**
  * A tela "Ver todos" do e-mail de currículos: todos os currículos do último e-mail do recrutador logado, na ordem e com
  * os textos do e-mail (que mostra só os 30 primeiros). A lista foi gravada antes do envio e é lida pelo id, o e-mail do
- * recrutador; por isso exige login, e quem não está logado vê o modal de login, que repete a busca ao entrar.
+ * recrutador; por isso exige login: quem não está logado vê a faixa com o link que abre o modal de login, já com o e-mail
+ * do destinatário (desde 2026-11-23; antes o modal abria sozinho), e a busca é repetida ao entrar.
  * O link do e-mail leva o destinatário (`?email=`): com outra conta logada, a tela avisa, sai dessa conta e abre o login
  * (até 2026-11-12 abria vazia, lendo a lista da conta errada). O grid é paginado no navegador (desde 2026-11-14), com a
  * coluna # numerando a lista inteira, na ordem do e-mail.
@@ -73,7 +74,6 @@ export const ResumesOfTheWeek = () => {
             // sem login o JnAjax chama o 401 antes de enviar, e não desliga o carregamento que já ligou
             JnAjax.setNotLoading()();
             setSituation('notLogged');
-            askTheRecipientLogin(expected);
         };
         callbacks['onUnexpectedHttpStatus'] = () => setSituation('error');
         // GET sem corpo: com {} o jQuery poria "?{}" na URL
@@ -97,6 +97,22 @@ export const ResumesOfTheWeek = () => {
                 {title}
                 <div className="panel mt-6">
                     Esta lista de currículos foi enviada para <b>{recipient}</b>, mas você estava logado como <b>{wrongEmail}</b>. Entre com <b>{recipient}</b> para ver a lista.
+                </div>
+            </div>
+        );
+    }
+
+    if (situation == 'notLogged') {
+        return (
+            <div>
+                {title}
+                <div className="mt-6">
+                    <NotLoggedMessage
+                        before="Você não está logado!"
+                        after="com o e-mail em que você recebe os currículos para ver a lista completa."
+                        onLoggedIn={() => load(recipient)}
+                        openLogin={() => askTheRecipientLogin(recipient)}
+                    />
                 </div>
             </div>
         );
