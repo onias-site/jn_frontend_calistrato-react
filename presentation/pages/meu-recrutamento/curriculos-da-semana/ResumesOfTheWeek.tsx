@@ -10,9 +10,33 @@ import { NotLoggedMessage } from '@/presentation/components/not-logged/NotLogged
 
 type Situation = 'loading' | 'loaded' | 'noEmail' | 'notLogged' | 'error' | 'wrongAccount';
 
-const messages: Record<Exclude<Situation, 'loaded' | 'wrongAccount' | 'notLogged'>, string> = {
-    loading: 'Carregando os currículos...',
+/**
+ * A lista que a tela mostra (desde 2026-11-24): a do último e-mail de currículos (padrão) ou a do último e-mail de uma
+ * vaga (curriculos-da-vaga). `path` recebe o `location.search` do link; `title` recebe o dono da lista (ou vazio).
+ */
+export type SeeAllList = {
+    path: (search: string) => string;
+    title: (search: string, owner: string) => string;
+    noEmail: string;
+    checkboxId: string;
+    gridTitle: (total: number, shown: number, onlyNotViewed: boolean) => React.ReactNode;
+};
+
+const resumesOfTheWeekList: SeeAllList = {
+    path: () => 'recruiter/{email}/resumes-of-the-week',
+    title: (search, owner) => getSeeAllTitle(owner, ''),
     noEmail: 'Não há e-mail de currículos seu do último dia. A lista completa fica disponível por um dia após cada e-mail.',
+    checkboxId: 'resumesOfTheWeekOnlyNotViewed',
+    gridTitle: (total, shown, onlyNotViewed) => (
+        <>
+            {total} {total == 1 ? 'currículo inserido ou alterado' : 'currículos inseridos ou alterados'} nos últimos 7 dias
+            {onlyNotViewed && `, ${shown} ${shown == 1 ? 'ainda não visto' : 'ainda não vistos'}`}
+        </>
+    ),
+};
+
+const messages: Record<Exclude<Situation, 'loaded' | 'wrongAccount' | 'notLogged' | 'noEmail'>, string> = {
+    loading: 'Carregando os currículos...',
     error: 'Não foi possível carregar os currículos agora. Tente de novo em alguns instantes.',
 };
 
@@ -29,7 +53,7 @@ const messages: Record<Exclude<Situation, 'loaded' | 'wrongAccount' | 'notLogged
  * depois do envio só aparece na lista do próximo e-mail); a coluna # numera as linhas que ficaram. O grid, o checkbox e a
  * paginação ficam no ResumeRowsGrid (desde 2026-11-22), que a lista dos currículos dos filtros da vaga também usa.
  */
-export const ResumesOfTheWeek = () => {
+export const ResumesOfTheWeek = ({ list = resumesOfTheWeekList }: { list?: SeeAllList }) => {
     const [situation, setSituation] = useState<Situation>('loading');
     const [resumes, setResumes] = useState<any[]>([]);
     const [email, setEmail] = useState('');
@@ -77,7 +101,7 @@ export const ResumesOfTheWeek = () => {
         };
         callbacks['onUnexpectedHttpStatus'] = () => setSituation('error');
         // GET sem corpo: com {} o jQuery poria "?{}" na URL
-        JnAjax.doACachedRequest('recruiter/{email}/resumes-of-the-week', callbacks, 'GET', null as any, {}, 'http://localhost:8081');
+        JnAjax.doACachedRequest(list.path(window.location.search), callbacks, 'GET', null as any, {}, 'http://localhost:8081');
     };
 
     useEffect(() => {
@@ -89,7 +113,8 @@ export const ResumesOfTheWeek = () => {
     }, []);
 
     // o título fica aqui, e não na página, porque o e-mail do recrutador só existe no navegador
-    const title = <PageTitle>{getSeeAllTitle(situation == 'loaded' ? email : '', recipient)}</PageTitle>;
+    const owner = (situation == 'loaded' ? email : '') || recipient;
+    const title = <PageTitle>{list.title(typeof window == 'undefined' ? '' : window.location.search, owner)}</PageTitle>;
 
     if (situation == 'wrongAccount') {
         return (
@@ -122,7 +147,7 @@ export const ResumesOfTheWeek = () => {
         return (
             <div>
                 {title}
-                <div className="panel mt-6">{messages[situation]}</div>
+                <div className="panel mt-6">{situation == 'noEmail' ? list.noEmail : messages[situation]}</div>
             </div>
         );
     }
@@ -134,13 +159,8 @@ export const ResumesOfTheWeek = () => {
                 <ResumeRowsGrid
                     resumes={resumes}
                     email={email}
-                    checkboxId="resumesOfTheWeekOnlyNotViewed"
-                    title={(total, shown, onlyNotViewed) => (
-                        <>
-                            {total} {total == 1 ? 'currículo inserido ou alterado' : 'currículos inseridos ou alterados'} nos últimos 7 dias
-                            {onlyNotViewed && `, ${shown} ${shown == 1 ? 'ainda não visto' : 'ainda não vistos'}`}
-                        </>
-                    )}
+                    checkboxId={list.checkboxId}
+                    title={list.gridTitle}
                 />
             </div>
         </div>

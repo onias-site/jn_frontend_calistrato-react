@@ -103,6 +103,10 @@ const Sidebar = () => {
                                         <li>
                                             <Link href="/meus-dados/quem-me-viu">{t('Who viewed me')}</Link>
                                         </li>
+                                        {/* invisível a pedido do usuário (2026-11-24): ele tem algo a investigar nesta tela */}
+                                        {/* <li>
+                                            <Link href="/meus-dados/vagas">{t('Minhas Vagas')}</Link>
+                                        </li> */}
                                         {/* <li>
                                             <Link href="/maintenence">{t('My Reputation')}</Link>
                                         </li>
@@ -163,10 +167,10 @@ const Sidebar = () => {
                                         <li>
                                             <Link href="/meu-recrutamento/curriculos-da-semana">{t('Currículos da semana')}</Link>
                                         </li>
-                                        {/* invisível até a tela de vagas ficar pronta (2026-11-22) */}
-                                        {/* <li>
-                                            <Link href="/meu-recrutamento/vagas">{t('Vagas')}</Link>
-                                        </li> */}
+                                        {/* visível desde 2026-11-24, como "Vagas cadastradas" */}
+                                        <li>
+                                            <Link href="/meu-recrutamento/vagas">{t('Vagas cadastradas')}</Link>
+                                        </li>
                                         {/* <li>
                                             <Link href="/maintenence">{t('Comentários')}</Link>
                                         </li>

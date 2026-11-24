@@ -49,6 +49,14 @@ export const serverRequests = (state: any) => {
         state.setDetailMessage(`O token informado está incorreto, você ainda pode tentar mais ${3 - response.attempts} vez(es)`) || state.setContextField('token', '');
     const notifyAboutLoginNotFound = () => state.showModal('RequestEmail', '', null, 'O seu login não foi encontrado, por favor, informe um e-mail');
     const notifyAboutInvalidEmail = () => state.setDetailMessage(`O e-mail '${state.email}' informado é inválido, por favor, informe um e-mail válido`);
+    // 410 (desde 2026-11-23): o provedor de e-mail suprime o endereço (devolução permanente, endereço inexistente ou
+    // denúncia de spam), então o token de acesso nunca chegaria a ele
+    const notifyAboutSuppressedEmail = () => {
+        state.setInvalid(true);
+        state.setDetailMessage(
+            `O e-mail '${state.email}' não está recebendo as nossas mensagens (ele devolveu e-mails anteriores, não existe ou os marcou como spam), por isso o token de acesso não chegaria a ele. Por favor, informe outro e-mail ou, se este e-mail voltou a funcionar, escreva para ${supportEmail}.`
+        );
+    };
     const executeRetryAfterAuthentication = (response: any) => state.executeRetryAfterAuthentication(response);
     const setDetailMessage = (detailMessage: string) => () => state.setDetailMessage(detailMessage);
     const requestFirstPassword = () => state.showModal('SavePassword', '');
@@ -102,10 +110,14 @@ export const serverRequests = (state: any) => {
                 emailMissing: 404,
                 passwordBlocked: 423,
                 passwordRecentlyBlocked: 423,
+                emailSuppressed: 410,
             },
             // o conflito de login só aparece na tentativa de senha (requestPassword): até 2026-11-12 a verificação do
             // e-mail já respondia 409 e o modal pedia uma nova senha antes de o usuário digitar a dele
-            callbacks: {},
+            // o 410 do e-mail suprimido nunca é guardado: a supressão pode ser retirada, e o servidor é perguntado toda vez
+            callbacks: {
+                '410': notifyAboutSuppressedEmail,
+            },
             cached: {
                 '200': openModal('RequestPassword'),
                 '201': openModal('RequestAnswers'),

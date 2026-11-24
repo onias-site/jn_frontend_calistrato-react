@@ -9,7 +9,8 @@ export type SalaryRange = { min: number; max: number };
 
 export type Language = { name: string; level: number };
 
-export type SortRule = { type: 'asc' | 'desc'; field: string[] };
+// um critério por regra desde 2026-11-23; value é o nome do idioma (spokenLanguage) ou da habilidade (skill) do critério
+export type SortRule = { type: 'asc' | 'desc'; field: string[]; value?: string };
 
 export type Contact = { type: 'whatsapp' | 'email' | 'link'; value: string };
 
@@ -18,7 +19,8 @@ export type Position = {
     title: string;
     description: string;
     resumeType: number;
-    seniority: string;
+    // uma lista desde 2026-11-23; as vagas gravadas antes guardam um texto só
+    seniority: string | string[];
     ddd: number[];
     clt?: SalaryRange;
     pj?: SalaryRange;
@@ -33,8 +35,6 @@ export type Position = {
     sort: SortRule[];
     contact: Contact[];
     mustSendInGroups: boolean;
-    mustSendToResumes: boolean;
-    visibleToCandidates: boolean;
     frequencyType: string;
     resumesEmail?: string;
 };
@@ -44,7 +44,8 @@ export type PositionForm = {
     title: string;
     description: string;
     resumeType: string;
-    seniority: string;
+    // as senioridades aceitas pela vaga (escolha múltipla desde 2026-11-23)
+    seniority: string[];
     ddd: string[];
     hasClt: boolean;
     cltMin: number | '';
@@ -62,13 +63,19 @@ export type PositionForm = {
     expirationMin: string;
     expirationMax: string;
     sort: SortRule[];
+    // o usuário mexeu na ordem: a partir daí ela não volta a seguir a padrão (só perde os critérios que a vaga deixou de pedir)
+    sortEdited: boolean;
     contact: Contact[];
     mustSendInGroups: boolean;
-    mustSendToResumes: boolean;
-    visibleToCandidates: boolean;
     frequencyType: string;
     // o e-mail que recebe os currículos encontrados (o do recrutador logado, por padrão); sem uso na frequência 'none'
     resumesEmail: string;
+};
+
+/** As senioridades da vaga como lista: a vaga gravada antes de 2026-11-23 guarda um texto só. */
+export const senioritiesOf = (seniority: string | string[] | undefined): string[] => {
+    if (Array.isArray(seniority)) return seniority;
+    return seniority ? [seniority] : [];
 };
 
 export const seniorityOptions = [
@@ -81,23 +88,94 @@ export const seniorityOptions = [
 
 export const frequencyOptions = [
     { value: 'none', label: 'Não receber currículos' },
-    { value: 'instantly', label: 'Instantâneamente' },
-    { value: 'hourly', label: 'De hora em hora' },
-    { value: 'daily', label: 'Uma vez por dia' },
-    { value: 'weekly', label: 'Uma vez por semana' },
+    // desde 2026-11-23, no lugar do antigo visibleToCandidates: a vaga aparece aos candidatos aderentes, que enviam o currículo
+    { value: 'byTheCandidates', label: 'Os próprios candidatos enviam seus currículos' },
+    { value: 'instantly', label: 'Receber currículos instantâneamente' },
+    { value: 'hourly', label: 'Receber currículos uma vez por hora' },
+    { value: 'daily', label: 'Receber currículos uma vez por dia' },
+    { value: 'weekly', label: 'Receber currículos uma vez por semana' },
 ];
 
-export const sortFieldOptions = [
-    { value: 'pj', label: 'Pretensão PJ' },
-    { value: 'clt', label: 'Pretensão CLT' },
-    { value: 'experience', label: 'Experiência' },
-    { value: 'shouldSkillsTotal', label: 'Habilidades desejáveis' },
-];
+/**
+ * Um critério de ordem dos currículos que a vaga oferece (desde 2026-11-23): key identifica a opção no combo (o campo, ou
+ * "campo:valor" no idioma e na habilidade), types dá o texto de cada sentido e defaultType o sentido da ordem padrão.
+ */
+export type SortCriterion = {
+    key: string;
+    label: string;
+    field: string;
+    value?: string;
+    defaultType: 'asc' | 'desc';
+    types: { asc: string; desc: string };
+    // entra na ordem padrão (as habilidades desejáveis uma a uma só entram quando o usuário as escolhe)
+    inDefault: boolean;
+};
 
-export const sortTypeOptions = [
-    { value: 'asc', label: 'Crescente' },
-    { value: 'desc', label: 'Decrescente' },
-];
+const criterion = (field: string, label: string, defaultType: 'asc' | 'desc', asc: string, desc: string, value?: string, inDefault = true): SortCriterion => ({
+    key: value ? `${field}:${value}` : field,
+    label,
+    field,
+    value,
+    defaultType,
+    types: { asc, desc },
+    inDefault,
+});
+
+/** A chave da opção de uma regra de ordem: o campo, ou "campo:valor" no idioma e na habilidade. */
+export const sortKeyOf = (rule: SortRule) => (rule.value ? `${rule.field[0]}:${rule.value}` : rule.field[0] || '');
+
+/**
+ * Os critérios de ordem que a vaga oferece, na prioridade da ordem padrão. Só entra o que a vaga pede: a pretensão CLT ou
+ * PJ quando informa a faixa, um nível por idioma exigido, as habilidades só na vaga de tecnologia (lidas do texto da vaga),
+ * a disponibilidade e o trabalho temporário quando diferentes de 0 e, por último, uma opção por habilidade desejável.
+ */
+export const sortCriteriaOf = (form: PositionForm, desiredSkills: string[]): SortCriterion[] => {
+    const tech = isTechPosition(form);
+    const criteria: SortCriterion[] = [];
+    form.hasClt && criteria.push(criterion('clt', 'Pretensão CLT', 'asc', 'Candidatos mais baratos', 'Candidatos mais caros'));
+    form.hasPj && criteria.push(criterion('pj', 'Pretensão PJ', 'asc', 'Candidatos mais baratos', 'Candidatos mais caros'));
+    form.hasLanguages &&
+        form.spokenLanguage.forEach((language) =>
+            criteria.push(criterion('spokenLanguage', `Nível de ${language.name}`, 'desc', `Menor nível de ${language.name} primeiro`, `Maior nível de ${language.name} primeiro`, language.name)),
+        );
+    criteria.push(criterion('experience', 'Experiência', 'desc', 'Candidatos mais inexperientes', 'Candidatos mais experientes'));
+    tech && criteria.push(criterion('skillsTotal', 'Habilidades totais dos currículos', 'desc', 'Menor quantidade de habilidades', 'Maior quantidade de habilidades'));
+    tech && criteria.push(criterion('shouldSkillsTotal', 'Habilidades desejáveis', 'desc', 'Menor quantidade de habilidades desejáveis', 'Maior quantidade de habilidades desejáveis'));
+    Number(form.disponibility) > 0 && criteria.push(criterion('disponibility', 'Disponibilidade para começar', 'asc', 'Quem começa antes aparece primeiro', 'Quem começa depois aparece primeiro'));
+    Number(form.temporallyJobTime) > 0 &&
+        criteria.push(criterion('temporallyJobTime', 'Tempo de trabalho temporário', 'asc', 'Quem aceita menos meses aparece primeiro', 'Quem aceita mais meses aparece primeiro'));
+    tech &&
+        desiredSkills.forEach((skill) =>
+            criteria.push(criterion('skill', `Habilidade ${skill}`, 'desc', `Quem tiver ${skill} aparece depois`, `Quem tiver ${skill} aparece primeiro`, skill, false)),
+        );
+    return criteria;
+};
+
+/** A regra de ordem de um critério, no sentido dado (ou no padrão dele). */
+export const sortRuleOf = (criterion: SortCriterion, type: 'asc' | 'desc' = criterion.defaultType): SortRule =>
+    criterion.value ? { type, field: [criterion.field], value: criterion.value } : { type, field: [criterion.field] };
+
+/** A ordem padrão: os critérios que a vaga pede, na prioridade, cada um no seu sentido padrão. */
+export const defaultSortOf = (form: PositionForm, desiredSkills: string[]) =>
+    sortCriteriaOf(form, desiredSkills)
+        .filter((criterion) => criterion.inDefault)
+        .map((criterion) => sortRuleOf(criterion));
+
+/**
+ * A ordem a mostrar: a padrão enquanto o usuário não mexe nela; depois, a dele sem os critérios que a vaga deixou de
+ * pedir (vazia, volta a padrão).
+ */
+export const sortToShow = (form: PositionForm, desiredSkills: string[]) => {
+    const defaultSort = defaultSortOf(form, desiredSkills);
+    if (!form.sortEdited) return defaultSort;
+    const keys = sortCriteriaOf(form, desiredSkills).map((criterion) => criterion.key);
+    const kept = form.sort.filter((rule) => keys.includes(sortKeyOf(rule)));
+    return kept.length ? kept : defaultSort;
+};
+
+/** A ordem gravada antes de 2026-11-23 juntava critérios numa regra: aqui cada critério vira uma regra. */
+export const sortOfThePosition = (sort: SortRule[] | undefined): SortRule[] =>
+    (sort || []).flatMap((rule) => (rule.field || []).map((field) => (rule.value ? { type: rule.type, field: [field], value: rule.value } : { type: rule.type, field: [field] })));
 
 export const contactTypeOptions = [
     { value: 'whatsapp', label: 'WhatsApp' },
@@ -120,7 +198,8 @@ export const LIMITS = {
     salaryMax: 100000,
     disponibilityMax: 30,
     temporallyJobTimeMax: 12,
-    dddMax: 67,
+    // todas as regiões mais o home office (a vaga simplificada, desde 2026-11-24)
+    dddMax: 68,
     contactValueMax: 500,
 };
 
@@ -189,7 +268,7 @@ export const emptyForm = (now: Date = new Date()): PositionForm => {
         title: '',
         description: '',
         resumeType: '1',
-        seniority: '',
+        seniority: [],
         // home office marcado por padrão: a aba Opções já entra contando os currículos do ddd 10
         ddd: ['10'],
         hasClt: true,
@@ -207,23 +286,53 @@ export const emptyForm = (now: Date = new Date()): PositionForm => {
         travel: false,
         expirationMin: today(now),
         expirationMax: today(inThirtyDays),
-        sort: [{ type: 'desc', field: ['experience'] }],
+        // a padrão de uma vaga nova (CLT marcado, sem idiomas): o modal a refaz enquanto o usuário não mexer nela
+        sort: [
+            { type: 'asc', field: ['clt'] },
+            { type: 'desc', field: ['experience'] },
+            { type: 'desc', field: ['skillsTotal'] },
+            { type: 'desc', field: ['shouldSkillsTotal'] },
+        ],
+        sortEdited: false,
         contact: [{ type: 'email', value: '' }],
         mustSendInGroups: true,
-        mustSendToResumes: true,
-        visibleToCandidates: true,
         frequencyType: 'daily',
         resumesEmail: '',
     };
 };
 
 
+/**
+ * A vaga simplificada (desde 2026-11-24): só as abas Vaga e Salários aparecem, e o resto vem preenchido. Todas as
+ * senioridades, todas as regiões mais o home office, nenhum idioma, os próprios candidatos enviam os currículos, a
+ * divulgação nos grupos marcada e o e-mail que recebe os currículos é o do usuário logado.
+ */
+export const simplifiedFormOf = (allDdds: string[], loggedEmail: string, now: Date = new Date()): PositionForm => ({
+    ...emptyForm(now),
+    seniority: seniorityOptions.map((option) => option.value),
+    ddd: allDdds,
+    hasLanguages: false,
+    spokenLanguage: [],
+    frequencyType: 'byTheCandidates',
+    mustSendInGroups: true,
+    resumesEmail: loggedEmail,
+});
+
+/** A ordem da vaga simplificada: as pretensões informadas (CLT antes de PJ), os mais baratos primeiro, e a experiência. */
+export const simplifiedSortOf = (form: PositionForm): SortRule[] => {
+    const sort: SortRule[] = [];
+    form.hasClt && sort.push({ type: 'asc', field: ['clt'] });
+    form.hasPj && sort.push({ type: 'asc', field: ['pj'] });
+    sort.push({ type: 'desc', field: ['experience'] });
+    return sort;
+};
+
 /** O formulário de "Editar", preenchido com a vaga. */
 export const formOf = (position: Position): PositionForm => ({
     title: position.title,
     description: position.description,
     resumeType: String(position.resumeType),
-    seniority: position.seniority,
+    seniority: senioritiesOf(position.seniority),
     ddd: (position.ddd || []).map(String),
     hasClt: !!position.clt,
     cltMin: position.clt ? position.clt.min : '',
@@ -240,11 +349,11 @@ export const formOf = (position: Position): PositionForm => ({
     travel: !!position.travel,
     expirationMin: toDateInput(position.expiration.min),
     expirationMax: toDateInput(position.expiration.max),
-    sort: position.sort && position.sort.length ? position.sort : [{ type: 'desc', field: ['experience'] }],
+    sort: sortOfThePosition(position.sort),
+    // a vaga gravada guarda a ordem escolhida; sem ordem gravada, segue a padrão
+    sortEdited: sortOfThePosition(position.sort).length > 0,
     contact: position.contact && position.contact.length ? position.contact : [{ type: 'email', value: '' }],
     mustSendInGroups: position.mustSendInGroups !== false,
-    mustSendToResumes: position.mustSendToResumes !== false,
-    visibleToCandidates: position.visibleToCandidates !== false,
     frequencyType: position.frequencyType || 'daily',
     resumesEmail: position.resumesEmail || '',
 });
@@ -272,8 +381,6 @@ export const requestBodyOf = (form: PositionForm, skills: any[] = []) => {
         sort: form.sort,
         contact: form.contact.map((contact) => ({ type: contact.type, value: contact.value.trim() })),
         mustSendInGroups: form.mustSendInGroups,
-        mustSendToResumes: form.mustSendToResumes,
-        visibleToCandidates: form.visibleToCandidates,
         frequencyType: form.frequencyType,
     };
     if (sendsTheResumes(form)) body.resumesEmail = form.resumesEmail.trim();
@@ -337,7 +444,7 @@ export const languagesTabErrors = (form: PositionForm) => {
 export const filtersTabErrors = (form: PositionForm) => {
     const errors: string[] = [];
     (form.ddd.length < 1 || form.ddd.length > LIMITS.dddMax) && errors.push('Escolha ao menos uma região');
-    !form.seniority && errors.push('Escolha a senioridade');
+    !form.seniority.length && errors.push('Escolha ao menos uma senioridade');
     isOutOfIntegerRange(form.disponibility, LIMITS.disponibilityMax) && errors.push(`Os dias para começar devem ir de 1 a ${LIMITS.disponibilityMax}`);
     isOutOfIntegerRange(form.temporallyJobTime, LIMITS.temporallyJobTimeMax) && errors.push(`A duração do temporário deve ir de 1 a ${LIMITS.temporallyJobTimeMax} meses`);
     return errors;
@@ -393,8 +500,11 @@ export const DESIRED_SKILLS = 'shouldSkills';
 
 // desde 2026-11-22 as encontradas na descrição vão para as desejáveis (a lista principal, de onde saem as implícitas), e
 // o recrutador arrasta para as obrigatórias as que os currículos precisam ter
+// o máximo de habilidades obrigatórias (desde 2026-11-23): o positions/resumes-of-the-filters recusa (422) mais de 100
+export const REQUIRED_SKILLS_MAX = 100;
 const requiredSkillsGroup = (list: any[]) => ({
     title: 'Habilidades OBRIGATÓRIAS da vaga',
+    maxItems: REQUIRED_SKILLS_MAX,
     help: 'Os currículos encontrados precisam ter todas estas habilidades. Arraste para cá, da lista de desejáveis, as que forem obrigatórias.',
     name: REQUIRED_SKILLS,
     category: 'skillsFromText',
@@ -428,6 +538,15 @@ export const toSkillListItem = (savedSkill: any) => {
  * tela mandou como excluídas, para não reaparecerem entre as desejáveis) voltam como excluídas.
  */
 export const skillGroupsFromText = (response: any) => [desiredSkillsGroup(response.skill || []), requiredSkillsGroup(response.excludedSkill || [])];
+
+/**
+ * As listas da vaga simplificada (desde 2026-11-24): todas as habilidades encontradas na descrição são obrigatórias, e
+ * nenhuma desejável. Sem a aba Habilidades para retirar o excesso, ficam as primeiras até o máximo que o backend aceita.
+ */
+export const simplifiedSkillGroupsFromText = (response: any) => [
+    desiredSkillsGroup([]),
+    requiredSkillsGroup([...(response.excludedSkill || []), ...(response.skill || [])].slice(0, REQUIRED_SKILLS_MAX)),
+];
 
 /**
  * As listas e o contexto da aba a partir das habilidades gravadas na vaga ("Editar"): cada uma volta à lista do seu type,

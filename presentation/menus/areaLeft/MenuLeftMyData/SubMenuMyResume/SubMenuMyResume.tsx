@@ -386,10 +386,13 @@ const getOptionsPendingRequirements = (stateRegioes: any, stateOptions: any): st
 
 // todas as regras de VisEntityResume.Fields: cada aba confere as suas ao avançar, e a aba que salva confere também as das
 // outras (com o nome da aba na frente), porque dá para voltar a uma aba anterior e mudar um campo depois de passar por ela
+// os idiomas ficam na aba Habilidades quando ela aparece (desde 2026-11-23): a pendência deles leva o nome da aba onde estão
 const getAllPendingRequirements = (stateSkills: any, stateResume: any, stateLanguage: any, stateSalary: any, stateRegioes: any, stateOptions: any): string[] => {
+    const withTabSkills = SubMenuMyResumeStore.getState().hasTabSkills && isTechResume(stateResume);
+    const languagesTabLabel = withTabSkills ? 'Habilidades' : 'Idiomas';
     const pendingByTab: [string, string[]][] = [
         ['Currículo', stateResume.getPendingRequirements()],
-        ['Idiomas', stateLanguage.getPendingRequirements()],
+        [languagesTabLabel, stateLanguage.getPendingRequirements()],
         ['Habilidades', isTechResume(stateResume) ? stateSkills.getPendingRequirements() : []],
         ['Opções', getOptionsPendingRequirements(stateRegioes, stateOptions)],
     ];
@@ -586,15 +589,18 @@ const SubMenuMyResume = () => {
     // mesmo número que aparece ao lado do título da lista principal (habilidades pelas quais o currículo é ENCONTRADO)
     const mainSkillsGroup: any = stateSkills.groups.filter((group: any) => group.main)[0];
     const mainSkillsCount = mainSkillsGroup && mainSkillsGroup.list ? mainSkillsGroup.list.length : 0;
+    // a aba Habilidades toma o lugar da aba Idiomas (desde 2026-11-23, como no modal da vaga), com os idiomas no topo dela
+    // e as pendências das duas; sem ela (currículo que não é de TI, ou sem habilidade encontrada), a aba Idiomas continua
+    const skillsTabErrors = () => [...stateLanguage.getPendingRequirements(), ...stateSkills.getPendingRequirements()];
     const tabSkills: any = {
         label: `${mainSkillsCount} Habilidades`,
         icon: <IconGithub className="h-4 w-4" />,
         title: 'Caso as habilidades estiverem desatualizadas / incorretas, volte à aba currículo e preencha o texto do currículo, para que possamos atualizar corretamente a sua lista de habilidades',
-        onMoveOnFowardTabs: stateSkills.getPendingRequirements,
-        getPendingRequirements: stateSkills.getPendingRequirements,
+        onMoveOnFowardTabs: () => [...stateLanguage.onMoveOnFowardTabs(), ...stateSkills.getPendingRequirements()],
+        getPendingRequirements: skillsTabErrors,
     };
 
-    hasTabSkills && tabs.splice(2, 0, tabSkills);
+    hasTabSkills && tabs.splice(1, 1, tabSkills);
 
     const statusButtons = <ResumeStatusButtons resumeStatus={resumeStatus} setResumeStatus={setResumeStatus} />;
 
@@ -650,8 +656,12 @@ const SubMenuMyResume = () => {
             {hasTabSkills ? (
                 <Tabs key={stateSubMenuMyResume.formVersion} tabs={tabs} lastButtonLabel="Salvar dados" lastButtonIcon={<IconSave className="h-4 w-4" />} shortcutButton={saveShortcutButton} resetSignal={tabsReset}>
                     <TabResume />
-                    <TabLanguages />
-                    <TabSkills2 getAccordionList={getImplicitSkills} />
+                    <div>
+                        <div className="mb-6 border-b border-white-light pb-2 dark:border-[#1b2e4b]">
+                            <TabLanguages />
+                        </div>
+                        <TabSkills2 getAccordionList={getImplicitSkills} withMoveOne />
+                    </div>
                     <TabOptions />
                     <TabSalary />
                 </Tabs>

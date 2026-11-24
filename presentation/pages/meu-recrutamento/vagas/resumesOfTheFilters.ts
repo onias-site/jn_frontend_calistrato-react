@@ -1,5 +1,5 @@
 import { HOME_OFFICE } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabFilter/RegioesComponent';
-import { isTechPosition, LIMITS, PositionForm } from './positionsData';
+import { isTechPosition, LIMITS, PositionForm, REQUIRED_SKILLS_MAX } from './positionsData';
 
 /**
  * Os currículos que atendem aos filtros da vaga (desde 2026-11-22): o público POST positions/resumes-of-the-filters
@@ -8,7 +8,7 @@ import { isTechPosition, LIMITS, PositionForm } from './positionsData';
  * contratação imediata (0 dias), vaga não temporária (0 meses), caixa desmarcada, faixa salarial desligada ou incompleta.
  */
 
-export type ResumesOfTheFilters = { ids: string[]; resumes: number; cltAverage?: number; pjAverage?: number };
+export type ResumesOfTheFilters = { ids: string[]; resumes: number; cltAverage?: number; pjAverage?: number; experienceAverage?: number };
 
 const DOMAIN = /^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$/;
 
@@ -30,19 +30,26 @@ export const recruiterDomainOf = (email?: string | null) => {
     return DOMAIN.test(domain) ? domain.toLowerCase() : null;
 };
 
-/** O corpo do POST positions/resumes-of-the-filters, ou null quando ainda não dá para contar (sem área ou sem região). */
+// as habilidades sem as repetidas, mesmo com maiúsculas e minúsculas diferentes ("SPRING" e "spring"): fica a primeira
+const distinctSkills = (skills: string[]) => skills.filter((skill, index) => skills.findIndex((other) => other.toUpperCase() == skill.toUpperCase()) == index);
+
+/**
+ * O corpo do POST positions/resumes-of-the-filters, ou null quando ainda não dá para contar (sem área, sem região ou com
+ * mais habilidades obrigatórias do que o backend aceita, que a aba Habilidades avisa e bloqueia).
+ */
 export const filtersRequestOf = (form: PositionForm, requiredSkills: string[], loggedEmail?: string | null) => {
     if (!form.resumeType) return null;
     const homeOffice = form.ddd.includes(HOME_OFFICE);
     if (!homeOffice && !form.ddd.length) return null;
+    const skills = isTechPosition(form) ? distinctSkills(requiredSkills.filter(Boolean)) : [];
+    if (skills.length > REQUIRED_SKILLS_MAX) return null;
     const body: Record<string, any> = { resumeType: Number(form.resumeType) };
     !homeOffice && (body.ddd = form.ddd.map(Number));
     const disponibility = positive(form.disponibility);
     disponibility && (body.disponibility = disponibility);
     const temporallyJobTime = positive(form.temporallyJobTime);
     temporallyJobTime && (body.temporallyJobTime = temporallyJobTime);
-    form.seniority && (body.seniority = form.seniority);
-    const skills = isTechPosition(form) ? requiredSkills.filter(Boolean) : [];
+    form.seniority.length && (body.seniority = form.seniority);
     skills.length && (body.skill = skills);
     const languages = form.hasLanguages ? form.spokenLanguage.map(({ name, level }) => ({ name, level })) : [];
     languages.length && (body.spokenLanguage = languages);
@@ -60,10 +67,17 @@ export const filtersRequestOf = (form: PositionForm, requiredSkills: string[], l
 
 const money = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
 
-/** "Foram encontrados N currículos", com as médias de pretensão dos que as informaram. */
+// os anos com uma casa decimal só quando ela existe: "6 anos", "6,5 anos"
+const years = (value: number) => `${value.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} ${value == 1 ? 'ano' : 'anos'}`;
+
+/** "Foram encontrados N currículos", com as médias de pretensão e (desde 2026-11-23) de experiência dos que as informaram. */
 export const foundResumesMessage = (found: ResumesOfTheFilters) => {
     if (found.resumes == 0) return 'Não foram encontrados currículos para os seus critérios de busca';
-    const averages = [found.cltAverage != null && `média CLT ${money(found.cltAverage)}`, found.pjAverage != null && `média PJ ${money(found.pjAverage)}`].filter(Boolean);
+    const averages = [
+        found.cltAverage != null && `média CLT ${money(found.cltAverage)}`,
+        found.pjAverage != null && `média PJ ${money(found.pjAverage)}`,
+        found.experienceAverage != null && `média de experiência ${years(found.experienceAverage)}`,
+    ].filter(Boolean);
     const count = `Foram encontrados ${found.resumes} currículos`;
     return averages.length ? `${count} (${averages.join(', ')})` : count;
 };

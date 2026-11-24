@@ -4,6 +4,7 @@ import {
     filtersTabErrors,
     formOf,
     foundResumesLabel,
+    frequencyOptions,
     fromDateInput,
     isValidContact,
     languagesTabErrors,
@@ -19,6 +20,7 @@ import {
     skillGroupsOfThePosition,
     replacePosition,
     requestBodyOf,
+    senioritiesOf,
     splitByExpiration,
     toDateInput,
 } from './positionsData';
@@ -29,7 +31,7 @@ const validForm = () => ({
     ...emptyForm(now),
     title: 'Desenvolvedor Java pleno',
     description: 'x'.repeat(120),
-    seniority: 'pleno',
+    seniority: ['pleno'],
     resumesEmail: 'rh@empresa.com.br',
     ddd: ['11', '21'],
     cltMin: 5000 as number | '',
@@ -61,6 +63,15 @@ describe('positionsData', () => {
         expect(replacePosition(positions, { ...positions[1], description: 'nova' } as any).filter((position) => position.title == 'A')[0].description).toBe('nova');
         expect(removePosition(positions, 'A').map((position) => position.title)).toEqual(['B']);
         expect(changeExpiration(positions, 'B', { min: '1', max: '99' }).filter((position) => position.title == 'B')[0].expiration).toEqual({ min: 1, max: 99 });
+    });
+
+    it('as senioridades da vaga são uma lista: a vaga gravada antes, com um texto só, vira lista de uma', () => {
+        expect(senioritiesOf(['junior', 'pleno'])).toEqual(['junior', 'pleno']);
+        expect(senioritiesOf('pleno')).toEqual(['pleno']);
+        expect(senioritiesOf(undefined)).toEqual([]);
+        expect(formOf({ ...positionOf(requestBodyOf(validForm(), [])), seniority: 'senior' } as any).seniority).toEqual(['senior']);
+        expect(requestBodyOf({ ...validForm(), seniority: ['junior', 'pleno'] }, []).seniority).toEqual(['junior', 'pleno']);
+        expect(pendingRequirements({ ...validForm(), seniority: [] }, true)).toContain('Escolha ao menos uma senioridade');
     });
 
     it('converte as datas do campo para o começo e o fim do dia', () => {
@@ -96,7 +107,7 @@ describe('positionsData', () => {
     it('lista o que falta no formulário', () => {
         expect(pendingRequirements(validForm(), true, now)).toEqual([]);
         expect(pendingRequirements(emptyForm(now), true, now)).toEqual(
-            expect.arrayContaining(['O título deve ter de 10 a 100 caracteres', 'Escolha a senioridade']),
+            expect.arrayContaining(['O título deve ter de 10 a 100 caracteres', 'Escolha ao menos uma senioridade']),
         );
         // a vaga nova nasce home office
         expect(emptyForm(now).ddd).toEqual(['10']);
@@ -151,10 +162,14 @@ describe('positionsData', () => {
         expect(context.cacheHash).toBe('hash');
     });
 
-    it('a vaga nasce visível aos candidatos e o erro de cada campo da aba Vaga fica no campo', () => {
-        expect(emptyForm(now).visibleToCandidates).toBe(true);
-        expect(requestBodyOf({ ...validForm(), visibleToCandidates: false }).visibleToCandidates).toBe(false);
-        expect(formOf(positionOf(requestBodyOf({ ...validForm(), visibleToCandidates: false }))).visibleToCandidates).toBe(false);
+    it('"os próprios candidatos enviam" é uma opção de recebimento (pede o e-mail) e o erro de cada campo da aba Vaga fica no campo', () => {
+        expect(frequencyOptions.map((option) => option.value)).toEqual(['none', 'byTheCandidates', 'instantly', 'hourly', 'daily', 'weekly']);
+        const byTheCandidates = { ...validForm(), frequencyType: 'byTheCandidates' };
+        expect(requestBodyOf(byTheCandidates)).toMatchObject({ frequencyType: 'byTheCandidates', resumesEmail: 'rh@empresa.com.br' });
+        expect(requestBodyOf(byTheCandidates)).not.toHaveProperty('visibleToCandidates');
+        expect(requestBodyOf(byTheCandidates)).not.toHaveProperty('mustSendToResumes');
+        expect(optionsTabErrors({ ...byTheCandidates, resumesEmail: '' })).toEqual(['Informe o e-mail para o qual enviar os currículos']);
+        expect(formOf(positionOf(requestBodyOf(byTheCandidates))).frequencyType).toBe('byTheCandidates');
         expect(Object.keys(positionTabFieldErrors({ ...validForm(), title: 'curto', contact: [] }, true, now))).toEqual(['title', 'contact']);
     });
 

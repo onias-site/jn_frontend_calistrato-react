@@ -184,9 +184,15 @@ export interface TabSkillsProps {
     source?: SkillsSource;
     // o que a coluna de acordeões mostra; sem ela, os conhecimentos implícitos
     accordionView?: SkillsAccordionView;
+    // o botão "Mover todos" de cada lista, que passa todos os itens dela para a outra (só com duas listas; na vaga, desde
+    // 2026-11-23, entre as desejáveis e as obrigatórias)
+    withMoveAll?: boolean;
+    // só a seta ao lado de cada habilidade, que a passa para a outra lista, sem o "Mover todos" (no currículo, desde
+    // 2026-11-23); withMoveAll já traz a seta
+    withMoveOne?: boolean;
 }
 
-export const TabSkills2: React.FC<TabSkillsProps> = ({ getAccordionList, store = TabSkillStore, withSuggestions = true, source, accordionView = IMPLICIT_SKILLS_VIEW }) => {
+export const TabSkills2: React.FC<TabSkillsProps> = ({ getAccordionList, store = TabSkillStore, withSuggestions = true, source, accordionView = IMPLICIT_SKILLS_VIEW, withMoveAll = false, withMoveOne = false }) => {
     const { groups, setGroups } = store((state: ITabSkillStore) => ({
         ...state,
     }));
@@ -227,14 +233,55 @@ export const TabSkills2: React.FC<TabSkillsProps> = ({ getAccordionList, store =
         group.filter = filter;
     };
 
+    // todos os itens da lista (inclusive os escondidos pelo filtro) vão para o fim da outra, e o filtro dela se desfaz
+    const moveAll = (from: any, to: any) => {
+        // a lista de destino com máximo (as obrigatórias da vaga): sem espaço para todas, nada se move
+        const room = to.maxItems ? to.maxItems - to.list.length : from.list.length;
+        if (from.list.length > room) {
+            PubSub.publish('showMessage', {
+                summary: 'Limite de habilidades',
+                detail: `A lista '${to.title}' aceita no máximo ${to.maxItems} habilidades e cabem só mais ${Math.max(room, 0)}. Mova as habilidades uma a uma, arrastando as que quiser.`,
+                severity: 'warn',
+            });
+            return;
+        }
+        to.list = [...to.list, ...from.list];
+        from.list = [];
+        from.filter = '';
+        setGroups(groups, getAccordionList);
+    };
+    // uma habilidade só (a seta ao lado dela), para o fim da outra lista, se couber
+    const moveOne = (from: any, to: any, item: any) => {
+        if (to.maxItems && to.list.length >= to.maxItems) {
+            PubSub.publish('showMessage', {
+                summary: 'Limite de habilidades',
+                detail: `A lista '${to.title}' aceita no máximo ${to.maxItems} habilidades. Retire uma dela para acrescentar ${item.label}.`,
+                severity: 'warn',
+            });
+            return;
+        }
+        from.list = from.list.filter((x: any) => x.label != item.label);
+        to.list = [...to.list, item];
+        setGroups(groups, getAccordionList);
+    };
+    const moveAllOf = (group: any, index: number): MoveAllButton | undefined => {
+        if (!withMoveAll && !withMoveOne) return undefined;
+        if (groups.length != 2) return undefined;
+        const otherIndex = index == 0 ? 1 : 0;
+        const other: any = groups[otherIndex];
+        const button = { toTheRight: otherIndex > index, targetTitle: other.title, showMoveAll: withMoveAll, onClick: () => moveAll(group, other), onMoveOne: (item: any) => moveOne(group, other, item) };
+        return button;
+    };
+
     const width = groups.length ? 100 / (groups.length + 1) + '%' : '';
     return (
         // no celular as três colunas ficam uma embaixo da outra; a partir do md, lado a lado, cada uma com a sua fração
         <SkillsSourceContext.Provider value={sourceContext}>
         <div className="flex flex-col md:max-h-[1000px] md:flex-row">
             <AccordionList width={width} store={store} withSuggestions={withSuggestions} view={accordionView} />
-            {groups.map((group: any) => (
+            {groups.map((group: any, index: number) => (
                 <SkillList
+                    moveAll={moveAllOf(group, index)}
                     transferToAnotherList={(item: any) => transferToAnotherList(group.name, item)}
                     setFilter={(obj) => setValue(group.name, 'filter', obj)}
                     setList={(obj) => setValue(group.name, 'list', obj)}
@@ -243,6 +290,7 @@ export const TabSkills2: React.FC<TabSkillsProps> = ({ getAccordionList, store =
                     list={group.list}
                     main={group.main}
                     help={group.help}
+                    maxItems={group.maxItems}
                     withSuggestions={withSuggestions}
                     key={group.name}
                     width={width}
@@ -253,7 +301,26 @@ export const TabSkills2: React.FC<TabSkillsProps> = ({ getAccordionList, store =
     );
 };
 
+// o contador de uma lista com máximo: quantas ainda cabem, o limite atingido ou quantas sobram
+const remainingItemsText = (remaining: number, maxItems: number) => {
+    if (remaining > 0) return `Restam ${remaining} de ${maxItems} habilidades`;
+    if (remaining == 0) return `Limite de ${maxItems} habilidades atingido: retire uma para acrescentar outra`;
+    return `Limite de ${maxItems} habilidades ultrapassado: retire ${-remaining}`;
+};
+
+interface MoveAllButton {
+    // a outra lista está à direita desta (no celular as listas ficam uma embaixo da outra, e a dica diz qual é)
+    toTheRight: boolean;
+    targetTitle: string;
+    // o botão "Mover todos" (só com withMoveAll); a seta de cada habilidade aparece sempre
+    showMoveAll: boolean;
+    onClick: () => void;
+    // a seta ao lado de cada habilidade (desde 2026-11-23): move só ela
+    onMoveOne: (item: any) => void;
+}
+
 interface SkillListProps {
+    moveAll?: MoveAllButton;
     transferToAnotherList: (item: any) => void;
     setFilter: (filter: string) => void;
     setList: (list: any[]) => void;
@@ -264,6 +331,8 @@ interface SkillListProps {
     list: any[];
     // a explicação da lista; sem ela, a das listas do currículo
     help?: string;
+    // o máximo de itens da lista (as obrigatórias da vaga): mostra quantos ainda cabem e recusa o arraste além dele
+    maxItems?: number;
     withSuggestions: boolean;
 }
 
@@ -524,7 +593,12 @@ const errorHasFound = (context: any, error: any, word: string, source: SkillsSou
     return true;
 };
 
-const SkillList: React.FC<SkillListProps> = ({ title, width, list, filter, setFilter, setList, transferToAnotherList, main, help, withSuggestions }) => {
+const SkillList: React.FC<SkillListProps> = ({ moveAll, title, width, list, filter, setFilter, setList, transferToAnotherList, main, help, maxItems, withSuggestions }) => {
+    // quantas habilidades ainda cabem; o SortableJS guarda as opções do grupo da montagem, então o put lê a lista por ref
+    const remaining = maxItems ? maxItems - list.length : 0;
+    const listRef = React.useRef(list);
+    listRef.current = list;
+    const [sortableGroup] = useState(() => ({ name: 'shared', put: () => !maxItems || listRef.current.length < maxItems }));
     const filtro = (item: any) => !filter || item.label.toUpperCase().startsWith(filter.trim().toUpperCase());
     // o ReactSortable localiza o item arrastado pelo índice no DOM, então precisa receber a mesma lista que é renderizada (a filtrada)
     const filteredList = list.filter(filtro);
@@ -540,6 +614,18 @@ const SkillList: React.FC<SkillListProps> = ({ title, width, list, filter, setFi
                     <label className="font-semibold leading-snug">{`${title} (${list.length})`}</label>
                     <HelpButton title={title} explanation={help || (main ? SKILLS_FROM_RESUME_HELP : EXCLUDED_SKILLS_FROM_RESUME_HELP)} tooltip="Clique aqui para saber mais detalhes sobre esta lista" />
                 </div>
+                {!!maxItems && (
+                    <div className={`mb-2 text-sm font-semibold ${remaining > 0 ? 'text-primary' : 'text-danger'}`}>
+                        {remainingItemsText(remaining, maxItems)}
+                    </div>
+                )}
+                {moveAll && moveAll.showMoveAll && (
+                    <Tooltip label={`Move todas as habilidades desta lista para a lista '${moveAll.targetTitle}'`} withArrow multiline w={260}>
+                        <button type="button" className="btn btn-outline-primary btn-sm mb-2" disabled={!list.length} onClick={moveAll.onClick}>
+                            {moveAll.toTheRight ? 'Mover todos →' : '← Mover todos'}
+                        </button>
+                    </Tooltip>
+                )}
 
                 {(list.length >= 7 || filter) && (
                     <TextInput className="mb-2" placeholder="Digite a habilidade para filtrar da listagem abaixo" value={filter || ''} onChange={(e) => setFilter(e.currentTarget.value)} />
@@ -561,7 +647,7 @@ const SkillList: React.FC<SkillListProps> = ({ title, width, list, filter, setFi
                             animation={200}
                             delay={1}
                             ghostClass="gu-transit"
-                            group="shared"
+                            group={sortableGroup}
                             onAdd={(evt) => transferToAnotherList(evt.item.textContent)}
                         >
                             {list.length ? (
@@ -572,6 +658,19 @@ const SkillList: React.FC<SkillListProps> = ({ title, width, list, filter, setFi
                                                 <div className="my-3 font-semibold md:my-0 ">
                                                     <div className="text-base text-dark dark:text-[#bfc9d4]">{skill.label}</div>
                                                 </div>
+                                                {moveAll && (
+                                                    <ActionIcon
+                                                        variant="light"
+                                                        color="primary"
+                                                        size="sm"
+                                                        className="shrink-0"
+                                                        title={`Mover para a lista '${moveAll.targetTitle}'`}
+                                                        aria-label={`Mover ${skill.label} para a lista '${moveAll.targetTitle}'`}
+                                                        onClick={() => moveAll.onMoveOne(skill)}
+                                                    >
+                                                        {moveAll.toTheRight ? '→' : '←'}
+                                                    </ActionIcon>
+                                                )}
                                             </div>
                                         </div>
                                     </li>

@@ -57,6 +57,9 @@ export const Positions = () => {
     const [tab, setTab] = useState<PositionsTab>('active');
     // undefined: modal fechado; null: "Abrir nova vaga"; uma vaga: "Editar"
     const [editing, setEditing] = useState<Position | null | undefined>(undefined);
+    // "Abrir nova vaga" (desde 2026-11-24) abre a escolha entre a vaga completa e a simplificada
+    const [choosing, setChoosing] = useState(false);
+    const [simplified, setSimplified] = useState(false);
     const [reactivating, setReactivating] = useState<Position | null>(null);
     const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
     // as vagas gravadas antes de a lista chegar do backend (ex.: a primeira, salva por quem fez o login só para salvar):
@@ -92,6 +95,30 @@ export const Positions = () => {
     };
 
     useEffect(load, []);
+
+    const openComplete = () => {
+        setChoosing(false);
+        setSimplified(false);
+        setEditing(null);
+    };
+    // a vaga simplificada exige login antes de abrir (o e-mail dele recebe os currículos); ao entrar, a lista é relida
+    const openSimplified = () => {
+        setChoosing(false);
+        const logged: any = JnAjax.getLogin() || {};
+        const open = () => {
+            setSimplified(true);
+            setEditing(null);
+        };
+        if (logged.email) return open();
+        JnAjax.getHandler401(() => {
+            load();
+            open();
+        })();
+    };
+    const closeForm = () => {
+        setEditing(undefined);
+        setSimplified(false);
+    };
 
     // fechar o modal de login aberto por aqui só fecha o modal: a tela continua aberta, sem login
     const openLogin = () => {
@@ -152,7 +179,7 @@ export const Positions = () => {
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                 <h5 className="text-lg font-semibold">Vagas</h5>
                 {(situation == 'loaded' || situation == 'notLogged') && (
-                    <button type="button" className="btn btn-primary" aria-haspopup="dialog" onClick={() => setEditing(null)}>
+                    <button type="button" className="btn btn-primary" aria-haspopup="dialog" onClick={() => setChoosing(true)}>
                         Abrir nova vaga
                     </button>
                 )}
@@ -181,8 +208,27 @@ export const Positions = () => {
                     <Tabs.Panel value="expired">{grid('expired', expired, 'Nenhuma vaga expirada.')}</Tabs.Panel>
                 </Tabs>
             )}
-            <Modal visible={editing !== undefined} setVisible={(visible) => !visible && setEditing(undefined)} title={editing ? 'Editar vaga' : 'Abrir nova vaga'} size="90%" closeOnClickOutside={false} closeOnEscape={false}>
-                {editing !== undefined && <PositionFormModal key={editing ? editing.title : 'new'} position={editing} onSaved={saved} onCancel={() => setEditing(undefined)} />}
+            <Modal visible={choosing} setVisible={setChoosing} title="Abrir nova vaga" size="md">
+                <div className="flex flex-col gap-3 sm:flex-row">
+                    <button type="button" className="btn btn-primary flex-1" onClick={openComplete}>
+                        Abrir vaga completa
+                    </button>
+                    <button type="button" className="btn btn-outline-primary flex-1" onClick={openSimplified}>
+                        Abrir vaga simplificada
+                    </button>
+                </div>
+            </Modal>
+            <Modal
+                visible={editing !== undefined}
+                setVisible={(visible) => !visible && closeForm()}
+                title={editing ? 'Editar vaga' : simplified ? 'Abrir vaga simplificada' : 'Abrir nova vaga'}
+                size="90%"
+                closeOnClickOutside={false}
+                closeOnEscape={false}
+            >
+                {editing !== undefined && (
+                    <PositionFormModal key={editing ? editing.title : simplified ? 'newSimplified' : 'new'} position={editing} simplified={editing == null && simplified} onSaved={saved} onCancel={closeForm} />
+                )}
             </Modal>
             <Modal visible={reactivating != null} setVisible={(visible) => !visible && setReactivating(null)} title="Reativar vaga" size="md">
                 {reactivating && <ReactivatePositionForm key={reactivating.title} position={reactivating} onReactivated={reactivated} onCancel={() => setReactivating(null)} />}

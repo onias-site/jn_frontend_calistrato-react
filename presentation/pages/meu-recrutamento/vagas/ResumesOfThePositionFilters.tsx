@@ -1,8 +1,10 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Tabs } from '@mantine/core';
 import JnAjax from '@/app/JnAjax';
 import { ResumeRowsGrid } from '../ResumeRowsGrid';
+import { SortRule } from './positionsData';
+import { sortResumes } from './resumesSort';
 
 type Situation = 'loading' | 'loaded' | 'notLogged' | 'error';
 
@@ -26,10 +28,14 @@ const plural = (total: number, singular: string, plural: string) => `${total} ${
  * a cada contagem nova (mudou um filtro, mudam os ids). O link de cada currículo abre a prévia numa nova aba do navegador
  * e grava a visualização (ela passa a constar em "curriculos-visualizados").
  */
-export const ResumesOfThePositionFilters = ({ ids }: { ids: string[] }) => {
+export const ResumesOfThePositionFilters = ({ ids, sort, desiredSkills }: { ids: string[]; sort: SortRule[]; desiredSkills: string[] }) => {
     const [situation, setSituation] = useState<Situation>('loading');
-    const [resumes, setResumes] = useState<any[]>([]);
-    const [unwantedResumes, setUnwantedResumes] = useState<any[]>([]);
+    const [receivedResumes, setResumes] = useState<any[]>([]);
+    const [receivedUnwantedResumes, setUnwantedResumes] = useState<any[]>([]);
+    // a ordem da aba Opções (desde 2026-11-24): a lista que já chegou é reordenada aqui, sem pedir de novo ao mudar um critério
+    const sortKey = JSON.stringify([sort, desiredSkills]);
+    const resumes = useMemo(() => sortResumes(receivedResumes, sort, desiredSkills), [receivedResumes, sortKey]);
+    const unwantedResumes = useMemo(() => sortResumes(receivedUnwantedResumes, sort, desiredSkills), [receivedUnwantedResumes, sortKey]);
     const [email, setEmail] = useState('');
     const [tab, setTab] = useState<Tab>('matching');
 

@@ -4,7 +4,7 @@ import { ActionIcon } from '@mantine/core';
 import { notify } from '@/presentation/components/source/notify';
 import IconPlusCircle from '@/presentation/icons/icon-plus-circle';
 import { ITabSkillStore, SkillStore, getImplicitSkills } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabSkills/TabSkills';
-import { REQUIRED_SKILLS, toSkillListItem } from './positionsData';
+import { REQUIRED_SKILLS, REQUIRED_SKILLS_MAX, toSkillListItem } from './positionsData';
 
 type AddAsFilterButtonProps = {
     store: SkillStore;
@@ -25,6 +25,10 @@ export const AddAsFilterButton = ({ store, skill }: AddAsFilterButtonProps) => {
 
     const addAsFilter = () => {
         if (!required || alreadyAFilter) return;
+        if ((required.list || []).length >= REQUIRED_SKILLS_MAX) {
+            notify({ summary: 'Limite de habilidades', detail: `A vaga aceita no máximo ${REQUIRED_SKILLS_MAX} habilidades obrigatórias. Retire uma para acrescentar ${skill}.`, severity: 'warn' });
+            return;
+        }
         // a mesma habilidade numa lista só: se estiver entre as desejáveis, sai de lá
         const desired = groups.filter((group) => group.name != REQUIRED_SKILLS);
         const found = desired.flatMap((group) => group.list || []).find((item: any) => item.skill == skill);

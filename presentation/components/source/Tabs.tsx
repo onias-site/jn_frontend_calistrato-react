@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import { Tabs as MantineTabs } from '@mantine/core';
+import { Loader, Tabs as MantineTabs } from '@mantine/core';
 import { notify } from '@/presentation/components/source/notify';
 import IconInfoTriangle from '@/presentation/icons/icon-info-triangle';
 import IconChevron from '@/presentation/icons/icon-chevron';
@@ -17,6 +17,8 @@ export interface TabsModel {
     getPendingRequirements?: () => string[];
     // os campos da aba já mostram cada pendência embaixo de si: o rodapé não repete a lista, só desabilita o avançar
     fieldsShowPendingRequirements?: boolean;
+    // a aba ainda carrega o seu conteúdo (desde 2026-11-23): fica desabilitada, com um spinner no lugar do ícone
+    loading?: boolean;
 }
 
 export interface TabsProps {
@@ -36,6 +38,9 @@ export interface TabsProps {
     // atalho mostrado à esquerda do botão de avançar em todas as abas menos a última (ex.: salvar sem passar pelas
     // demais abas); devolve as pendências, mostradas como as do avançar
     shortcutButton?: TabsShortcutButton;
+    // o avançar espera um processamento (desde 2026-11-23, a leitura das habilidades da descrição da vaga): fica
+    // desabilitado e girando, e as abas seguintes não abrem
+    forwardLoading?: boolean;
 }
 
 export interface TabsShortcutButton {
@@ -60,6 +65,7 @@ export const Tabs: React.FC<TabsProps> = ({
     shortcutButton,
     resetSignal = 0,
     goToTab,
+    forwardLoading = false,
 }) => {
     const [activeIndex, setActiveIndex] = useState(0);
     // a caixa de pendências só aparece depois de o usuário tentar avançar ou salvar nesta aba: a aba não abre já em erro
@@ -92,6 +98,8 @@ export const Tabs: React.FC<TabsProps> = ({
     const nextIcon = tabs[activeIndex + 1] ? <IconChevron direction="right" className="h-4 w-4" /> : lastButtonIcon;
 
     const changeTab = (index: number) => {
+        if (tabs[index] && tabs[index].loading) return;
+        if (index > activeIndex && forwardLoading) return;
         if (index > activeIndex) {
             goToNextTab();
             return;
@@ -143,7 +151,14 @@ export const Tabs: React.FC<TabsProps> = ({
                 {/* numa tela estreita as abas rolam na horizontal em vez de quebrar o nome em duas linhas */}
                 <MantineTabs.List className="mb-5 flex-nowrap overflow-x-auto">
                     {tabs.map((item, index) => (
-                        <MantineTabs.Tab key={index} value={String(index)} leftSection={item.icon} className="whitespace-nowrap font-semibold">
+                        <MantineTabs.Tab
+                            key={index}
+                            value={String(index)}
+                            leftSection={item.loading ? <Loader size={14} /> : item.icon}
+                            disabled={!!item.loading}
+                            aria-busy={!!item.loading}
+                            className="whitespace-nowrap font-semibold"
+                        >
                             {item.label}
                         </MantineTabs.Tab>
                     ))}
@@ -194,8 +209,15 @@ export const Tabs: React.FC<TabsProps> = ({
                     {nextLabel && (
                         // o botão fica sempre habilitado: o clique é o que destaca as pendências nos campos (até 2026-11-08 ficava
                         // desabilitado, e numa aba com os erros nos campos nada explicava o porquê)
-                        <button onClick={goToNextTab} type="button" className="btn btn-primary shrink-0 gap-2 whitespace-nowrap">
-                            {nextIcon}
+                        // (a exceção é a espera de um processamento, forwardLoading: desabilitado e girando)
+                        <button
+                            onClick={goToNextTab}
+                            type="button"
+                            disabled={forwardLoading}
+                            aria-busy={forwardLoading}
+                            className="btn btn-primary shrink-0 gap-2 whitespace-nowrap disabled:cursor-wait disabled:opacity-70"
+                        >
+                            {forwardLoading ? <Loader size={16} color="white" /> : nextIcon}
                             {nextLabel}
                         </button>
                     )}

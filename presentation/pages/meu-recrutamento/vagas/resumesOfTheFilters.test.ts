@@ -19,7 +19,7 @@ describe('resumesOfTheFilters', () => {
                 ddd: ['11', '21'],
                 disponibility: 15,
                 temporallyJobTime: 6,
-                seniority: 'pleno',
+                seniority: ['junior', 'pleno'],
                 hasLanguages: true,
                 spokenLanguage: [{ name: 'Inglês', level: 2 } as any],
                 negotiableClaim: true,
@@ -40,7 +40,7 @@ describe('resumesOfTheFilters', () => {
             ddd: [11, 21],
             disponibility: 15,
             temporallyJobTime: 6,
-            seniority: 'pleno',
+            seniority: ['junior', 'pleno'],
             skill: ['JAVA', 'BACKEND'],
             spokenLanguage: [{ name: 'Inglês', level: 2 }],
             negotiableClaim: true,
@@ -61,6 +61,13 @@ describe('resumesOfTheFilters', () => {
         expect(filtersRequestOf(form({ hasClt: true, cltMin: 5000, cltMax: '' }), [])).toEqual({ resumeType: 1 });
     });
 
+    it('as habilidades vão sem as repetidas (maiúsculas ou não) e, acima de 100, não conta (o backend recusaria com 422)', () => {
+        expect(filtersRequestOf(form(), ['SPRING', 'JAVA', 'spring'])).toEqual({ resumeType: 1, skill: ['SPRING', 'JAVA'] });
+        const hundred = Array.from({ length: 100 }, (_, index) => `SKILL${index}`);
+        expect(filtersRequestOf(form(), [...hundred, 'skill0'])?.skill).toHaveLength(100);
+        expect(filtersRequestOf(form(), [...hundred, 'SKILL100'])).toBeNull();
+    });
+
     it('o domínio só vale de um e-mail com domínio válido', () => {
         expect(recruiterDomainOf('rh@empresa.com.br')).toBe('empresa.com.br');
         expect(recruiterDomainOf(undefined)).toBeNull();
@@ -74,5 +81,8 @@ describe('resumesOfTheFilters', () => {
         expect(message).toContain('8.000');
         expect(message).toContain('média PJ R$');
         expect(message).toContain('12.500');
+        expect(message).not.toContain('experiência');
+        expect(foundResumesMessage({ ids: ['a'], resumes: 1, experienceAverage: 6.46 })).toBe('Foram encontrados 1 currículos (média de experiência 6,5 anos)');
+        expect(foundResumesMessage({ ids: ['a'], resumes: 1, experienceAverage: 6 })).toContain('média de experiência 6 anos');
     });
 });
