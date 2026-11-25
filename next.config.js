@@ -8,6 +8,17 @@ const nextConfig = {
     images: {
         unoptimized: true,
     },
+    // since 2026-11-24 the home page is the recruiter's positions: a 307 before any rendering (app/(defaults)/page.tsx
+    // redirects too, for a navigation inside the app)
+    async redirects() {
+        return [
+            {
+                source: '/',
+                destination: '/meu-recrutamento/vagas',
+                permanent: false,
+            },
+        ];
+    },
     async headers() {
         return [
             {

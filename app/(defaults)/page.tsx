@@ -1,10 +1,7 @@
-import { SkillStatistics } from '@/presentation/pages/estatisticas/skills/SkillStatistics';
-import { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 
-export const metadata: Metadata = {
-title: 'Home',
-};
-
-const Home = () => <SkillStatistics initialSeniority="senior" searchOnOpening />;
+// desde 2026-11-24 a tela inicial é a das vagas do recrutador (até então eram as estatísticas das skills, que continuam em
+// /estatisticas/telegram/vagas)
+const Home = () => redirect('/meu-recrutamento/vagas');
 
 export default Home;
