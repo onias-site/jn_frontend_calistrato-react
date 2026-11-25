@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect, useRef, useState } from 'react';
-import { Tabs } from '@mantine/core';
+import { Loader, Tabs } from '@mantine/core';
 import JnAjax from '@/app/JnAjax';
 import { Modal } from '@/presentation/components/source/Modal';
 import { ConfirmModal } from '@/presentation/components/source/ConfirmModal';
@@ -265,6 +265,12 @@ export const Positions = () => {
                     <a role="button" className="cursor-pointer font-semibold text-primary underline" onClick={openLogin}>
                         login
                     </a>
+                </div>
+            ) : situation == 'loading' ? (
+                // o spinner enquanto o grupo das vagas não chega (desde 2026-11-25)
+                <div role="status" className="flex items-center gap-3 py-6">
+                    <Loader size="md" />
+                    <span>{messages.loading}</span>
                 </div>
             ) : situation != 'loaded' ? (
                 <div>{messages[situation]}</div>

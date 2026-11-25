@@ -1,7 +1,9 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { Loader } from '@mantine/core';
 import JnAjax from '@/app/JnAjax';
+import { GridPagination, paginate } from '@/presentation/components/source/GridPagination';
 import { ConfirmModal } from '@/presentation/components/source/ConfirmModal';
 import { notify } from '@/presentation/components/source/notify';
 import { NotLoggedMessage } from '@/presentation/components/not-logged/NotLoggedMessage';
@@ -42,6 +44,7 @@ export const PositionsOfTheResume = () => {
     const [situation, setSituation] = useState<Situation>('loading');
     const [positions, setPositions] = useState<PositionOfTheResume[]>([]);
     const [confirming, setConfirming] = useState<PositionOfTheResume | null>(null);
+    const [page, setPage] = useState(1);
 
     const load = () => {
         setSituation('loading');
@@ -153,16 +156,33 @@ export const PositionsOfTheResume = () => {
         );
     }
 
+    // o spinner enquanto as vagas não chegam (desde 2026-11-25)
+    if (situation == 'loading') {
+        return (
+            <div role="status" className="panel mt-6 flex items-center gap-3">
+                <Loader size="md" />
+                <span>{messages.loading}</span>
+            </div>
+        );
+    }
+
     if (situation != 'loaded') return <div className="panel mt-6">{messages[situation]}</div>;
 
     if (positions.length == 0) return <div className="panel mt-6">Nenhuma vaga aberta aos candidatos combina com o seu currículo agora. Volte em outro momento.</div>;
+
+    // paginado desde 2026-11-25, com o rodapé dos outros grids; mudar de página volta ao topo da lista
+    const { pageRows } = paginate(positions, page);
+    const changePage = (chosen: number) => {
+        setPage(chosen);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
 
     return (
         <div className="mt-6 space-y-4">
             <h5 className="text-lg font-semibold">
                 {positions.length} {positions.length == 1 ? 'vaga compatível' : 'vagas compatíveis'} com o seu currículo
             </h5>
-            {positions.map((position) => (
+            {pageRows.map((position) => (
                 <div key={position.id} className="panel space-y-2">
                     <h6 className="text-base font-bold">{position.title}</h6>
                     <div className="text-sm text-gray-600 dark:text-gray-400">
@@ -195,6 +215,7 @@ export const PositionsOfTheResume = () => {
                     )}
                 </div>
             ))}
+            <GridPagination total={positions.length} page={page} onChange={changePage} />
             <ConfirmModal
                 visible={confirming != null}
                 onHide={() => setConfirming(null)}
