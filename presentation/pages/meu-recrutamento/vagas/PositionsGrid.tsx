@@ -10,6 +10,8 @@ type PositionsGridProps = {
     positions: Position[];
     emptyMessage: string;
     onEdit: (position: Position) => void;
+    // "Ver os currículos encontrados": o modal da vaga aberto na aba "Currículos aderentes"
+    onSeeTheResumes: (position: Position) => void;
     onDelete: (position: Position) => void;
     onInactivate: (position: Position) => void;
     onReactivate: (position: Position) => void;
@@ -24,7 +26,7 @@ type PositionsGridProps = {
  * encontrados aparece nas duas, ainda desligado (a busca dos currículos de uma vaga vem depois). Na das excluídas (desde
  * 2026-11-24, as vagas da gêmea vis_inactive_position), só Restaurar: a vaga volta valendo de hoje até uma semana depois.
  */
-export const PositionsGrid = ({ tab, positions, emptyMessage, onEdit, onDelete, onInactivate, onReactivate, onRestore, restoring }: PositionsGridProps) => {
+export const PositionsGrid = ({ tab, positions, emptyMessage, onEdit, onSeeTheResumes, onDelete, onInactivate, onReactivate, onRestore, restoring }: PositionsGridProps) => {
     const [page, setPage] = useState(1);
 
     if (positions.length == 0) {
@@ -76,7 +78,7 @@ export const PositionsGrid = ({ tab, positions, emptyMessage, onEdit, onDelete, 
                                                 Reativar
                                             </button>
                                         )}
-                                        <button type="button" className="cursor-not-allowed whitespace-nowrap text-white-dark" disabled title="Em breve">
+                                        <button type="button" className={`${action} whitespace-nowrap`} aria-haspopup="dialog" onClick={() => onSeeTheResumes(position)}>
                                             {foundResumesLabel()}
                                         </button>
                                     </div>

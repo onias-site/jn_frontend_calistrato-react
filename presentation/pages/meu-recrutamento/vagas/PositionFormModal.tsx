@@ -76,6 +76,9 @@ type PositionFormModalProps = {
     // "Abrir vaga simplificada" (desde 2026-11-24): só as abas Vaga e Salários, o resto preenchido (simplifiedFormOf); o
     // link da contagem de currículos mostra todas as abas, e salvar sem ter passado por ele fecha o modal
     simplified?: boolean;
+    // o link "Ver os currículos encontrados" do grid (desde 2026-11-24): o modal abre já na aba "Currículos aderentes",
+    // como se o link da contagem tivesse sido clicado
+    openOnResumes?: boolean;
 };
 
 const resumeTypeOptions = resumeTypes.map((type) => ({ value: String(type.id), label: type.label }));
@@ -132,7 +135,7 @@ const broadSkillsViewOf = (store: SkillStore): SkillsAccordionView => ({
 // todas as regiões mais o home office: as regiões da vaga simplificada
 const allDddsWithHomeOffice = [...dddRegions.map((region) => region.id).filter((id) => id != HOME_OFFICE), HOME_OFFICE];
 
-export const PositionFormModal = ({ position, onSaved, onCancel, simplified = false }: PositionFormModalProps) => {
+export const PositionFormModal = ({ position, onSaved, onCancel, simplified = false, openOnResumes = false }: PositionFormModalProps) => {
     // a vaga simplificada mostra só Vaga e Salários até o usuário abrir a lista de currículos pelo link da contagem
     const [expanded, setExpanded] = useState(!simplified);
     const collapsed = simplified && !expanded;
@@ -210,6 +213,10 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
         goToTheResumesAfterExpanding.current = false;
         setGoToTab({ index: resumesTabIndex.current });
     }, [expanded]);
+    // aberto pelo link do grid: uma vez só, depois do primeiro render (quando o índice da aba já foi calculado)
+    useEffect(() => {
+        if (openOnResumes) seeTheResumes();
+    }, []);
     const resumesMessage = <ResumesOfTheFiltersMessage request={filtersRequest} {...resumesOfTheFilters} onSeeTheResumes={seeTheResumes} />;
     const [hasTabSkills, setHasTabSkills] = useState(skillGroups.some((group) => group.list.length > 0));
     // o skills/fromText ainda lê a descrição (desde 2026-11-23): o avançar e a aba Habilidades ficam desabilitados e

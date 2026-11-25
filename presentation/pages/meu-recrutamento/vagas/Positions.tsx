@@ -66,6 +66,8 @@ export const Positions = () => {
     // "Abrir nova vaga" (desde 2026-11-24) abre a escolha entre a vaga completa e a simplificada
     const [choosing, setChoosing] = useState(false);
     const [simplified, setSimplified] = useState(false);
+    // o modal da vaga aberto pelo link "Ver os currículos encontrados": já na aba "Currículos aderentes"
+    const [openOnResumes, setOpenOnResumes] = useState(false);
     const [reactivating, setReactivating] = useState<Position | null>(null);
     const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
     // as vagas gravadas antes de a lista chegar do backend (ex.: a primeira, salva por quem fez o login só para salvar):
@@ -130,6 +132,15 @@ export const Positions = () => {
     const closeForm = () => {
         setEditing(undefined);
         setSimplified(false);
+        setOpenOnResumes(false);
+    };
+    const edit = (position: Position) => {
+        setOpenOnResumes(false);
+        setEditing(position);
+    };
+    const seeTheResumes = (position: Position) => {
+        setOpenOnResumes(true);
+        setEditing(position);
     };
 
     // fechar o modal de login aberto por aqui só fecha o modal: a tela continua aberta, sem login
@@ -213,7 +224,8 @@ export const Positions = () => {
             tab={gridTab}
             positions={gridPositions}
             emptyMessage={emptyMessage}
-            onEdit={setEditing}
+            onEdit={edit}
+            onSeeTheResumes={seeTheResumes}
             onDelete={(position) => setConfirmation({ kind: 'delete', position })}
             onInactivate={(position) => setConfirmation({ kind: 'inactivate', position })}
             onReactivate={setReactivating}
@@ -293,7 +305,7 @@ export const Positions = () => {
                 closeOnEscape={false}
             >
                 {editing !== undefined && (
-                    <PositionFormModal key={editing ? editing.title : simplified ? 'newSimplified' : 'new'} position={editing} simplified={editing == null && simplified} onSaved={saved} onCancel={closeForm} />
+                    <PositionFormModal key={editing ? editing.title : simplified ? 'newSimplified' : 'new'} position={editing} simplified={editing == null && simplified} openOnResumes={openOnResumes} onSaved={saved} onCancel={closeForm} />
                 )}
             </Modal>
             <Modal visible={reactivating != null} setVisible={(visible) => !visible && setReactivating(null)} title="Reativar vaga" size="md">
