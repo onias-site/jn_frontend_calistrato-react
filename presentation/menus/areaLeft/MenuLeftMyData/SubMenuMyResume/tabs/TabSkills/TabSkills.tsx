@@ -208,6 +208,8 @@ export const TabSkills2: React.FC<TabSkillsProps> = ({ getAccordionList, store =
         }
 
         const obj = allItems.filter((x) => x.label == item)[0];
+        // item não identificado: deixa as listas como estão em vez de derrubar a tela
+        if (!obj) return;
 
         for (let index in groups) {
             const group = groups[index];
@@ -648,11 +650,13 @@ const SkillList: React.FC<SkillListProps> = ({ moveAll, title, width, list, filt
                             delay={1}
                             ghostClass="gu-transit"
                             group={sortableGroup}
-                            onAdd={(evt) => transferToAnotherList(evt.item.textContent)}
+                            // o item é achado pelo data-label, não pelo texto visível: com a seta de mover (modal de vagas,
+                            // desde 2026-11-23) o textContent virava "Java→" e não achava nenhuma habilidade (bug de 2026-11-24)
+                            onAdd={(evt) => transferToAnotherList(evt.item.dataset.label || evt.item.textContent)}
                         >
                             {list.length ? (
                                 filteredList.map((skill: any, id: number) => (
-                                    <li key={id} className="mb-2.5 cursor-grab ">
+                                    <li key={id} data-label={skill.label} className="mb-2.5 cursor-grab ">
                                         <div className="items-md-center flex flex-col rounded-md border border-white-light bg-white px-6 py-3.5 text-center dark:border-dark dark:bg-[#1b2e4b] md:flex-row ltr:md:text-left rtl:md:text-right">
                                             <div className="flex flex-1 flex-col items-center justify-between md:flex-row">
                                                 <div className="my-3 font-semibold md:my-0 ">
