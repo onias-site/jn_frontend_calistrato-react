@@ -38,6 +38,7 @@ import {
     PositionForm,
     SortRule,
     contactTypeOptions,
+    copyFormOf,
     emptyForm,
     formOf,
     frequencyOptions,
@@ -79,6 +80,9 @@ type PositionFormModalProps = {
     // o link "Ver os currículos encontrados" do grid (desde 2026-11-24): o modal abre já na aba "Currículos aderentes",
     // como se o link da contagem tivesse sido clicado
     openOnResumes?: boolean;
+    // "Copiar" (desde 2026-11-24): sem vaga (position null, é uma vaga nova), mas com o formulário e as habilidades desta,
+    // menos o título e o período (copyFormOf)
+    template?: Position | null;
 };
 
 const resumeTypeOptions = resumeTypes.map((type) => ({ value: String(type.id), label: type.label }));
@@ -135,7 +139,9 @@ const broadSkillsViewOf = (store: SkillStore): SkillsAccordionView => ({
 // todas as regiões mais o home office: as regiões da vaga simplificada
 const allDddsWithHomeOffice = [...dddRegions.map((region) => region.id).filter((id) => id != HOME_OFFICE), HOME_OFFICE];
 
-export const PositionFormModal = ({ position, onSaved, onCancel, simplified = false, openOnResumes = false }: PositionFormModalProps) => {
+export const PositionFormModal = ({ position, onSaved, onCancel, simplified = false, openOnResumes = false, template = null }: PositionFormModalProps) => {
+    // a vaga de onde vêm os dados: a editada ou, numa cópia, o molde
+    const source = position ?? template;
     // a vaga simplificada mostra só Vaga e Salários até o usuário abrir a lista de currículos pelo link da contagem
     const [expanded, setExpanded] = useState(!simplified);
     const collapsed = simplified && !expanded;
@@ -145,6 +151,7 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
     const creating = position == null && !savedOnce;
     const [form, setForm] = useState<PositionForm>(() => {
         if (position != null) return formOf(position);
+        if (template != null) return copyFormOf(template);
         if (!simplified) return emptyForm();
         const logged: any = JnAjax.getLogin() || {};
         return simplifiedFormOf(allDddsWithHomeOffice, logged.email || '');
@@ -156,8 +163,8 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
     // a store das habilidades deste modal; na edição de uma vaga de tecnologia, já com as habilidades gravadas
     const [skillStore] = useState(() => {
         const store = createSkillStore();
-        if (position == null || String(position.resumeType) != '1') return store;
-        const { groups, context } = skillGroupsOfThePosition(position.skill, sha1(position.description.trim()));
+        if (source == null || String(source.resumeType) != '1') return store;
+        const { groups, context } = skillGroupsOfThePosition(source.skill, sha1(source.description.trim()));
         store.getState().setGroups(groups as any, getImplicitSkills);
         store.getState().setContext(context);
         return store;
@@ -168,8 +175,8 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
     // pede-as uma vez ao abrir, sem mexer nas listas (sem login, a coluna fica vazia até a descrição ser relida)
     useEffect(() => {
         const context = skillStore.getState().context || {};
-        if (position == null || String(position.resumeType) != '1' || context.broadSkill) return;
-        const text = position.description.trim();
+        if (source == null || String(source.resumeType) != '1' || context.broadSkill) return;
+        const text = source.description.trim();
         const callbacks: any = {};
         callbacks['setLoading'] = () => {};
         callbacks['setNotLoading'] = () => {};

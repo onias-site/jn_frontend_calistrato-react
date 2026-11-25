@@ -340,6 +340,17 @@ export const simplifiedSortOf = (form: PositionForm): SortRule[] => {
     return sort;
 };
 
+/**
+ * O formulário de "Copiar" (desde 2026-11-24): uma vaga nova que usa a antiga só como molde. Tudo vem da antiga, menos o
+ * título, que ganha " 2" no fim (ele é parte da chave: o mesmo título seria a antiga; um título que já exista o backend
+ * recusa com 409 e o usuário troca), e o período, que recomeça como o de uma vaga nova (de hoje a uma semana), já que a
+ * antiga pode estar expirada.
+ */
+export const copyFormOf = (position: Position, now: Date = new Date()): PositionForm => {
+    const newPeriod = emptyForm(now);
+    return { ...formOf(position), title: `${position.title} 2`, expirationMin: newPeriod.expirationMin, expirationMax: newPeriod.expirationMax };
+};
+
 /** O formulário de "Editar", preenchido com a vaga. */
 export const formOf = (position: Position): PositionForm => ({
     title: position.title,

@@ -12,6 +12,8 @@ type PositionsGridProps = {
     onEdit: (position: Position) => void;
     // "Ver os currículos encontrados": o modal da vaga aberto na aba "Currículos aderentes"
     onSeeTheResumes: (position: Position) => void;
+    // "Copiar": o modal de criação com os dados desta vaga, para uma vaga nova
+    onCopy: (position: Position) => void;
     onDelete: (position: Position) => void;
     onInactivate: (position: Position) => void;
     onReactivate: (position: Position) => void;
@@ -26,7 +28,7 @@ type PositionsGridProps = {
  * encontrados aparece nas duas, ainda desligado (a busca dos currículos de uma vaga vem depois). Na das excluídas (desde
  * 2026-11-24, as vagas da gêmea vis_inactive_position), só Restaurar: a vaga volta valendo de hoje até uma semana depois.
  */
-export const PositionsGrid = ({ tab, positions, emptyMessage, onEdit, onSeeTheResumes, onDelete, onInactivate, onReactivate, onRestore, restoring }: PositionsGridProps) => {
+export const PositionsGrid = ({ tab, positions, emptyMessage, onEdit, onSeeTheResumes, onCopy, onDelete, onInactivate, onReactivate, onRestore, restoring }: PositionsGridProps) => {
     const [page, setPage] = useState(1);
 
     if (positions.length == 0) {
@@ -62,6 +64,9 @@ export const PositionsGrid = ({ tab, positions, emptyMessage, onEdit, onSeeTheRe
                                     <div className="flex flex-wrap gap-x-4 gap-y-1">
                                         <button type="button" className={action} aria-haspopup="dialog" onClick={() => onEdit(position)}>
                                             Editar
+                                        </button>
+                                        <button type="button" className={action} aria-haspopup="dialog" title="Abre uma vaga nova com os dados desta, que fica como está" onClick={() => onCopy(position)}>
+                                            Copiar
                                         </button>
                                         {tab == 'active' && (
                                             <button type="button" className={action} aria-haspopup="dialog" onClick={() => onDelete(position)}>

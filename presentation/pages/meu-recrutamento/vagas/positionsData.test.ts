@@ -1,5 +1,6 @@
 import {
     changeExpiration,
+    copyFormOf,
     emptyForm,
     filtersTabErrors,
     formOf,
@@ -104,6 +105,16 @@ describe('positionsData', () => {
         expect(form.hasPj).toBe(false);
         expect(form.ddd).toEqual(['11', '21']);
         expect(form.expirationMin).toBe('2026-11-21');
+    });
+
+    it('a cópia de uma vaga (desde 2026-11-24) traz tudo dela, menos o título, com " 2" no fim, e o período, que recomeça hoje por uma semana', () => {
+        const position = positionOf(requestBodyOf(validForm()));
+        const original = formOf(position);
+        const copy = copyFormOf(position, new Date(2026, 11, 5, 9, 0, 0));
+        expect(copy.title).toBe(`${position.title} 2`);
+        expect(copy.expirationMin).toBe('2026-12-05');
+        expect(copy.expirationMax).toBe('2026-12-12');
+        expect({ ...copy, title: original.title, expirationMin: original.expirationMin, expirationMax: original.expirationMax }).toEqual(original);
     });
 
     it('a vaga nova (desde 2026-11-24) começa sem área, que é obrigatória, e fica aberta por uma semana', () => {

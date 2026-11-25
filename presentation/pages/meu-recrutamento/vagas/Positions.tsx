@@ -68,6 +68,8 @@ export const Positions = () => {
     const [simplified, setSimplified] = useState(false);
     // o modal da vaga aberto pelo link "Ver os currículos encontrados": já na aba "Currículos aderentes"
     const [openOnResumes, setOpenOnResumes] = useState(false);
+    // "Copiar": a vaga usada como molde de uma vaga nova (editing fica null, como em "Abrir nova vaga")
+    const [template, setTemplate] = useState<Position | null>(null);
     const [reactivating, setReactivating] = useState<Position | null>(null);
     const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
     // as vagas gravadas antes de a lista chegar do backend (ex.: a primeira, salva por quem fez o login só para salvar):
@@ -113,6 +115,7 @@ export const Positions = () => {
     const openComplete = () => {
         setChoosing(false);
         setSimplified(false);
+        setTemplate(null);
         setEditing(null);
     };
     // a vaga simplificada exige login antes de abrir (o e-mail dele recebe os currículos); ao entrar, a lista é relida
@@ -121,6 +124,7 @@ export const Positions = () => {
         const logged: any = JnAjax.getLogin() || {};
         const open = () => {
             setSimplified(true);
+            setTemplate(null);
             setEditing(null);
         };
         if (logged.email) return open();
@@ -133,14 +137,23 @@ export const Positions = () => {
         setEditing(undefined);
         setSimplified(false);
         setOpenOnResumes(false);
+        setTemplate(null);
     };
     const edit = (position: Position) => {
         setOpenOnResumes(false);
+        setTemplate(null);
         setEditing(position);
     };
     const seeTheResumes = (position: Position) => {
         setOpenOnResumes(true);
+        setTemplate(null);
         setEditing(position);
+    };
+    const copy = (position: Position) => {
+        setOpenOnResumes(false);
+        setSimplified(false);
+        setTemplate(position);
+        setEditing(null);
     };
 
     // fechar o modal de login aberto por aqui só fecha o modal: a tela continua aberta, sem login
@@ -226,6 +239,7 @@ export const Positions = () => {
             emptyMessage={emptyMessage}
             onEdit={edit}
             onSeeTheResumes={seeTheResumes}
+            onCopy={copy}
             onDelete={(position) => setConfirmation({ kind: 'delete', position })}
             onInactivate={(position) => setConfirmation({ kind: 'inactivate', position })}
             onReactivate={setReactivating}
@@ -299,13 +313,13 @@ export const Positions = () => {
             <Modal
                 visible={editing !== undefined}
                 setVisible={(visible) => !visible && closeForm()}
-                title={editing ? 'Editar vaga' : simplified ? 'Abrir vaga simplificada' : 'Abrir nova vaga'}
+                title={editing ? 'Editar vaga' : template ? `Nova vaga copiada de "${template.title}"` : simplified ? 'Abrir vaga simplificada' : 'Abrir nova vaga'}
                 size="90%"
                 closeOnClickOutside={false}
                 closeOnEscape={false}
             >
                 {editing !== undefined && (
-                    <PositionFormModal key={editing ? editing.title : simplified ? 'newSimplified' : 'new'} position={editing} simplified={editing == null && simplified} openOnResumes={openOnResumes} onSaved={saved} onCancel={closeForm} />
+                    <PositionFormModal key={editing ? editing.title : template ? `copy-${template.title}` : simplified ? 'newSimplified' : 'new'} position={editing} simplified={editing == null && simplified} openOnResumes={openOnResumes} template={template} onSaved={saved} onCancel={closeForm} />
                 )}
             </Modal>
             <Modal visible={reactivating != null} setVisible={(visible) => !visible && setReactivating(null)} title="Reativar vaga" size="md">
