@@ -10,6 +10,7 @@ import {
     languagesTabErrors,
     optionsTabErrors,
     parsePositions,
+    parsePositionsOnBothSides,
     positionTabErrors,
     positionTabFieldErrors,
     salaryTabErrors,
@@ -29,6 +30,7 @@ const now = new Date(2026, 10, 21, 15, 0, 0);
 
 const validForm = () => ({
     ...emptyForm(now),
+    resumeType: '1',
     title: 'Desenvolvedor Java pleno',
     description: 'x'.repeat(120),
     seniority: ['pleno'],
@@ -102,6 +104,23 @@ describe('positionsData', () => {
         expect(form.hasPj).toBe(false);
         expect(form.ddd).toEqual(['11', '21']);
         expect(form.expirationMin).toBe('2026-11-21');
+    });
+
+    it('a vaga nova (desde 2026-11-24) começa sem área, que é obrigatória, e fica aberta por uma semana', () => {
+        const form = emptyForm(now);
+        expect(form.resumeType).toBe('');
+        expect(positionTabFieldErrors(form, true, now).resumeType).toBe('Escolha a área da vaga');
+        expect(form.expirationMin).toBe('2026-11-21');
+        expect(form.expirationMax).toBe('2026-11-28');
+    });
+
+    it('lê as vagas e as excluídas dos dois lados do grupo (bothSides)', () => {
+        const child = (title: string, max: number) => JSON.stringify({ title, expiration: { min: '0', max: String(max) } });
+        const sides = parsePositionsOnBothSides({ jn_grouper: { child: [child('ativa', 2)] }, jn_inactive_grouper: { child: [child('excluida', 1)] } });
+        expect(sides.positions.map((position) => position.title)).toEqual(['ativa']);
+        expect(sides.deleted.map((position) => position.title)).toEqual(['excluida']);
+        // um lado sem o grupo vem como json vazio
+        expect(parsePositionsOnBothSides({ jn_grouper: {}, jn_inactive_grouper: {} })).toEqual({ positions: [], deleted: [] });
     });
 
     it('lista o que falta no formulário', () => {

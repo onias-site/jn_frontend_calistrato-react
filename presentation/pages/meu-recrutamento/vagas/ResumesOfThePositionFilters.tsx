@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Tabs } from '@mantine/core';
+import { Loader, Tabs } from '@mantine/core';
 import JnAjax from '@/app/JnAjax';
 import { ResumeRowsGrid } from '../ResumeRowsGrid';
 import { SortRule } from './positionsData';
@@ -67,6 +67,16 @@ export const ResumesOfThePositionFilters = ({ ids, sort, desiredSkills }: { ids:
 
     if (ids.length == 0) {
         return <div>Nenhum currículo atende aos filtros da vaga agora.</div>;
+    }
+
+    // a leitura dos currículos é lenta (desde 2026-11-24): o spinner mostra que a lista está chegando
+    if (situation == 'loading') {
+        return (
+            <div role="status" className="flex items-center gap-3 py-6">
+                <Loader size="md" />
+                <span>{messages.loading}</span>
+            </div>
+        );
     }
 
     if (situation != 'loaded') {

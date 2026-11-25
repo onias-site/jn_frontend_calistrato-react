@@ -25,4 +25,10 @@ describe('ordem da lista dos currículos aderentes', () => {
     it('quem tiver a habilidade aparece primeiro; o empate mantém a ordem recebida', () => {
         expect(names(sortResumes(rows, [{ type: 'desc', field: ['skill'], value: 'Python' }], []))).toEqual(['semPretensao', 'caro', 'baratoJunior', 'baratoSenior']);
     });
+
+    it('pelo DDD (desde 2026-11-24): o menor DDD vem do backend; só home office (sem ddd) vai para o fim nos dois sentidos', () => {
+        const byDdd = [row('rio', { ddd: 21 }), row('soHomeOffice', {}), row('saoPaulo', { ddd: 11 }), row('brasilia', { ddd: 61 })];
+        expect(names(sortResumes(byDdd, [{ type: 'asc', field: ['ddd'] }], []))).toEqual(['saoPaulo', 'rio', 'brasilia', 'soHomeOffice']);
+        expect(names(sortResumes(byDdd, [{ type: 'desc', field: ['ddd'] }], []))).toEqual(['brasilia', 'rio', 'saoPaulo', 'soHomeOffice']);
+    });
 });

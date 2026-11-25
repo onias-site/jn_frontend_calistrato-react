@@ -144,6 +144,8 @@ export const sortCriteriaOf = (form: PositionForm, desiredSkills: string[]): Sor
     Number(form.disponibility) > 0 && criteria.push(criterion('disponibility', 'Disponibilidade para começar', 'asc', 'Quem começa antes aparece primeiro', 'Quem começa depois aparece primeiro'));
     Number(form.temporallyJobTime) > 0 &&
         criteria.push(criterion('temporallyJobTime', 'Tempo de trabalho temporário', 'asc', 'Quem aceita menos meses aparece primeiro', 'Quem aceita mais meses aparece primeiro'));
+    // desde 2026-11-24, fora da ordem padrão: o menor DDD do currículo, sem contar o home office (só home office vai para o fim)
+    criteria.push(criterion('ddd', 'DDD', 'asc', 'DDDs menores primeiro', 'DDDs maiores primeiro', undefined, false));
     tech &&
         desiredSkills.forEach((skill) =>
             criteria.push(criterion('skill', `Habilidade ${skill}`, 'desc', `Quem tiver ${skill} aparece depois`, `Quem tiver ${skill} aparece primeiro`, skill, false)),
@@ -235,6 +237,15 @@ export const dateTimeLabel = (milliseconds: number | string) => {
 
 export const today = (now: Date = new Date()) => `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 
+/**
+ * As vagas dos dois lados do grupo do e-mail (grouper/.../bothSides, desde 2026-11-24): jn_grouper com as vagas de
+ * vis_position (as duas primeiras abas) e jn_inactive_grouper com as excluídas, que estão na gêmea vis_inactive_position.
+ */
+export const parsePositionsOnBothSides = (groups: any) => ({
+    positions: parsePositions(groups && groups.jn_grouper),
+    deleted: parsePositions(groups && groups.jn_inactive_grouper),
+});
+
 /** As vagas do grupo (cada filho é um texto JSON); as mais novas de expirar primeiro. */
 export const parsePositions = (group: any): Position[] =>
     ((group && group.child) || [])
@@ -263,11 +274,13 @@ export const changeExpiration = (positions: Position[], title: string, expiratio
 export const foundResumesLabel = (resumes?: number) => (resumes == null ? 'Ver os currículos encontrados' : `Ver os ${resumes} currículos encontrados`);
 
 export const emptyForm = (now: Date = new Date()): PositionForm => {
-    const inThirtyDays = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 30);
+    // desde 2026-11-24 a vaga nova fica aberta por uma semana (antes, 30 dias)
+    const inOneWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7);
     return {
         title: '',
         description: '',
-        resumeType: '1',
+        // obrigatória e sem valor padrão desde 2026-11-24: o usuário escolhe a área
+        resumeType: '',
         seniority: [],
         // home office marcado por padrão: a aba Opções já entra contando os currículos do ddd 10
         ddd: ['10'],
@@ -285,7 +298,7 @@ export const emptyForm = (now: Date = new Date()): PositionForm => {
         pcd: false,
         travel: false,
         expirationMin: today(now),
-        expirationMax: today(inThirtyDays),
+        expirationMax: today(inOneWeek),
         // a padrão de uma vaga nova (CLT marcado, sem idiomas): o modal a refaz enquanto o usuário não mexer nela
         sort: [
             { type: 'asc', field: ['clt'] },

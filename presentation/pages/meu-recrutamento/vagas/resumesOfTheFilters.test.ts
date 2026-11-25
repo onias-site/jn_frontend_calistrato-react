@@ -1,7 +1,7 @@
 import { emptyForm, PositionForm } from './positionsData';
 import { filtersRequestOf, foundResumesMessage, recruiterDomainOf } from './resumesOfTheFilters';
 
-const form = (changes: Partial<PositionForm> = {}): PositionForm => ({ ...emptyForm(new Date(2026, 10, 22)), ...changes });
+const form = (changes: Partial<PositionForm> = {}): PositionForm => ({ ...emptyForm(new Date(2026, 10, 22)), resumeType: '1', ...changes });
 
 describe('resumesOfTheFilters', () => {
     it('a vaga nova (home office, contratação imediata, não temporária, nada marcado) filtra só pela área', () => {

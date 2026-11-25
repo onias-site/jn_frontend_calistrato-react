@@ -31,6 +31,8 @@ const valueGetters: Record<string, (values: any, criterionValue: string, desired
     disponibility: (values) => Number(values.disponibility || 0),
     temporallyJobTime: (values) => Number(values.temporallyJobTime || 0),
     skill: (values, skill) => (allSkills(values).includes(skill) ? 1 : 0),
+    // o menor DDD do currículo sem o home office (desde 2026-11-24); só home office, o backend não manda, e vai para o fim
+    ddd: (values) => numberOrMissing(values.ddd),
 };
 
 /** O número de uma linha num critério, já no sentido dele (para comparar em ordem crescente). */

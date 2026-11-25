@@ -419,12 +419,24 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
                 <TextInput id="title" error={!!fieldErrors.title} value={form.title} maxLength={LIMITS.titleMax} disabled={!creating} onChange={(event) => set({ title: event.currentTarget.value })} />
             </LabelComponent>
             <LabelComponent
-                explanation="A área dos currículos procurados. A vaga de tecnologia da informação (TI) ganha a aba 'Habilidades', com as habilidades encontradas na descrição."
+                explanation="Obrigatória: a área dos currículos procurados. A vaga de tecnologia da informação (TI) ganha a aba 'Habilidades', com as habilidades encontradas na descrição."
                 labelValue="Área da vaga:"
                 property="resumeType"
                 errors={fieldErrors}
             >
-                <Select id="resumeType" error={!!fieldErrors.resumeType} data={resumeTypeOptions} value={form.resumeType} allowDeselect={false} comboboxProps={inside} onChange={(value) => set({ resumeType: value || '' })} />
+                {/* obrigatória e sem valor padrão desde 2026-11-24: começa vazia, e a aba Vaga não avança sem ela */}
+                <Select
+                    id="resumeType"
+                    required
+                    aria-required
+                    placeholder="Escolha a área da vaga"
+                    error={!!fieldErrors.resumeType}
+                    data={resumeTypeOptions}
+                    value={form.resumeType || null}
+                    allowDeselect={false}
+                    comboboxProps={inside}
+                    onChange={(value) => set({ resumeType: value || '' })}
+                />
             </LabelComponent>
             {resumesMessage}
             <LabelComponent

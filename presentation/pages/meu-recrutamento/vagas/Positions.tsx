@@ -10,7 +10,7 @@ import { groupParentId } from '@/presentation/pages/meus-dados/acessos/accessesR
 import { PositionFormModal } from './PositionFormModal';
 import { ReactivatePositionForm } from './ReactivatePositionForm';
 import { PositionsGrid, PositionsTab } from './PositionsGrid';
-import { Position, changeExpiration, parsePositions, removePosition, replacePosition, splitByExpiration } from './positionsData';
+import { Position, changeExpiration, parsePositionsOnBothSides, removePosition, replacePosition, splitByExpiration } from './positionsData';
 
 type Situation = 'loading' | 'loaded' | 'notLogged' | 'error';
 
@@ -30,8 +30,8 @@ const confirmations = {
     delete: {
         path: 'delete',
         header: 'Excluir vaga',
-        message: 'A vaga será excluída e sairá das duas abas. Deseja continuar?',
-        done: 'A vaga foi excluída.',
+        message: 'A vaga será excluída e passará para a aba "Vagas excluídas", de onde pode ser restaurada. Deseja continuar?',
+        done: 'A vaga foi para a aba "Vagas excluídas".',
         danger: true,
     },
     inactivate: {
@@ -50,10 +50,16 @@ const confirmations = {
  * manda a vaga para a gêmea, e ela some das duas abas; "Inativar" põe o fim da vaga um minuto antes de agora, e ela vai
  * para a aba das expiradas; "Reativar" pede o novo fim da vaga, e ela volta. As gravações são assíncronas no backend: a
  * tela atualiza a lista com o que enviou, e a lista guardada em memória é descartada (JnAjax.TICKET_WRITES).
+ * <p>
+ * Desde 2026-11-24 há a terceira aba, "Vagas excluídas": as vagas da gêmea vis_inactive_position, lidas do mesmo grupo
+ * nos dois lados (grouper/.../bothSides: jn_grouper e jn_inactive_grouper). "Restaurar" a devolve valendo do começo de hoje
+ * até o fim do dia uma semana depois; se já houver uma vaga não excluída com o mesmo título, a restaurada ganha "título 2".
  */
 export const Positions = () => {
     const [situation, setSituation] = useState<Situation>('loading');
     const [positions, setPositions] = useState<Position[]>([]);
+    const [deleted, setDeleted] = useState<Position[]>([]);
+    const [restoring, setRestoring] = useState<string | null>(null);
     const [tab, setTab] = useState<PositionsTab>('active');
     // undefined: modal fechado; null: "Abrir nova vaga"; uma vaga: "Editar"
     const [editing, setEditing] = useState<Position | null | undefined>(undefined);
@@ -72,12 +78,17 @@ export const Positions = () => {
         setSituation('loading');
         const callbacks: any = {};
         callbacks[200] = (response: any) => {
-            setPositions(withTheSaved(parsePositions(response)));
+            const sides = parsePositionsOnBothSides(response);
+            const loaded = withTheSaved(sides.positions);
+            setPositions(loaded);
+            // uma vaga gravada depois de excluída sai da gêmea: não fica nas duas listas
+            setDeleted(sides.deleted.filter((position) => !loaded.some((saved) => saved.title == position.title)));
             setSituation('loaded');
         };
         // nenhuma vaga ainda: o grupo do usuário não existe
         callbacks[404] = () => {
             setPositions(withTheSaved([]));
+            setDeleted([]);
             setSituation('loaded');
         };
         // a tela abre sem login (desde 2026-11-22): mostra o convite ao login e deixa "Abrir nova vaga" livre; o login só é
@@ -91,7 +102,8 @@ export const Positions = () => {
         const login: any = JnAjax.getLogin() || {};
         const parentId = login.email ? groupParentId(login.email) : '';
         // GET sem corpo: com {} o jQuery poria "?{}" na URL
-        JnAjax.doACachedRequest(`grouper/{email}/${PARENT_NAME}/${CHILD_NAME}/${parentId}`, callbacks, 'GET', null as any, {}, 'http://localhost:8082');
+        // os dois lados do grupo numa leitura só: as vagas (jn_grouper) e as excluídas (jn_inactive_grouper)
+        JnAjax.doACachedRequest(`grouper/{email}/${PARENT_NAME}/${CHILD_NAME}/${parentId}/bothSides`, callbacks, 'GET', null as any, {}, 'http://localhost:8082');
     };
 
     useEffect(load, []);
@@ -130,6 +142,8 @@ export const Positions = () => {
     // salvou sem ter a lista (fez o login para salvar) passa a ver as suas vagas
     const saved = (position: Position) => {
         setPositions((current) => replacePosition(current, position));
+        // gravar um título que estava entre as excluídas tira a excluída da gêmea
+        setDeleted((current) => removePosition(current, position.title));
         if (situation == 'loaded') return;
         savedBeforeTheList.current = [...savedBeforeTheList.current, position];
         load();
@@ -147,6 +161,8 @@ export const Positions = () => {
         callbacks[200] = (response: any) => {
             const changed = chosen.kind == 'delete' ? removePosition(positions, title) : changeExpiration(positions, title, response.expiration);
             setPositions(changed);
+            // a excluída vai para a aba das excluídas
+            chosen.kind == 'delete' && setDeleted((current) => replacePosition(current, chosen.position));
             notify({ summary: texts.header, detail: texts.done });
         };
         callbacks[404] = () => notify({ summary: 'Vaga não encontrada', detail: 'Esta vaga não está mais entre as suas.', severity: 'error' });
@@ -157,6 +173,36 @@ export const Positions = () => {
         };
         callbacks['onUnexpectedHttpStatus'] = () => notify({ summary: 'Não foi possível concluir', detail: 'Tente de novo em alguns instantes.', severity: 'error' });
         JnAjax.doAnAjaxRequest(`recruiter/{email}/positions/${texts.path}`, callbacks, 'POST', { title }, {}, 'http://localhost:8081');
+    };
+
+    // "Restaurar" (desde 2026-11-24): a vaga sai das excluídas e volta valendo por uma semana, com o título que o backend
+    // devolveu (o mesmo, ou "título 2" quando já há uma vaga não excluída com ele)
+    const restore = (position: Position) => {
+        setRestoring(position.title);
+        const callbacks: any = {};
+        callbacks[200] = (response: any) => {
+            setRestoring(null);
+            const restored: Position = { ...position, title: response.title, expiration: { min: Number(response.expiration.min), max: Number(response.expiration.max) } };
+            setDeleted((current) => removePosition(current, position.title));
+            setPositions((current) => replacePosition(current, restored));
+            const renamed = response.title != position.title ? ` Como você já tinha uma vaga com este título, ela foi restaurada como "${response.title}".` : '';
+            notify({ summary: 'Vaga restaurada', detail: `A vaga voltou para a aba "Vagas dentro da expiração", valendo até ${new Date(restored.expiration.max).toLocaleDateString('pt-BR')}.${renamed}` });
+        };
+        callbacks[404] = () => {
+            setRestoring(null);
+            notify({ summary: 'Vaga não encontrada', detail: 'Esta vaga não está mais entre as suas vagas excluídas.', severity: 'error' });
+        };
+        callbacks[401] = () => {
+            // sem login o JnAjax chama o 401 antes de enviar, e não desliga o carregamento que já ligou
+            JnAjax.setNotLoading()();
+            setRestoring(null);
+            JnAjax.getHandler401(() => restore(position))();
+        };
+        callbacks['onUnexpectedHttpStatus'] = () => {
+            setRestoring(null);
+            notify({ summary: 'Não foi possível restaurar', detail: 'Tente de novo em alguns instantes.', severity: 'error' });
+        };
+        JnAjax.doAnAjaxRequest('recruiter/{email}/positions/restore', callbacks, 'POST', { title: position.title }, {}, 'http://localhost:8081');
     };
 
     const { active, expired } = splitByExpiration(positions);
@@ -171,6 +217,8 @@ export const Positions = () => {
             onDelete={(position) => setConfirmation({ kind: 'delete', position })}
             onInactivate={(position) => setConfirmation({ kind: 'inactivate', position })}
             onReactivate={setReactivating}
+            onRestore={restore}
+            restoring={restoring}
         />
     );
 
@@ -203,12 +251,30 @@ export const Positions = () => {
                         <Tabs.Tab value="expired" className="whitespace-nowrap font-semibold">
                             Vagas expiradas ({expired.length})
                         </Tabs.Tab>
+                        <Tabs.Tab value="deleted" className="whitespace-nowrap font-semibold">
+                            Vagas excluídas ({deleted.length})
+                        </Tabs.Tab>
                     </Tabs.List>
                     <Tabs.Panel value="active">{grid('active', active, 'Nenhuma vaga dentro da data de expiração. Use "Abrir nova vaga" para cadastrar uma.')}</Tabs.Panel>
                     <Tabs.Panel value="expired">{grid('expired', expired, 'Nenhuma vaga expirada.')}</Tabs.Panel>
+                    <Tabs.Panel value="deleted">{grid('deleted', deleted, 'Nenhuma vaga excluída.')}</Tabs.Panel>
                 </Tabs>
             )}
-            <Modal visible={choosing} setVisible={setChoosing} title="Abrir nova vaga" size="md">
+            <Modal visible={choosing} setVisible={setChoosing} title="Abrir nova vaga" size="lg">
+                {/* a diferença entre os dois cadastros (desde 2026-11-24), para o usuário escolher antes de abrir */}
+                <div className="mb-5 space-y-3 text-sm">
+                    <p>
+                        <strong>Vaga completa:</strong> você passa por todas as abas e decide cada detalhe: as habilidades obrigatórias e desejáveis (vaga de tecnologia),
+                        os idiomas, as regiões, as senioridades, a disponibilidade para começar, o trabalho temporário, as faixas salariais, como e com que frequência receber
+                        os currículos, a divulgação nos grupos e a ordem em que os currículos aparecem.
+                    </p>
+                    <p>
+                        <strong>Vaga simplificada:</strong> você preenche só a vaga (título, área, descrição, contatos e período) e os salários; o resto já vem
+                        preenchido: todas as senioridades, todas as regiões mais o home office, nenhum idioma exigido, as habilidades encontradas na descrição como
+                        obrigatórias, os próprios candidatos enviando os currículos para o seu e-mail e a vaga divulgada nos grupos. Exige login. Depois, você pode
+                        editá-la como uma vaga completa.
+                    </p>
+                </div>
                 <div className="flex flex-col gap-3 sm:flex-row">
                     <button type="button" className="btn btn-primary flex-1" onClick={openComplete}>
                         Abrir vaga completa
