@@ -18,29 +18,20 @@ const Sidebar = () => {
     const dispatch = useDispatch();
     const { t } = getTranslation();
     const pathname = usePathname();
-    const [currentMenu, setCurrentMenu] = useState<string>('');
+    // todos os grupos do menu começam abertos (desde 2026-11-25); cada um abre e fecha sozinho, sem fechar os outros
+    const [openMenus, setOpenMenus] = useState<string[]>(['users', 'page', 'auth', 'statistics']);
+    const isOpen = (value: string) => openMenus.includes(value);
     const themeConfig = useSelector((state: IRootState) => state.themeConfig);
     const semidark = useSelector((state: IRootState) => state.themeConfig.semidark);
     const toggleMenu = (value: string) => {
-        setCurrentMenu((oldValue) => {
-            return oldValue === value ? '' : value;
-        });
+        setOpenMenus((oldValue) => (oldValue.includes(value) ? oldValue.filter((menu) => menu != value) : [...oldValue, value]));
     };
 
     useEffect(() => {
         const selector = document.querySelector('.sidebar ul a[href="' + window.location.pathname + '"]');
+        // os grupos já começam abertos: só marca o link da rota atual (antes, clicava no grupo dele para abri-lo)
         if (selector) {
             selector.classList.add('active');
-            const ul: any = selector.closest('ul.sub-menu');
-            if (ul) {
-                let ele: any = ul.closest('li.menu').querySelectorAll('.nav-link') || [];
-                if (ele.length) {
-                    ele = ele[0];
-                    setTimeout(() => {
-                        ele.click();
-                    });
-                }
-            }
         }
     }, []);
 
@@ -84,18 +75,18 @@ const Sidebar = () => {
                     <PerfectScrollbar className="relative h-[calc(100vh-80px)]">
                         <ul className="relative space-y-0.5 p-4 py-0 font-semibold">
                             <li className="menu nav-item">
-                                <button type="button" className={`${currentMenu === 'users' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('users')}>
+                                <button type="button" className={`${isOpen('users') ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('users')}>
                                     <div className="flex items-center">
                                         <IconMenuUsers className="shrink-0 group-hover:!text-primary" />
                                         <span className="text-black dark:text-[#506690] dark:group-hover:text-white-dark ltr:pl-3 rtl:pr-3">{t('My Data')}</span>
                                     </div>
 
-                                    <div className={currentMenu !== 'users' ? '-rotate-90 rtl:rotate-90' : ''}>
+                                    <div className={!isOpen('users') ? '-rotate-90 rtl:rotate-90' : ''}>
                                         <IconCaretDown />
                                     </div>
                                 </button>
 
-                                <AnimateHeight duration={300} height={currentMenu === 'users' ? 'auto' : 0}>
+                                <AnimateHeight duration={300} height={isOpen('users') ? 'auto' : 0}>
                                     <ul className="sub-menu text-gray-500">
                                         <li>
                                             <Link href="/meus-dados/sobre-mim">{t('about_me')}</Link>
@@ -117,18 +108,18 @@ const Sidebar = () => {
                             </li>
 
                             {/* <li className="menu nav-item">
-                                <button type="button" className={`${currentMenu === 'page' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('page')}>
+                                <button type="button" className={`${isOpen('page') ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('page')}>
                                     <div className="flex items-center">
                                         <IconMenuPages className="shrink-0 group-hover:!text-primary" />
                                         <span className="text-black dark:text-[#506690] dark:group-hover:text-white-dark ltr:pl-3 rtl:pr-3">{t('Ninjas')}</span>
                                     </div>
 
-                                    <div className={currentMenu !== 'page' ? '-rotate-90 rtl:rotate-90' : ''}>
+                                    <div className={!isOpen('page') ? '-rotate-90 rtl:rotate-90' : ''}>
                                         <IconCaretDown />
                                     </div>
                                 </button>
 
-                                <AnimateHeight duration={300} height={currentMenu === 'page' ? 'auto' : 0}>
+                                <AnimateHeight duration={300} height={isOpen('page') ? 'auto' : 0}>
                                     <ul className="sub-menu text-gray-500">
                                         <li>
                                             <Link href="/maintenence">{t('Seja um Ninja')}</Link>
@@ -144,18 +135,18 @@ const Sidebar = () => {
                             </li> */}
 
                             <li className="menu nav-item">
-                                <button type="button" className={`${currentMenu === 'auth' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('auth')}>
+                                <button type="button" className={`${isOpen('auth') ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('auth')}>
                                     <div className="flex items-center">
                                         <IconMenuAuthentication className="shrink-0 group-hover:!text-primary" />
                                         <span className="text-black dark:text-[#506690] dark:group-hover:text-white-dark ltr:pl-3 rtl:pr-3">{t('Meu Recrutamento')}</span>
                                     </div>
 
-                                    <div className={currentMenu !== 'auth' ? '-rotate-90 rtl:rotate-90' : ''}>
+                                    <div className={!isOpen('auth') ? '-rotate-90 rtl:rotate-90' : ''}>
                                         <IconCaretDown />
                                     </div>
                                 </button>
 
-                                <AnimateHeight duration={300} height={currentMenu === 'auth' ? 'auto' : 0}>
+                                <AnimateHeight duration={300} height={isOpen('auth') ? 'auto' : 0}>
                                     <ul className="sub-menu text-gray-500">
                                         {/* <li>
                                             <Link href="/maintenence">{t('Buscar currículos')}</Link>
@@ -181,18 +172,18 @@ const Sidebar = () => {
                             </li>
 
                             <li className="menu nav-item">
-                                <button type="button" className={`${currentMenu === 'statistics' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('statistics')}>
+                                <button type="button" className={`${isOpen('statistics') ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('statistics')}>
                                     <div className="flex items-center">
                                         <IconMenuCharts className="shrink-0 group-hover:!text-primary" />
                                         <span className="text-black dark:text-[#506690] dark:group-hover:text-white-dark ltr:pl-3 rtl:pr-3">{t('Statistics')}</span>
                                     </div>
 
-                                    <div className={currentMenu !== 'statistics' ? '-rotate-90 rtl:rotate-90' : ''}>
+                                    <div className={!isOpen('statistics') ? '-rotate-90 rtl:rotate-90' : ''}>
                                         <IconCaretDown />
                                     </div>
                                 </button>
 
-                                <AnimateHeight duration={300} height={currentMenu === 'statistics' ? 'auto' : 0}>
+                                <AnimateHeight duration={300} height={isOpen('statistics') ? 'auto' : 0}>
                                     <ul className="sub-menu text-gray-500">
                                         <li>
                                             <Link href="/estatisticas/telegram/vagas">{t('Telegram job groups')}</Link>
