@@ -16,6 +16,11 @@ export type PositionOfTheResume = {
     pj?: SalaryRange;
     expiration: { min: number | string; max: number | string };
     contact: Contact[];
+    // desde 2026-11-24: o id da vaga (vai no envio do currículo), se o currículo já foi enviado a ela e, quando o
+    // candidato já pediu o envio, a hora cheia em que ele vai (yyyyMMddHH)
+    id: string;
+    resumeSent?: boolean;
+    sendingHour?: string;
 };
 
 const pad = (value: number) => String(value).padStart(2, '0');
@@ -64,3 +69,18 @@ export const contactLabel = (contact: Contact) => {
     if (contact.type == 'email') return `E-mail ${contact.value.trim()}`;
     return 'Página da vaga';
 };
+
+/** A hora cheia do envio do currículo (yyyyMMddHH) como o candidato lê: "22:00 de 24/11". */
+export const sendingHourLabel = (sendingHour: string) => {
+    const day = sendingHour.substring(6, 8);
+    const month = sendingHour.substring(4, 6);
+    const hour = sendingHour.substring(8, 10);
+    return `${hour}:00 de ${day}/${month}`;
+};
+
+/** A vaga com o envio do currículo marcado para a hora devolvida pela API. */
+export const withSendingHour = (positions: PositionOfTheResume[], id: string, sendingHour: string) =>
+    positions.map((position) => (position.id == id ? { ...position, sendingHour } : position));
+
+/** A vaga que deixou de aceitar o currículo sai da lista. */
+export const withoutPosition = (positions: PositionOfTheResume[], id: string) => positions.filter((position) => position.id != id);

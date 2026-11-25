@@ -1,5 +1,5 @@
 import { dddRegions } from '@/presentation/components/regions/dddRegions';
-import { contactHref, contactLabel, newestFirst, PositionOfTheResume, regionsLabel, salaryLabel, senioritiesLabel, validUntilLabel } from './resumePositionsData';
+import { contactHref, contactLabel, newestFirst, PositionOfTheResume, regionsLabel, salaryLabel, senioritiesLabel, sendingHourLabel, validUntilLabel, withoutPosition, withSendingHour } from './resumePositionsData';
 
 const position = (title: string, min: number): PositionOfTheResume => ({
     title,
@@ -9,6 +9,7 @@ const position = (title: string, min: number): PositionOfTheResume => ({
     ddd: ['11'],
     expiration: { min, max: min + 1 },
     contact: [],
+    id: title,
 });
 
 describe('a tela Minhas vagas do candidato', () => {
@@ -42,5 +43,21 @@ describe('a tela Minhas vagas do candidato', () => {
         expect(contactHref({ type: 'link', value: 'empresa.com/vagas' })).toBe('https://empresa.com/vagas');
         expect(contactHref({ type: 'link', value: 'http://empresa.com' })).toBe('http://empresa.com');
         expect(contactLabel({ type: 'link', value: 'x' })).toBe('Página da vaga');
+    });
+
+    it('mostra a hora cheia do envio do currículo', () => {
+        expect(sendingHourLabel('2026112422')).toBe('22:00 de 24/11');
+        expect(sendingHourLabel('2026120100')).toBe('00:00 de 01/12');
+    });
+
+    it('marca a hora do envio só na vaga escolhida', () => {
+        const marked = withSendingHour([position('a', 1), position('b', 2)], 'b', '2026112423');
+        expect(marked[0].sendingHour).toBeUndefined();
+        expect(marked[1].sendingHour).toBe('2026112423');
+    });
+
+    it('tira da lista a vaga que deixou de aceitar o currículo', () => {
+        const left = withoutPosition([position('a', 1), position('b', 2)], 'a');
+        expect(left.map((item) => item.id)).toEqual(['b']);
     });
 });
