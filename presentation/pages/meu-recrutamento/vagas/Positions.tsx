@@ -10,7 +10,7 @@ import { groupParentId } from '@/presentation/pages/meus-dados/acessos/accessesR
 import { PositionFormModal } from './PositionFormModal';
 import { ReactivatePositionForm } from './ReactivatePositionForm';
 import { PositionsGrid, PositionsTab } from './PositionsGrid';
-import { Position, changeExpiration, parsePositionsOnBothSides, removePosition, replacePosition, splitByExpiration } from './positionsData';
+import { Position, changeExpiration, keyBodyOf, parsePositionsOnBothSides, positionKey, removePosition, replacePosition, splitByExpiration } from './positionsData';
 
 type Situation = 'loading' | 'loaded' | 'notLogged' | 'error';
 
@@ -76,7 +76,7 @@ export const Positions = () => {
     // a gravação é assíncrona e o grupo lido logo depois ainda pode vir sem elas
     const savedBeforeTheList = useRef<Position[]>([]);
 
-    const withTheSaved = (loaded: Position[]) => savedBeforeTheList.current.reduce(replacePosition, loaded);
+    const withTheSaved = (loaded: Position[]) => savedBeforeTheList.current.reduce((list, saved) => replacePosition(list, saved), loaded);
 
     const load = () => {
         setSituation('loading');
@@ -86,7 +86,7 @@ export const Positions = () => {
             const loaded = withTheSaved(sides.positions);
             setPositions(loaded);
             // uma vaga gravada depois de excluída sai da gêmea: não fica nas duas listas
-            setDeleted(sides.deleted.filter((position) => !loaded.some((saved) => saved.title == position.title)));
+            setDeleted(sides.deleted.filter((position) => !loaded.some((saved) => positionKey(saved) == positionKey(position))));
             setSituation('loaded');
         };
         // nenhuma vaga ainda: o grupo do usuário não existe
@@ -164,26 +164,27 @@ export const Positions = () => {
 
     // o modal continua aberto depois de gravar (vai para a aba dos currículos encontrados): só a lista muda; quem
     // salvou sem ter a lista (fez o login para salvar) passa a ver as suas vagas
-    const saved = (position: Position) => {
-        setPositions((current) => replacePosition(current, position));
-        // gravar um título que estava entre as excluídas tira a excluída da gêmea
-        setDeleted((current) => removePosition(current, position.title));
+    // replacedKey: a chave anterior da vaga, quando a edição mudou o título (desde 2026-11-24 a de título antigo some)
+    const saved = (position: Position, replacedKey: string) => {
+        setPositions((current) => replacePosition(current, position, replacedKey));
+        // gravar uma chave que estava entre as excluídas tira a excluída da gêmea
+        setDeleted((current) => removePosition(current, positionKey(position)));
         if (situation == 'loaded') return;
         savedBeforeTheList.current = [...savedBeforeTheList.current, position];
         load();
     };
 
-    const reactivated = (title: string, expiration: { min: any; max: any }) => {
-        setPositions(changeExpiration(positions, title, expiration));
+    const reactivated = (key: string, expiration: { min: any; max: any }) => {
+        setPositions(changeExpiration(positions, key, expiration));
         setReactivating(null);
     };
 
     const confirm = (chosen: Confirmation) => () => {
         const texts = confirmations[chosen.kind];
-        const title = chosen.position.title;
+        const key = positionKey(chosen.position);
         const callbacks: any = {};
         callbacks[200] = (response: any) => {
-            const changed = chosen.kind == 'delete' ? removePosition(positions, title) : changeExpiration(positions, title, response.expiration);
+            const changed = chosen.kind == 'delete' ? removePosition(positions, key) : changeExpiration(positions, key, response.expiration);
             setPositions(changed);
             // a excluída vai para a aba das excluídas
             chosen.kind == 'delete' && setDeleted((current) => replacePosition(current, chosen.position));
@@ -196,18 +197,18 @@ export const Positions = () => {
             JnAjax.getHandler401(confirm(chosen))();
         };
         callbacks['onUnexpectedHttpStatus'] = () => notify({ summary: 'Não foi possível concluir', detail: 'Tente de novo em alguns instantes.', severity: 'error' });
-        JnAjax.doAnAjaxRequest(`recruiter/{email}/positions/${texts.path}`, callbacks, 'POST', { title }, {}, 'http://localhost:8081');
+        JnAjax.doAnAjaxRequest(`recruiter/{email}/positions/${texts.path}`, callbacks, 'POST', keyBodyOf(chosen.position), {}, 'http://localhost:8081');
     };
 
     // "Restaurar" (desde 2026-11-24): a vaga sai das excluídas e volta valendo por uma semana, com o título que o backend
     // devolveu (o mesmo, ou "título 2" quando já há uma vaga não excluída com ele)
     const restore = (position: Position) => {
-        setRestoring(position.title);
+        setRestoring(positionKey(position));
         const callbacks: any = {};
         callbacks[200] = (response: any) => {
             setRestoring(null);
             const restored: Position = { ...position, title: response.title, expiration: { min: Number(response.expiration.min), max: Number(response.expiration.max) } };
-            setDeleted((current) => removePosition(current, position.title));
+            setDeleted((current) => removePosition(current, positionKey(position)));
             setPositions((current) => replacePosition(current, restored));
             const renamed = response.title != position.title ? ` Como você já tinha uma vaga com este título, ela foi restaurada como "${response.title}".` : '';
             notify({ summary: 'Vaga restaurada', detail: `A vaga voltou para a aba "Vagas dentro da expiração", valendo até ${new Date(restored.expiration.max).toLocaleDateString('pt-BR')}.${renamed}` });
@@ -226,7 +227,7 @@ export const Positions = () => {
             setRestoring(null);
             notify({ summary: 'Não foi possível restaurar', detail: 'Tente de novo em alguns instantes.', severity: 'error' });
         };
-        JnAjax.doAnAjaxRequest('recruiter/{email}/positions/restore', callbacks, 'POST', { title: position.title }, {}, 'http://localhost:8081');
+        JnAjax.doAnAjaxRequest('recruiter/{email}/positions/restore', callbacks, 'POST', keyBodyOf(position), {}, 'http://localhost:8081');
     };
 
     const { active, expired } = splitByExpiration(positions);
@@ -319,11 +320,11 @@ export const Positions = () => {
                 closeOnEscape={false}
             >
                 {editing !== undefined && (
-                    <PositionFormModal key={editing ? editing.title : template ? `copy-${template.title}` : simplified ? 'newSimplified' : 'new'} position={editing} simplified={editing == null && simplified} openOnResumes={openOnResumes} template={template} onSaved={saved} onCancel={closeForm} />
+                    <PositionFormModal key={editing ? positionKey(editing) : template ? `copy-${positionKey(template)}` : simplified ? 'newSimplified' : 'new'} position={editing} simplified={editing == null && simplified} openOnResumes={openOnResumes} template={template} onSaved={saved} onCancel={closeForm} />
                 )}
             </Modal>
             <Modal visible={reactivating != null} setVisible={(visible) => !visible && setReactivating(null)} title="Reativar vaga" size="md">
-                {reactivating && <ReactivatePositionForm key={reactivating.title} position={reactivating} onReactivated={reactivated} onCancel={() => setReactivating(null)} />}
+                {reactivating && <ReactivatePositionForm key={positionKey(reactivating)} position={reactivating} onReactivated={reactivated} onCancel={() => setReactivating(null)} />}
             </Modal>
             <ConfirmModal
                 visible={confirmation != null}

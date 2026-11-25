@@ -3,13 +3,14 @@ import React from 'react';
 import { ResumesOfTheWeek, SeeAllList } from '../curriculos-da-semana/ResumesOfTheWeek';
 import {
     getPositionTitleFromQuery,
+    getPositionYearMonthFromQuery,
     getResumesOfThePositionGridTitle,
     getResumesOfThePositionPath,
     getResumesOfThePositionTitle,
 } from './positionSeeAll';
 
 const resumesOfThePositionList: SeeAllList = {
-    path: (search) => getResumesOfThePositionPath(getPositionTitleFromQuery(search)),
+    path: (search) => getResumesOfThePositionPath(getPositionTitleFromQuery(search), getPositionYearMonthFromQuery(search)),
     title: (search, owner) => getResumesOfThePositionTitle(getPositionTitleFromQuery(search), owner),
     noEmail: 'Não há e-mail de currículos desta vaga seu do último mês. A lista completa fica disponível por um mês após cada e-mail.',
     checkboxId: 'resumesOfThePositionOnlyNotViewed',

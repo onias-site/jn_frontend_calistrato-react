@@ -17,6 +17,8 @@ export type Contact = { type: 'whatsapp' | 'email' | 'link'; value: string };
 /** Uma vaga como o grupo a guarda (os campos que o usuário preencheu, as datas em milissegundos). */
 export type Position = {
     title: string;
+    // o mês de criação (yyyyMM), parte da chave desde 2026-11-24; as vagas gravadas antes não o têm
+    yearMonth?: string;
     description: string;
     resumeType: number;
     // uma lista desde 2026-11-23; as vagas gravadas antes guardam um texto só
@@ -261,14 +263,34 @@ export const splitByExpiration = (positions: Position[], now: number = Date.now(
     expired: positions.filter((position) => isExpired(position, now)),
 });
 
-/** A lista com a vaga gravada no lugar da de mesmo título (ou acrescentada). */
-export const replacePosition = (positions: Position[], saved: Position) => [saved, ...positions.filter((position) => position.title != saved.title)];
+/**
+ * O mês corrente como yyyyMM no fuso de São Paulo: o mês de criação de uma vaga nova (o backend usa o mesmo, desde
+ * 2026-11-24 parte da chave da vaga com o recrutador e o título).
+ */
+export const currentYearMonth = (now: Date = new Date()): string => {
+    const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit' }).formatToParts(now);
+    const part = (type: string) => (parts.find((piece) => piece.type == type) || { value: '' }).value;
+    return `${part('year')}${part('month')}`;
+};
 
-export const removePosition = (positions: Position[], title: string) => positions.filter((position) => position.title != title);
+/**
+ * A identidade da vaga na tela (desde 2026-11-24): o mês de criação e o título, a chave dela no backend (o recrutador é
+ * sempre o usuário logado). Duas vagas de mesmo título em meses diferentes são vagas diferentes.
+ */
+export const positionKey = (position: { title: string; yearMonth?: string }) => `${position.yearMonth || ''}|${position.title}`;
 
-/** A lista com a nova expiração da vaga de mesmo título. */
-export const changeExpiration = (positions: Position[], title: string, expiration: { min: any; max: any }) =>
-    positions.map((position) => (position.title == title ? { ...position, expiration: { min: Number(expiration.min), max: Number(expiration.max) } } : position));
+/** O corpo das ações sobre uma vaga gravada (excluir, inativar, reativar, restaurar): a chave dela. */
+export const keyBodyOf = (position: Position) => ({ title: position.title, yearMonth: position.yearMonth });
+
+/** A lista com a vaga gravada no lugar da de mesma chave (ou da chave anterior, quando o título mudou), ou acrescentada. */
+export const replacePosition = (positions: Position[], saved: Position, replacedKey: string = positionKey(saved)) =>
+    [saved, ...positions.filter((position) => positionKey(position) != positionKey(saved) && positionKey(position) != replacedKey)];
+
+export const removePosition = (positions: Position[], key: string) => positions.filter((position) => positionKey(position) != key);
+
+/** A lista com a nova expiração da vaga de mesma chave. */
+export const changeExpiration = (positions: Position[], key: string, expiration: { min: any; max: any }) =>
+    positions.map((position) => (positionKey(position) == key ? { ...position, expiration: { min: Number(expiration.min), max: Number(expiration.max) } } : position));
 
 /** O rótulo do botão dos currículos encontrados: ainda sem a contagem (o botão vem antes da busca). */
 export const foundResumesLabel = (resumes?: number) => (resumes == null ? 'Ver os currículos encontrados' : `Ver os ${resumes} currículos encontrados`);
@@ -433,12 +455,16 @@ const isOutOfIntegerRange = (value: number | string, max: number) => value === '
  * Os erros da aba "Vaga" por campo, mostrados embaixo de cada um, como na aba Currículo (LabelComponent): título,
  * descrição, área, contatos e as datas (expiration).
  */
-export const positionTabFieldErrors = (form: PositionForm, creating: boolean, now: Date = new Date()) => {
+/** A explicação do título já usado (o title-in-use respondeu 200): o modal não deixa gravar com ele. */
+export const TITLE_IN_USE = 'Este título já é de outra vaga sua criada no mesmo mês: escolha outro título';
+
+export const positionTabFieldErrors = (form: PositionForm, creating: boolean, now: Date = new Date(), titleInUse: boolean = false) => {
     const fieldErrors: Record<string, string> = {};
     const fail = (field: string, message: string) => (fieldErrors[field] = fieldErrors[field] || message);
     const title = form.title.trim();
     const description = form.description.trim();
     (title.length < LIMITS.titleMin || title.length > LIMITS.titleMax) && fail('title', `O título deve ter de ${LIMITS.titleMin} a ${LIMITS.titleMax} caracteres`);
+    titleInUse && fail('title', TITLE_IN_USE);
     (description.length < LIMITS.descriptionMin || description.length > LIMITS.descriptionMax) &&
         fail('description', `A descrição deve ter de ${LIMITS.descriptionMin} a ${LIMITS.descriptionMax.toLocaleString('pt-BR')} caracteres (tem ${description.length})`);
     !form.resumeType && fail('resumeType', 'Escolha a área da vaga');
@@ -454,7 +480,8 @@ export const positionTabFieldErrors = (form: PositionForm, creating: boolean, no
 };
 
 /** Aba "Vaga": título, descrição, área, contatos e as datas de início e de fim da vaga. */
-export const positionTabErrors = (form: PositionForm, creating: boolean, now: Date = new Date()) => Object.values(positionTabFieldErrors(form, creating, now));
+export const positionTabErrors = (form: PositionForm, creating: boolean, now: Date = new Date(), titleInUse: boolean = false) =>
+    Object.values(positionTabFieldErrors(form, creating, now, titleInUse));
 
 /** Aba "Idiomas": marcado o "exige outro idioma", ao menos um idioma, cada um com o seu nível. */
 export const languagesTabErrors = (form: PositionForm) => {
@@ -505,8 +532,8 @@ export const salaryTabErrors = (form: PositionForm) => {
 };
 
 /** Tudo o que falta ou está errado no formulário, aba por aba; vazio, a vaga pode ser gravada. */
-export const pendingRequirements = (form: PositionForm, creating: boolean, now: Date = new Date()) => [
-    ...positionTabErrors(form, creating, now),
+export const pendingRequirements = (form: PositionForm, creating: boolean, now: Date = new Date(), titleInUse: boolean = false) => [
+    ...positionTabErrors(form, creating, now, titleInUse),
     ...filtersTabErrors(form),
     ...languagesTabErrors(form),
     ...salaryTabErrors(form),

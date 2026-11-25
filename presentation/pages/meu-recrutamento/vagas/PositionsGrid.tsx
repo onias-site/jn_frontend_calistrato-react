@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import { GridPagination, paginate } from '@/presentation/components/source/GridPagination';
-import { Position, dateTimeLabel, foundResumesLabel } from './positionsData';
+import { Position, dateTimeLabel, foundResumesLabel, positionKey } from './positionsData';
 
 export type PositionsTab = 'active' | 'expired' | 'deleted';
 
@@ -51,13 +51,13 @@ export const PositionsGrid = ({ tab, positions, emptyMessage, onEdit, onSeeTheRe
                     </thead>
                     <tbody>
                         {pageRows.map((position) => (
-                            <tr key={position.title}>
+                            <tr key={positionKey(position)}>
                                 <td className="max-w-md break-words">{position.title}</td>
                                 <td className="whitespace-nowrap">{dateTimeLabel(position.expiration.max)}</td>
                                 <td>
                                     {tab == 'deleted' && (
-                                        <button type="button" className={action} disabled={restoring == position.title} onClick={() => onRestore(position)}>
-                                            {restoring == position.title ? 'Restaurando...' : 'Restaurar'}
+                                        <button type="button" className={action} disabled={restoring == positionKey(position)} onClick={() => onRestore(position)}>
+                                            {restoring == positionKey(position) ? 'Restaurando...' : 'Restaurar'}
                                         </button>
                                     )}
                                     {tab != 'deleted' && (

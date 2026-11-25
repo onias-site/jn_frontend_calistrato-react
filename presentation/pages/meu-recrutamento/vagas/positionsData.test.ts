@@ -1,5 +1,9 @@
 import {
+    TITLE_IN_USE,
     changeExpiration,
+    currentYearMonth,
+    keyBodyOf,
+    positionKey,
     copyFormOf,
     emptyForm,
     filtersTabErrors,
@@ -61,11 +65,38 @@ describe('positionsData', () => {
         expect(parsePositions(undefined)).toEqual([]);
     });
 
-    it('troca, tira e muda a expiração da vaga pelo título', () => {
-        const positions = parsePositions({ child: [JSON.stringify({ title: 'A', expiration: { min: 1, max: 2 } }), JSON.stringify({ title: 'B', expiration: { min: 1, max: 3 } })] });
-        expect(replacePosition(positions, { ...positions[1], description: 'nova' } as any).filter((position) => position.title == 'A')[0].description).toBe('nova');
-        expect(removePosition(positions, 'A').map((position) => position.title)).toEqual(['B']);
-        expect(changeExpiration(positions, 'B', { min: '1', max: '99' }).filter((position) => position.title == 'B')[0].expiration).toEqual({ min: 1, max: 99 });
+    it('troca, tira e muda a expiração da vaga pela chave (mês de criação e título)', () => {
+        const positions = parsePositions({
+            child: [
+                JSON.stringify({ title: 'A', yearMonth: '202611', expiration: { min: 1, max: 2 } }),
+                JSON.stringify({ title: 'B', yearMonth: '202611', expiration: { min: 1, max: 3 } }),
+                JSON.stringify({ title: 'A', yearMonth: '202610', expiration: { min: 1, max: 1 } }),
+            ],
+        });
+        const novemberA = positions.find((position) => positionKey(position) == '202611|A') as any;
+        const replaced = replacePosition(positions, { ...novemberA, description: 'nova' });
+        expect(replaced.length).toBe(3);
+        expect(replaced.filter((position) => position.description == 'nova').map(positionKey)).toEqual(['202611|A']);
+        expect(removePosition(positions, '202611|A').map(positionKey)).toEqual(['202611|B', '202610|A']);
+        expect(changeExpiration(positions, '202611|B', { min: '1', max: '99' }).filter((position) => position.title == 'B')[0].expiration).toEqual({ min: 1, max: 99 });
+        expect(keyBodyOf(novemberA)).toEqual({ title: 'A', yearMonth: '202611' });
+    });
+
+    it('a vaga renomeada toma o lugar da de título antigo, no mesmo mês', () => {
+        const positions = parsePositions({ child: [JSON.stringify({ title: 'Antigo', yearMonth: '202611', expiration: { min: 1, max: 2 } })] });
+        const renamed = { ...positions[0], title: 'Novo' };
+        expect(replacePosition(positions, renamed, '202611|Antigo').map(positionKey)).toEqual(['202611|Novo']);
+    });
+
+    it('o mês corrente da vaga nova é o de São Paulo', () => {
+        // 01:00 UTC do dia 1 de dezembro ainda é 30 de novembro em São Paulo
+        expect(currentYearMonth(new Date(Date.UTC(2026, 11, 1, 1, 0)))).toBe('202611');
+        expect(currentYearMonth(new Date(Date.UTC(2026, 11, 1, 12, 0)))).toBe('202612');
+    });
+
+    it('o título já usado no mesmo mês é um erro do título', () => {
+        expect(positionTabFieldErrors(validForm(), true, now, true).title).toBe(TITLE_IN_USE);
+        expect(positionTabFieldErrors(validForm(), true, now, false).title).toBeUndefined();
     });
 
     it('as senioridades da vaga são uma lista: a vaga gravada antes, com um texto só, vira lista de uma', () => {

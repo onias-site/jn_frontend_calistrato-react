@@ -4,11 +4,12 @@ import { TextInput } from '@mantine/core';
 import JnAjax from '@/app/JnAjax';
 import { LoadingButton } from '@/presentation/components/source/LoadingButton';
 import { notify } from '@/presentation/components/source/notify';
-import { Position, fromDateInput, today } from './positionsData';
+import { Position, fromDateInput, keyBodyOf, positionKey, today } from './positionsData';
 
 type ReactivatePositionFormProps = {
     position: Position;
-    onReactivated: (title: string, expiration: { min: any; max: any }) => void;
+    // key: a chave da vaga (positionKey), o mês de criação e o título
+    onReactivated: (key: string, expiration: { min: any; max: any }) => void;
     onCancel: () => void;
 };
 
@@ -29,7 +30,7 @@ export const ReactivatePositionForm = ({ position, onReactivated, onCancel }: Re
         callbacks[200] = (response: any) => {
             setSaving(false);
             notify({ summary: 'Vaga reativada', detail: 'A vaga voltou para a aba das vagas dentro da expiração.' });
-            onReactivated(position.title, response.expiration || { min: position.expiration.min, max });
+            onReactivated(positionKey(position), response.expiration || { min: position.expiration.min, max });
         };
         callbacks[404] = () => {
             setSaving(false);
@@ -49,7 +50,7 @@ export const ReactivatePositionForm = ({ position, onReactivated, onCancel }: Re
             setSaving(false);
             notify({ summary: 'Não foi possível reativar', detail: 'Tente de novo em alguns instantes.', severity: 'error' });
         };
-        JnAjax.doAnAjaxRequest('recruiter/{email}/positions/reactivate', callbacks, 'POST', { title: position.title, max }, {}, 'http://localhost:8081');
+        JnAjax.doAnAjaxRequest('recruiter/{email}/positions/reactivate', callbacks, 'POST', { ...keyBodyOf(position), max }, {}, 'http://localhost:8081');
     };
 
     return (

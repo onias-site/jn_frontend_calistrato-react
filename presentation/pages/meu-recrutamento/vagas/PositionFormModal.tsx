@@ -32,6 +32,8 @@ import {
     Contact,
     DESIRED_SKILLS,
     LIMITS,
+    currentYearMonth,
+    positionKey,
     REQUIRED_SKILLS,
     REQUIRED_SKILLS_MAX,
     Position,
@@ -69,10 +71,11 @@ import {
 } from './positionsData';
 
 type PositionFormModalProps = {
-    // sem vaga, "Abrir nova vaga": o título vem vazio e é obrigatório; com vaga, "Editar": o título (parte da chave) fica travado
+    // sem vaga, "Abrir nova vaga": o título vem vazio e é obrigatório; com vaga, "Editar": o título pode mudar (desde 2026-11-24)
     position: Position | null;
     // a vaga gravada: a tela atualiza a lista e o modal continua aberto, na aba "Currículos aderentes"
-    onSaved: (position: Position) => void;
+    // replacedKey: a chave da vaga que a gravada substitui na lista (a anterior, quando o título mudou)
+    onSaved: (position: Position, replacedKey: string) => void;
     onCancel: () => void;
     // "Abrir vaga simplificada" (desde 2026-11-24): só as abas Vaga e Salários, o resto preenchido (simplifiedFormOf); o
     // link da contagem de currículos mostra todas as abas, e salvar sem ter passado por ele fecha o modal
@@ -146,9 +149,14 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
     const [expanded, setExpanded] = useState(!simplified);
     const collapsed = simplified && !expanded;
     const goToTheResumesAfterExpanding = React.useRef(false);
-    // gravada uma vez, a vaga nova passa a ser editada: o título trava e o próximo "Salvar dados" vai ao /edit
+    // gravada uma vez, a vaga nova passa a ser editada: o próximo "Salvar dados" vai ao /edit
     const [savedOnce, setSavedOnce] = useState(false);
-    const creating = position == null && !savedOnce;
+    // a chave da vaga gravada (desde 2026-11-24 o título e o mês de criação): a da vaga editada, ou a da vaga nova depois
+    // de gravada; nula enquanto a vaga nova não foi gravada. Com ela, gravar é editar, e um título diferente renomeia a vaga
+    const [stored, setStored] = useState<{ title: string; yearMonth?: string } | null>(position ? { title: position.title, yearMonth: position.yearMonth } : null);
+    const creating = stored == null;
+    // o título digitado já é de outra vaga do usuário no mesmo mês (o title-in-use respondeu 200): não deixa gravar
+    const [titleInUse, setTitleInUse] = useState(false);
     const [form, setForm] = useState<PositionForm>(() => {
         if (position != null) return formOf(position);
         if (template != null) return copyFormOf(template);
@@ -156,6 +164,29 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
         const logged: any = JnAjax.getLogin() || {};
         return simplifiedFormOf(allDddsWithHomeOffice, logged.email || '');
     });
+    // o título digitado, conferido por id (desde 2026-11-24): já usado, o modal explica e não grava
+    useEffect(() => {
+        const title = form.title.trim();
+        setTitleInUse(false);
+        if (title.length < LIMITS.titleMin || title.length > LIMITS.titleMax) return;
+        if (stored != null && stored.title == title) return;
+        let current = true;
+        // espera o usuário parar de digitar, como a contagem dos currículos
+        const timer = setTimeout(() => {
+            const callbacks: any = {};
+            callbacks[200] = () => current && setTitleInUse(true);
+            callbacks[404] = () => current && setTitleInUse(false);
+            callbacks[401] = () => JnAjax.setNotLoading()();
+            callbacks['onUnexpectedHttpStatus'] = () => {};
+            // sem mês, o backend usa o corrente: o de uma vaga nova
+            const body = stored != null && stored.yearMonth ? { title, yearMonth: stored.yearMonth } : { title };
+            JnAjax.doAnAjaxRequest('recruiter/{email}/positions/title-in-use', callbacks, 'POST', body, {}, 'http://localhost:8081');
+        }, 500);
+        return () => {
+            current = false;
+            clearTimeout(timer);
+        };
+    }, [form.title, stored]);
     const [saving, setSaving] = useState(false);
     // o erro de cada campo da aba Vaga só aparece depois da primeira tentativa de avançar ou salvar
     const [attempted, setAttempted] = useState(false);
@@ -238,7 +269,7 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
         if (!loggedEmail || form.resumesEmail) return;
         set({ resumesEmail: loggedEmail });
     }, [loggedEmail]);
-    const fieldErrors = attempted ? positionTabFieldErrors(form, creating) : {};
+    const fieldErrors = attempted || titleInUse ? positionTabFieldErrors(form, creating, new Date(), titleInUse) : {};
 
     // a ordem dos currículos (desde 2026-11-23): um critério por linha, só os que a vaga pede, e a padrão enquanto o usuário
     // não mexer nela; as habilidades desejáveis da aba Habilidades viram critérios, uma a uma
@@ -263,7 +294,7 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
         // a pendência segura o usuário na aba Vaga (que não a repete em notificação: os campos mostram as suas)
         if (loadingSkills) return [READING_THE_SKILLS];
         setAttempted(true);
-        const errors = positionTabErrors(form, creating);
+        const errors = positionTabErrors(form, creating, new Date(), titleInUse);
         if (errors.length) return errors;
         // só a vaga de Tecnologia da Informação vai ao skills/fromText (e só ela tem a aba Habilidades)
         if (!isTechPosition(form)) return [];
@@ -303,7 +334,7 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
         {
             label: 'Vaga',
             icon: <IconFile className="h-4 w-4" />,
-            getPendingRequirements: () => positionTabErrors(form, creating),
+            getPendingRequirements: () => positionTabErrors(form, creating, new Date(), titleInUse),
             onMoveOnFowardTabs: loadSkillsFromText,
             fieldsShowPendingRequirements: true,
         },
@@ -325,15 +356,24 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
         setAttempted(true);
         if (skillsOutdated()) return ['Aba Vaga: a descrição mudou. Avance até a aba Habilidades para conferir as habilidades encontradas nela antes de salvar.'];
         const skillErrors = showTabSkills ? [...requiredSkillsErrors(), ...skillStore.getState().getPendingRequirements()] : [];
-        const errors = [...pendingRequirements(form, creating), ...skillErrors];
+        const errors = [...pendingRequirements(form, creating, new Date(), titleInUse), ...skillErrors];
         if (errors.length || saving) return errors;
         setSaving(true);
         const body = requestBodyOf({ ...form, sort: shownSort }, skillStore.getState().loadSkillsContext());
+        // a edição leva a chave da vaga gravada: o mês de criação e, quando o título mudou, o título anterior
+        if (stored != null) body.yearMonth = stored.yearMonth;
+        const renaming = stored != null && stored.title != body.title;
+        if (renaming) body.oldTitle = stored.title;
         const callbacks: any = {};
-        callbacks[200] = () => {
+        callbacks[200] = (response: any) => {
             setSaving(false);
-            notify({ summary: creating ? 'Vaga aberta' : 'Vaga salva', detail: 'A lista já mostra a vaga como você a gravou.' });
-            onSaved(positionOf(body));
+            notify({ summary: creating ? 'Vaga aberta' : renaming ? 'Vaga renomeada' : 'Vaga salva', detail: 'A lista já mostra a vaga como você a gravou.' });
+            const { oldTitle, ...sent } = body;
+            // o mês de criação: o da vaga gravada, ou o que o backend deu à vaga nova
+            const yearMonth = (stored && stored.yearMonth) || (response && response.yearMonth) || currentYearMonth();
+            const saved = positionOf({ ...sent, yearMonth });
+            onSaved(saved, stored != null ? positionKey(stored) : positionKey(saved));
+            setStored({ title: saved.title, yearMonth });
             // a vaga simplificada sem a lista aberta pelo link da contagem: o modal só fecha
             if (collapsed) return onCancel();
             // a aba dos currículos aderentes aparece (se o link da contagem ainda não a abriu) e o modal vai para ela
@@ -343,7 +383,17 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
         };
         callbacks[409] = () => {
             setSaving(false);
-            notify({ summary: 'Título repetido', detail: 'Você já tem uma vaga com este título. Escolha outro título ou edite a vaga que já existe.', severity: 'error' });
+            setTitleInUse(true);
+            notify({ summary: 'Título repetido', detail: 'Você já tem outra vaga com este título criada no mesmo mês. Escolha outro título.', severity: 'error' });
+        };
+        // 423 (desde 2026-11-24): candidatos já enviaram o currículo por esta vaga e não acompanhariam um título novo
+        callbacks[423] = () => {
+            setSaving(false);
+            notify({
+                summary: 'Título mantido',
+                detail: `Candidatos já enviaram o currículo pela vaga "${stored ? stored.title : ''}", por isso o título dela não pode mudar. Volte ao título anterior para gravar as outras alterações.`,
+                severity: 'error',
+            });
         };
         callbacks[404] = () => {
             setSaving(false);
@@ -425,12 +475,12 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
         // largura limitada, como na aba Currículo: um campo de uma linha muito largo é desconfortável de ler e de preencher
         <div className="max-w-4xl">
             <LabelComponent
-                explanation={`O título identifica a vaga para você e para os candidatos (de ${LIMITS.titleMin} a ${LIMITS.titleMax} caracteres). Ele faz parte da identificação da vaga, por isso não pode ser alterado depois de criada.`}
+                explanation={`O título identifica a vaga para você e para os candidatos (de ${LIMITS.titleMin} a ${LIMITS.titleMax} caracteres). Não pode repetir o de outra vaga sua criada no mesmo mês. Pode ser alterado depois, menos numa vaga pela qual candidatos já enviaram o currículo.`}
                 labelValue="Título da vaga:"
                 property="title"
                 errors={fieldErrors}
             >
-                <TextInput id="title" error={!!fieldErrors.title} value={form.title} maxLength={LIMITS.titleMax} disabled={!creating} onChange={(event) => set({ title: event.currentTarget.value })} />
+                <TextInput id="title" error={!!fieldErrors.title} value={form.title} maxLength={LIMITS.titleMax} onChange={(event) => set({ title: event.currentTarget.value })} />
             </LabelComponent>
             <LabelComponent
                 explanation="Obrigatória: a área dos currículos procurados. A vaga de tecnologia da informação (TI) ganha a aba 'Habilidades', com as habilidades encontradas na descrição."

@@ -1,5 +1,6 @@
 import {
     getPositionTitleFromQuery,
+    getPositionYearMonthFromQuery,
     getResumesOfThePositionGridTitle,
     getResumesOfThePositionPath,
     getResumesOfThePositionTitle,
@@ -12,8 +13,13 @@ describe('a tela "Ver todos" do e-mail dos currículos da vaga', () => {
         expect(getPositionTitleFromQuery('')).toBe('');
     });
 
-    it('pede a lista pelo título codificado na URL', () => {
-        expect(getResumesOfThePositionPath('Dev Java & Go')).toBe('recruiter/{email}/resumes-of-the-position?title=Dev%20Java%20%26%20Go');
+    it('pede a lista pelo título codificado na URL e pelo mês de criação da vaga', () => {
+        expect(getResumesOfThePositionPath('Dev Java & Go', '202611')).toBe('recruiter/{email}/resumes-of-the-position?title=Dev%20Java%20%26%20Go&yearMonth=202611');
+    });
+
+    it('lê o mês de criação da vaga do link', () => {
+        expect(getPositionYearMonthFromQuery('?email=rh%40empresa.com&vaga=Dev&mes=202611')).toBe('202611');
+        expect(getPositionYearMonthFromQuery('?email=rh%40empresa.com&vaga=Dev')).toBe('');
     });
 
     it('mostra a vaga e o recrutador no título da tela', () => {
