@@ -103,10 +103,9 @@ const Sidebar = () => {
                                         <li>
                                             <Link href="/meus-dados/quem-me-viu">{t('Who viewed me')}</Link>
                                         </li>
-                                        {/* invisível a pedido do usuário (2026-11-24): ele tem algo a investigar nesta tela */}
-                                        {/* <li>
+                                        <li>
                                             <Link href="/meus-dados/vagas">{t('Minhas Vagas')}</Link>
-                                        </li> */}
+                                        </li>
                                         {/* <li>
                                             <Link href="/maintenence">{t('My Reputation')}</Link>
                                         </li>
