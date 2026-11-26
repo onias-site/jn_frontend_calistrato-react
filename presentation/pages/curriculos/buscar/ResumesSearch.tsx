@@ -65,7 +65,7 @@ const groupsOfTheRequiredSkills = (skills: string[]) => [desiredSkillsGroup([]),
  * tecnologia; os outros filtros são livres. A cada filtro acrescentado, mudado ou retirado, o POST resume-filter grava os
  * filtros em vis_resume_filter (os mesmos filtros da última hora vêm do cache, sem nova busca) e devolve o id deles, que
  * vai para o endereço (?filtro=<id>): aberta com ele, a tela lê os filtros pelo GET resume-filter/{id} e preenche os
- * campos; sem os filtros (expirados com a hora), não faz nada. Numa busca de tecnologia, o texto da vaga (ou o
+ * campos; sem os filtros (expirados 24 horas depois da última busca deles), não faz nada. Numa busca de tecnologia, o texto da vaga (ou o
  * descritivo das habilidades) vai ao skills/fromText ao sair do campo, como no modal da vaga: as listas de habilidades
  * obrigatórias e desejáveis e as ferramentas abrangentes; só as obrigatórias filtram (o texto não é gravado nos
  * filtros, e o id reabre só as obrigatórias). A contagem fica fixa no topo, à vista ao rolar.
@@ -106,7 +106,7 @@ export const ResumesSearch = () => {
             skillStore.getState().setGroups(groupsOfTheRequiredSkills(restored.requiredSkills) as any, getImplicitSkills);
             setReadingTheFilters(false);
         };
-        // sem os filtros (expiraram com a hora) a tela fica como está
+        // sem os filtros (expiraram 24 horas depois da última busca deles) a tela fica como está
         callbacks[404] = () => setReadingTheFilters(false);
         callbacks[422] = () => setReadingTheFilters(false);
         callbacks['onUnexpectedHttpStatus'] = () => setReadingTheFilters(false);
@@ -165,7 +165,7 @@ export const ResumesSearch = () => {
     const copyTheLink = () => {
         if (!filterId) return;
         const link = window.location.origin + addressWithTheFilter(window.location.href, filterId);
-        const copied = () => notify({ summary: 'Link copiado', detail: 'Cole o link para quem deve ver esta busca: os filtros valem até o fim do dia.', severity: 'success' });
+        const copied = () => notify({ summary: 'Link copiado', detail: 'Cole o link para quem deve ver esta busca: os filtros valem por 24 horas.', severity: 'success' });
         const failed = () => notify({ summary: 'Não foi possível copiar', detail: link, severity: 'warn' });
         navigator.clipboard.writeText(link).then(copied, failed);
     };
