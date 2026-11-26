@@ -3,13 +3,11 @@ import React, { useEffect, useState } from 'react';
 import JnAjax from '@/app/JnAjax';
 import { ResumeRowsGrid } from '../ResumeRowsGrid';
 import PageTitle from '@/presentation/layouts/page-title';
-import { decideSeeAll, getRecipientFromQuery, getSeeAllTitle, needsTheRecipientConfirmation, prefillTheLoginWithTheRecipient } from './seeAllRecipient';
+import { decideSeeAll, getRecipientFromQuery, getSeeAllTitle, prefillTheLoginWithTheRecipient } from './seeAllRecipient';
 import { ModalLoginStore } from '@/presentation/auth/ModalLogin';
-import { registerTheRecipientAnswers } from './registerTheRecipientAnswers';
 import { NotLoggedMessage } from '@/presentation/components/not-logged/NotLoggedMessage';
-import { ConfirmModal } from '@/presentation/components/source/ConfirmModal';
 
-type Situation = 'loading' | 'loaded' | 'noEmail' | 'notLogged' | 'error' | 'wrongAccount' | 'confirm';
+type Situation = 'loading' | 'loaded' | 'noEmail' | 'notLogged' | 'error' | 'wrongAccount';
 
 /**
  * A lista que a tela mostra (desde 2026-11-24): a do último e-mail de currículos (padrão) ou a do último e-mail de uma
@@ -36,7 +34,7 @@ const resumesOfTheWeekList: SeeAllList = {
     ),
 };
 
-const messages: Record<Exclude<Situation, 'loaded' | 'wrongAccount' | 'notLogged' | 'noEmail' | 'confirm'>, string> = {
+const messages: Record<Exclude<Situation, 'loaded' | 'wrongAccount' | 'notLogged' | 'noEmail'>, string> = {
     loading: 'Carregando os currículos...',
     error: 'Não foi possível carregar os currículos agora. Tente de novo em alguns instantes.',
 };
@@ -53,9 +51,9 @@ const messages: Record<Exclude<Situation, 'loaded' | 'wrongAccount' | 'notLogged
  * currículos sem visualização do recrutador (o campo viewed da lista, gravado no envio do e-mail: uma visualização feita
  * depois do envio só aparece na lista do próximo e-mail); a coluna # numera as linhas que ficaram. O grid, o checkbox e a
  * paginação ficam no ResumeRowsGrid (desde 2026-11-22), que a lista dos currículos dos filtros da vaga também usa.
- * Desde 2026-11-26, sem a conta do destinatário logada, a tela abre um diálogo de confirmação e não grava nem busca nada
- * antes do clique em "Ver os currículos": os robôs que abrem os links dos e-mails gravavam jn_login_email e
- * js_login_answers do destinatário.
+ * Desde 2026-11-26 a tela não grava nada ao abrir: só exige o login. Antes ela gravava o e-mail de login e as respostas
+ * do pré-cadastro do destinatário (jn_login_email e js_login_answers), e os robôs que abrem os links dos e-mails criavam
+ * esses cadastros sem que o recrutador clicasse; agora o recrutador sem cadastro responde as perguntas no modal de login.
  */
 export const ResumesOfTheWeek = ({ list = resumesOfTheWeekList }: { list?: SeeAllList }) => {
     const [situation, setSituation] = useState<Situation>('loading');
@@ -63,8 +61,6 @@ export const ResumesOfTheWeek = ({ list = resumesOfTheWeekList }: { list?: SeeAl
     const [email, setEmail] = useState('');
     const [recipient, setRecipient] = useState('');
     const [wrongEmail, setWrongEmail] = useState('');
-    // o diálogo de confirmação abre sozinho; fechado sem confirmar, o botão do painel continua na tela
-    const [confirmVisible, setConfirmVisible] = useState(true);
 
     // abre o login já com o e-mail do destinatário do link; ao entrar, repete a busca
     const askTheRecipientLogin = (expected: string) => {
@@ -110,55 +106,15 @@ export const ResumesOfTheWeek = ({ list = resumesOfTheWeekList }: { list?: SeeAl
         JnAjax.doACachedRequest(list.path(window.location.search), callbacks, 'GET', null as any, {}, 'http://localhost:8081');
     };
 
-    // o destinatário é recrutador: grava as suas respostas do pré-cadastro, se ainda não as tem, e busca a lista
-    const start = (expected: string) => {
-        registerTheRecipientAnswers(expected);
-        load(expected);
-    };
-
     useEffect(() => {
         const expected = getRecipientFromQuery(window.location.search);
         setRecipient(expected);
-        const login: any = JnAjax.getLogin() || {};
-        // robôs que abrem os links dos e-mails gravavam o cadastro do destinatário: só o clique de uma pessoa grava
-        if (needsTheRecipientConfirmation(expected, login.email)) {
-            setSituation('confirm');
-            return;
-        }
-        start(expected);
+        load(expected);
     }, []);
 
     // o título fica aqui, e não na página, porque o e-mail do recrutador só existe no navegador
     const owner = (situation == 'loaded' ? email : '') || recipient;
     const title = <PageTitle>{list.title(typeof window == 'undefined' ? '' : window.location.search, owner)}</PageTitle>;
-
-    if (situation == 'confirm') {
-        const confirmation = (
-            <>
-                Esta lista de currículos foi enviada para <b>{recipient}</b>. Deseja ver os currículos?
-            </>
-        );
-        return (
-            <div>
-                {title}
-                <div className="panel mt-6 flex flex-wrap items-center justify-between gap-3">
-                    <span>{confirmation}</span>
-                    <button type="button" className="btn btn-primary" onClick={() => start(recipient)}>
-                        Ver os currículos
-                    </button>
-                </div>
-                <ConfirmModal
-                    visible={confirmVisible}
-                    onHide={() => setConfirmVisible(false)}
-                    header="Ver os currículos"
-                    message={confirmation}
-                    acceptLabel="Ver os currículos"
-                    rejectLabel="Agora não"
-                    accept={() => start(recipient)}
-                />
-            </div>
-        );
-    }
 
     if (situation == 'wrongAccount') {
         return (
