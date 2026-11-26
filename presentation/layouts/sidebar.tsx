@@ -148,24 +148,24 @@ const Sidebar = () => {
 
                                 <AnimateHeight duration={300} height={isOpen('auth') ? 'auto' : 0}>
                                     <ul className="sub-menu text-gray-500">
-                                        {/* <li>
-                                            <Link href="/maintenence">{t('Buscar currículos')}</Link>
-                                        </li> */}
+                                        {/* desde 2026-11-25: Buscar (só o título, sem conteúdo ainda), Vagas cadastradas, Vistos, Desta semana */}
                                         <li>
-                                            <Link href="/meu-recrutamento/curriculos-visualizados">{t('Cvs visualizados')}</Link>
+                                            <Link href="/curriculos/buscar">{t('Buscar currículos')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/meu-recrutamento/curriculos-da-semana">{t('Currículos da semana')}</Link>
+                                            <Link href="/curriculos/vagas-cadastradas">{t('Vagas cadastradas')}</Link>
                                         </li>
-                                        {/* visível desde 2026-11-24, como "Vagas cadastradas" */}
                                         <li>
-                                            <Link href="/meu-recrutamento/vagas">{t('Vagas cadastradas')}</Link>
+                                            <Link href="/curriculos/vistos">{t('Cvs visualizados')}</Link>
+                                        </li>
+                                        <li>
+                                            <Link href="/curriculos/desta-semana">{t('Currículos da semana')}</Link>
                                         </li>
                                         {/* <li>
                                             <Link href="/maintenence">{t('Comentários')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/meu-recrutamento/minhas-vagas">{t('Minhas vagas')}</Link>
+                                            <Link href="/curriculos/minhas-vagas">{t('Minhas vagas')}</Link>
                                         </li> */}
                                     </ul>
                                 </AnimateHeight>
@@ -186,13 +186,16 @@ const Sidebar = () => {
                                 <AnimateHeight duration={300} height={isOpen('statistics') ? 'auto' : 0}>
                                     <ul className="sub-menu text-gray-500">
                                         <li>
-                                            <Link href="/estatisticas/telegram/vagas">{t('Telegram job groups')}</Link>
-                                        </li>
-                                        <li>
                                             <Link href="/estatisticas/ofertaXdemanda">{t('Supply X Demand')}</Link>
                                         </li>
+                                        {/* <li>
+                                            <Link href="/estatisticas/vagas">{t('Job openings statistics')}</Link>
+                                        </li> */}
                                         <li>
                                             <Link href="/estatisticas/curiosidades">{t('Curiosities')}</Link>
+                                        </li>
+                                        <li>
+                                            <Link href="/estatisticas/telegram/vagas">{t('Telegram job groups')}</Link>
                                         </li>
                                     </ul>
                                 </AnimateHeight>

@@ -149,7 +149,7 @@ const FormularioVaga: React.FC<FormularioVagaProps> = ({ vagaId }) => {
         reset();
         resetFilters();
 
-        router.push('/meu-recrutamento/minhas-vagas');
+        router.push('/curriculos/minhas-vagas');
         return response;
     };
 

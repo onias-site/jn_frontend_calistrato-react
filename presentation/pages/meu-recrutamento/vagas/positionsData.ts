@@ -128,7 +128,7 @@ export const sortKeyOf = (rule: SortRule) => (rule.value ? `${rule.field[0]}:${r
 
 /**
  * Os critérios de ordem que a vaga oferece, na prioridade da ordem padrão. Só entra o que a vaga pede: a pretensão CLT ou
- * PJ quando informa a faixa, um nível por idioma exigido, as habilidades só na vaga de tecnologia (lidas do texto da vaga),
+ * PJ quando informa a faixa, um nível por idioma exigido, a experiência, o DDD, as habilidades só na vaga de tecnologia (lidas do texto da vaga),
  * a disponibilidade e o trabalho temporário quando diferentes de 0 e, por último, uma opção por habilidade desejável.
  */
 export const sortCriteriaOf = (form: PositionForm, desiredSkills: string[]): SortCriterion[] => {
@@ -138,20 +138,19 @@ export const sortCriteriaOf = (form: PositionForm, desiredSkills: string[]): Sor
     form.hasPj && criteria.push(criterion('pj', 'Pretensão PJ', 'asc', 'Candidatos mais baratos', 'Candidatos mais caros'));
     form.hasLanguages &&
         form.spokenLanguage.forEach((language) =>
-            criteria.push(criterion('spokenLanguage', `Nível de ${language.name}`, 'desc', `Menor nível de ${language.name} primeiro`, `Maior nível de ${language.name} primeiro`, language.name)),
+            criteria.push(criterion('spokenLanguage', `Nível de ${language.name}`, 'desc', `Menor nível de ${language.name} primeiro`, `Maior nível de ${language.name} primeiro`, language.name))
         );
     criteria.push(criterion('experience', 'Experiência', 'desc', 'Candidatos mais inexperientes', 'Candidatos mais experientes'));
+    // o menor DDD do currículo, sem contar o home office (só home office vai para o fim); na ordem padrão desde 2026-11-25,
+    // logo depois das pretensões e da experiência
+    criteria.push(criterion('ddd', 'DDD', 'asc', 'DDDs menores primeiro', 'DDDs maiores primeiro'));
     tech && criteria.push(criterion('skillsTotal', 'Habilidades totais dos currículos', 'desc', 'Menor quantidade de habilidades', 'Maior quantidade de habilidades'));
     tech && criteria.push(criterion('shouldSkillsTotal', 'Habilidades desejáveis', 'desc', 'Menor quantidade de habilidades desejáveis', 'Maior quantidade de habilidades desejáveis'));
     Number(form.disponibility) > 0 && criteria.push(criterion('disponibility', 'Disponibilidade para começar', 'asc', 'Quem começa antes aparece primeiro', 'Quem começa depois aparece primeiro'));
     Number(form.temporallyJobTime) > 0 &&
         criteria.push(criterion('temporallyJobTime', 'Tempo de trabalho temporário', 'asc', 'Quem aceita menos meses aparece primeiro', 'Quem aceita mais meses aparece primeiro'));
-    // desde 2026-11-24, fora da ordem padrão: o menor DDD do currículo, sem contar o home office (só home office vai para o fim)
-    criteria.push(criterion('ddd', 'DDD', 'asc', 'DDDs menores primeiro', 'DDDs maiores primeiro', undefined, false));
     tech &&
-        desiredSkills.forEach((skill) =>
-            criteria.push(criterion('skill', `Habilidade ${skill}`, 'desc', `Quem tiver ${skill} aparece depois`, `Quem tiver ${skill} aparece primeiro`, skill, false)),
-        );
+        desiredSkills.forEach((skill) => criteria.push(criterion('skill', `Habilidade ${skill}`, 'desc', `Quem tiver ${skill} aparece depois`, `Quem tiver ${skill} aparece primeiro`, skill, false)));
     return criteria;
 };
 
@@ -283,8 +282,10 @@ export const positionKey = (position: { title: string; yearMonth?: string }) => 
 export const keyBodyOf = (position: Position) => ({ title: position.title, yearMonth: position.yearMonth });
 
 /** A lista com a vaga gravada no lugar da de mesma chave (ou da chave anterior, quando o título mudou), ou acrescentada. */
-export const replacePosition = (positions: Position[], saved: Position, replacedKey: string = positionKey(saved)) =>
-    [saved, ...positions.filter((position) => positionKey(position) != positionKey(saved) && positionKey(position) != replacedKey)];
+export const replacePosition = (positions: Position[], saved: Position, replacedKey: string = positionKey(saved)) => [
+    saved,
+    ...positions.filter((position) => positionKey(position) != positionKey(saved) && positionKey(position) != replacedKey),
+];
 
 export const removePosition = (positions: Position[], key: string) => positions.filter((position) => positionKey(position) != key);
 
@@ -301,8 +302,8 @@ export const emptyForm = (now: Date = new Date()): PositionForm => {
     return {
         title: '',
         description: '',
-        // obrigatória e sem valor padrão desde 2026-11-24: o usuário escolhe a área
-        resumeType: '',
+        // obrigatória; desde 2026-11-25 já vem com tecnologia da informação (antes, vazia)
+        resumeType: '1',
         seniority: [],
         // home office marcado por padrão: a aba Opções já entra contando os currículos do ddd 10
         ddd: ['10'],
@@ -325,6 +326,7 @@ export const emptyForm = (now: Date = new Date()): PositionForm => {
         sort: [
             { type: 'asc', field: ['clt'] },
             { type: 'desc', field: ['experience'] },
+            { type: 'asc', field: ['ddd'] },
             { type: 'desc', field: ['skillsTotal'] },
             { type: 'desc', field: ['shouldSkillsTotal'] },
         ],
@@ -335,7 +337,6 @@ export const emptyForm = (now: Date = new Date()): PositionForm => {
         resumesEmail: '',
     };
 };
-
 
 /**
  * A vaga simplificada (desde 2026-11-24): só as abas Vaga e Salários aparecem, e o resto vem preenchido. Todas as
@@ -353,12 +354,13 @@ export const simplifiedFormOf = (allDdds: string[], loggedEmail: string, now: Da
     resumesEmail: loggedEmail,
 });
 
-/** A ordem da vaga simplificada: as pretensões informadas (CLT antes de PJ), os mais baratos primeiro, e a experiência. */
+/** A ordem da vaga simplificada: as pretensões informadas (CLT antes de PJ), os mais baratos primeiro, a experiência e o DDD. */
 export const simplifiedSortOf = (form: PositionForm): SortRule[] => {
     const sort: SortRule[] = [];
     form.hasClt && sort.push({ type: 'asc', field: ['clt'] });
     form.hasPj && sort.push({ type: 'asc', field: ['pj'] });
     sort.push({ type: 'desc', field: ['experience'] });
+    sort.push({ type: 'asc', field: ['ddd'] });
     return sort;
 };
 
@@ -404,7 +406,6 @@ export const formOf = (position: Position): PositionForm => ({
     resumesEmail: position.resumesEmail || '',
 });
 
-
 /**
  * O corpo da requisição de criar ou editar: a vaga como o backend a valida (as datas como texto, em milissegundos). As
  * habilidades vêm da aba Habilidades (loadSkillsContext da store), e só a vaga de tecnologia as leva.
@@ -425,11 +426,12 @@ export const requestBodyOf = (form: PositionForm, skills: any[] = []) => {
         travel: form.travel,
         expiration: { min: String(fromDateInput(form.expirationMin, false)), max: String(fromDateInput(form.expirationMax, true)) },
         sort: form.sort,
-        contact: form.contact.map((contact) => ({ type: contact.type, value: contact.value.trim() })),
         mustSendInGroups: form.mustSendInGroups,
         frequencyType: form.frequencyType,
     };
     if (sendsTheResumes(form)) body.resumesEmail = form.resumesEmail.trim();
+    // os contatos só aparecem na divulgação nos grupos (desde 2026-11-25): fora dela não são pedidos nem enviados
+    if (form.mustSendInGroups) body.contact = form.contact.map((contact) => ({ type: contact.type, value: contact.value.trim() }));
     if (form.hasClt) body.clt = { min: Number(form.cltMin), max: Number(form.cltMax) };
     if (form.hasPj) body.pj = { min: Number(form.pjMin), max: Number(form.pjMax) };
     return body;
@@ -438,7 +440,7 @@ export const requestBodyOf = (form: PositionForm, skills: any[] = []) => {
 /** A vaga como fica na lista depois de gravada (o que foi enviado, com as datas em número). */
 export const positionOf = (body: any): Position => ({ ...body, expiration: { min: Number(body.expiration.min), max: Number(body.expiration.max) } });
 
-const salaryErrors = (name: string, min: number | '', max: number | '') => {
+export const salaryErrors = (name: string, min: number | '', max: number | '') => {
     const { salaryMin, salaryMax } = LIMITS;
     const outOfRange = (value: number | '') => value === '' || value < salaryMin || value > salaryMax;
     if (outOfRange(min) || outOfRange(max)) return [`A faixa ${name} deve ir de R$ ${salaryMin.toLocaleString('pt-BR')} a R$ ${salaryMax.toLocaleString('pt-BR')}`];
@@ -446,44 +448,30 @@ const salaryErrors = (name: string, min: number | '', max: number | '') => {
     return [];
 };
 
-
 // o campo apagado ('') e o 0 digitado ('0') ficam fora da faixa, como no currículo (IntegerFieldComponent); só o checkbox põe o 0
 const isOutOfIntegerRange = (value: number | string, max: number) => value === '' || value === '0' || !Number.isInteger(Number(value)) || Number(value) < 0 || Number(value) > max;
 
-/** Aba "Vaga": título, descrição, área, contatos e as datas de início e de fim da vaga. */
 /**
- * Os erros da aba "Vaga" por campo, mostrados embaixo de cada um, como na aba Currículo (LabelComponent): título,
- * descrição, área, contatos e as datas (expiration).
+ * Os erros da aba "Requisitos" (antes, "Vaga") por campo, mostrados embaixo de cada um, como na aba Currículo
+ * (LabelComponent): descrição e área (desde 2026-11-25 o título, os contatos e o período estão na aba Opções).
  */
 /** A explicação do título já usado (o title-in-use respondeu 200): o modal não deixa gravar com ele. */
 export const TITLE_IN_USE = 'Este título já é de outra vaga sua criada no mesmo mês: escolha outro título';
 
-export const positionTabFieldErrors = (form: PositionForm, creating: boolean, now: Date = new Date(), titleInUse: boolean = false) => {
+export const positionTabFieldErrors = (form: PositionForm) => {
     const fieldErrors: Record<string, string> = {};
     const fail = (field: string, message: string) => (fieldErrors[field] = fieldErrors[field] || message);
-    const title = form.title.trim();
     const description = form.description.trim();
-    (title.length < LIMITS.titleMin || title.length > LIMITS.titleMax) && fail('title', `O título deve ter de ${LIMITS.titleMin} a ${LIMITS.titleMax} caracteres`);
-    titleInUse && fail('title', TITLE_IN_USE);
     (description.length < LIMITS.descriptionMin || description.length > LIMITS.descriptionMax) &&
         fail('description', `A descrição deve ter de ${LIMITS.descriptionMin} a ${LIMITS.descriptionMax.toLocaleString('pt-BR')} caracteres (tem ${description.length})`);
     !form.resumeType && fail('resumeType', 'Escolha a área da vaga');
-    form.contact.length < 1 && fail('contact', 'Informe ao menos um contato');
-    form.contact.some((contact) => !isValidContact(contact) || contact.value.trim().length > LIMITS.contactValueMax) && fail('contact', 'Confira os contatos: WhatsApp com DDD, e-mail válido ou link começando com http');
-    if (!form.expirationMin || !form.expirationMax) {
-        fail('expiration', 'Informe o início e o fim da vaga');
-        return fieldErrors;
-    }
-    creating && form.expirationMin < today(now) && fail('expiration', 'O início da vaga não pode ser antes de hoje');
-    form.expirationMax < form.expirationMin && fail('expiration', 'O fim da vaga não pode ser antes do início');
     return fieldErrors;
 };
 
-/** Aba "Vaga": título, descrição, área, contatos e as datas de início e de fim da vaga. */
-export const positionTabErrors = (form: PositionForm, creating: boolean, now: Date = new Date(), titleInUse: boolean = false) =>
-    Object.values(positionTabFieldErrors(form, creating, now, titleInUse));
+/** Aba "Requisitos": descrição e área (os idiomas, também nela, em languagesTabErrors). */
+export const positionTabErrors = (form: PositionForm) => Object.values(positionTabFieldErrors(form));
 
-/** Aba "Idiomas": marcado o "exige outro idioma", ao menos um idioma, cada um com o seu nível. */
+/** Os idiomas (na aba "Requisitos" desde 2026-11-25): marcado o "exige outro idioma", ao menos um idioma, cada um com o seu nível. */
 export const languagesTabErrors = (form: PositionForm) => {
     if (!form.hasLanguages) return [];
     if (!form.spokenLanguage.length) return ['Escolha ao menos um idioma'];
@@ -514,10 +502,40 @@ export const resumesEmailError = (form: PositionForm) => {
     return '';
 };
 
-export const optionsTabErrors = (form: PositionForm) => {
+/** A vaga fora dos grupos e sem receber currículos não iria a lugar nenhum (desde 2026-11-25): o modal não a deixa gravar. */
+export const USELESS_POSITION = 'Sem a divulgação nos grupos, escolha uma forma de receber os currículos: com "Não receber currículos" a vaga não iria a lugar nenhum';
+
+export const isUselessPosition = (form: PositionForm) => !form.mustSendInGroups && form.frequencyType == 'none';
+
+/**
+ * Os erros por campo da aba "Opções" (desde 2026-11-25): o título, os contatos, pedidos só com a divulgação nos grupos
+ * (onde aparecem), e o período da vaga.
+ */
+export const optionsTabFieldErrors = (form: PositionForm, creating: boolean, now: Date = new Date(), titleInUse: boolean = false) => {
+    const fieldErrors: Record<string, string> = {};
+    const fail = (field: string, message: string) => (fieldErrors[field] = fieldErrors[field] || message);
+    const title = form.title.trim();
+    (title.length < LIMITS.titleMin || title.length > LIMITS.titleMax) && fail('title', `O título deve ter de ${LIMITS.titleMin} a ${LIMITS.titleMax} caracteres`);
+    titleInUse && fail('title', TITLE_IN_USE);
+    form.mustSendInGroups && form.contact.length < 1 && fail('contact', 'Informe ao menos um contato');
+    form.mustSendInGroups &&
+        form.contact.some((contact) => !isValidContact(contact) || contact.value.trim().length > LIMITS.contactValueMax) &&
+        fail('contact', 'Confira os contatos: WhatsApp com DDD, e-mail válido ou link começando com http');
+    if (!form.expirationMin || !form.expirationMax) {
+        fail('expiration', 'Informe o início e o fim da vaga');
+        return fieldErrors;
+    }
+    creating && form.expirationMin < today(now) && fail('expiration', 'O início da vaga não pode ser antes de hoje');
+    form.expirationMax < form.expirationMin && fail('expiration', 'O fim da vaga não pode ser antes do início');
+    return fieldErrors;
+};
+
+export const optionsTabErrors = (form: PositionForm, creating: boolean = false, now: Date = new Date(), titleInUse: boolean = false) => {
     const errors: string[] = [];
     const emailError = resumesEmailError(form);
     emailError && errors.push(emailError);
+    isUselessPosition(form) && errors.push(USELESS_POSITION);
+    errors.push(...Object.values(optionsTabFieldErrors(form, creating, now, titleInUse)));
     (form.sort.length < 1 || form.sort.some((rule) => rule.field.length < 1)) && errors.push('Escolha ao menos um critério de ordenação dos currículos');
     return errors;
 };
@@ -533,11 +551,11 @@ export const salaryTabErrors = (form: PositionForm) => {
 
 /** Tudo o que falta ou está errado no formulário, aba por aba; vazio, a vaga pode ser gravada. */
 export const pendingRequirements = (form: PositionForm, creating: boolean, now: Date = new Date(), titleInUse: boolean = false) => [
-    ...positionTabErrors(form, creating, now, titleInUse),
-    ...filtersTabErrors(form),
+    ...positionTabErrors(form),
     ...languagesTabErrors(form),
+    ...filtersTabErrors(form),
     ...salaryTabErrors(form),
-    ...optionsTabErrors(form),
+    ...optionsTabErrors(form, creating, now, titleInUse),
 ];
 
 // ---- aba Habilidades (como a do currículo: as habilidades encontradas no texto, aqui a descrição da vaga, por skills/fromText)
@@ -553,7 +571,7 @@ export const DESIRED_SKILLS = 'shouldSkills';
 // o recrutador arrasta para as obrigatórias as que os currículos precisam ter
 // o máximo de habilidades obrigatórias (desde 2026-11-23): o positions/resumes-of-the-filters recusa (422) mais de 100
 export const REQUIRED_SKILLS_MAX = 100;
-const requiredSkillsGroup = (list: any[]) => ({
+export const requiredSkillsGroup = (list: any[]) => ({
     title: 'Habilidades OBRIGATÓRIAS da vaga',
     maxItems: REQUIRED_SKILLS_MAX,
     help: 'Os currículos encontrados precisam ter todas estas habilidades. Arraste para cá, da lista de desejáveis, as que forem obrigatórias.',
@@ -562,7 +580,7 @@ const requiredSkillsGroup = (list: any[]) => ({
     list,
 });
 
-const desiredSkillsGroup = (list: any[]) => ({
+export const desiredSkillsGroup = (list: any[]) => ({
     title: 'Habilidades DESEJÁVEIS da vaga',
     help:
         'As habilidades encontradas na descrição da vaga. Elas contam a favor do currículo, mas não são exigidas; arraste para a lista de obrigatórias as que os currículos precisam ter. ' +

@@ -14,6 +14,8 @@ import {
     isValidContact,
     languagesTabErrors,
     optionsTabErrors,
+    optionsTabFieldErrors,
+    USELESS_POSITION,
     parsePositions,
     parsePositionsOnBothSides,
     positionTabErrors,
@@ -94,9 +96,10 @@ describe('positionsData', () => {
         expect(currentYearMonth(new Date(Date.UTC(2026, 11, 1, 12, 0)))).toBe('202612');
     });
 
-    it('o título já usado no mesmo mês é um erro do título', () => {
-        expect(positionTabFieldErrors(validForm(), true, now, true).title).toBe(TITLE_IN_USE);
-        expect(positionTabFieldErrors(validForm(), true, now, false).title).toBeUndefined();
+    it('o título já usado no mesmo mês é um erro do título, na aba Opções desde 2026-11-25', () => {
+        expect(optionsTabFieldErrors(validForm(), true, now, true).title).toBe(TITLE_IN_USE);
+        expect(optionsTabFieldErrors(validForm(), true, now, false).title).toBeUndefined();
+        expect(optionsTabErrors(validForm(), true, now, true)).toEqual([TITLE_IN_USE]);
     });
 
     it('as senioridades da vaga são uma lista: a vaga gravada antes, com um texto só, vira lista de uma', () => {
@@ -148,10 +151,11 @@ describe('positionsData', () => {
         expect({ ...copy, title: original.title, expirationMin: original.expirationMin, expirationMax: original.expirationMax }).toEqual(original);
     });
 
-    it('a vaga nova (desde 2026-11-24) começa sem área, que é obrigatória, e fica aberta por uma semana', () => {
+    it('a vaga nova (desde 2026-11-25) começa com a área de tecnologia, que é obrigatória, e fica aberta por uma semana', () => {
         const form = emptyForm(now);
-        expect(form.resumeType).toBe('');
-        expect(positionTabFieldErrors(form, true, now).resumeType).toBe('Escolha a área da vaga');
+        expect(form.resumeType).toBe('1');
+        expect(positionTabFieldErrors(form).resumeType).toBeUndefined();
+        expect(positionTabFieldErrors({ ...form, resumeType: '' }).resumeType).toBe('Escolha a área da vaga');
         expect(form.expirationMin).toBe('2026-11-21');
         expect(form.expirationMax).toBe('2026-11-28');
     });
@@ -182,7 +186,11 @@ describe('positionsData', () => {
     });
 
     it('separa as pendências pelas abas do formulário, as mesmas do currículo', () => {
-        expect(positionTabErrors({ ...validForm(), contact: [] }, true, now)).toEqual(['Informe ao menos um contato']);
+        // o título, os contatos e o período ficam na aba Opções desde 2026-11-25
+        expect(positionTabErrors({ ...validForm(), title: 'curto', contact: [], expirationMin: '' })).toEqual([]);
+        expect(optionsTabErrors({ ...validForm(), title: 'curto' }, true, now)).toEqual(['O título deve ter de 10 a 100 caracteres']);
+        expect(optionsTabErrors({ ...validForm(), contact: [] }, true, now)).toEqual(['Informe ao menos um contato']);
+        expect(optionsTabErrors({ ...validForm(), expirationMin: '2026-11-01' }, true, now)).toEqual(['O início da vaga não pode ser antes de hoje']);
         expect(languagesTabErrors({ ...validForm(), spokenLanguage: [] })).toEqual(['Escolha ao menos um idioma']);
         // sem o "exige outro idioma" marcado, nada é pedido nem enviado
         expect(languagesTabErrors({ ...validForm(), hasLanguages: false, spokenLanguage: [] })).toEqual([]);
@@ -231,7 +239,21 @@ describe('positionsData', () => {
         expect(requestBodyOf(byTheCandidates)).not.toHaveProperty('mustSendToResumes');
         expect(optionsTabErrors({ ...byTheCandidates, resumesEmail: '' })).toEqual(['Informe o e-mail para o qual enviar os currículos']);
         expect(formOf(positionOf(requestBodyOf(byTheCandidates))).frequencyType).toBe('byTheCandidates');
-        expect(Object.keys(positionTabFieldErrors({ ...validForm(), title: 'curto', contact: [] }, true, now))).toEqual(['title', 'contact']);
+        expect(Object.keys(positionTabFieldErrors({ ...validForm(), title: 'curto', description: '' }))).toEqual(['description']);
+        expect(Object.keys(optionsTabFieldErrors({ ...validForm(), title: 'curto', contact: [], expirationMax: '2026-11-20' }, true, now))).toEqual(['title', 'contact', 'expiration']);
+    });
+
+    it('os contatos (desde 2026-11-25) só são pedidos e enviados com a divulgação nos grupos', () => {
+        const outOfTheGroups = { ...validForm(), mustSendInGroups: false, contact: [] };
+        expect(optionsTabErrors(outOfTheGroups, true, now)).toEqual([]);
+        expect(requestBodyOf(outOfTheGroups)).not.toHaveProperty('contact');
+        expect(requestBodyOf(validForm()).contact).toEqual([{ type: 'email', value: 'rh@empresa.com.br' }]);
+    });
+
+    it('fora dos grupos e sem receber currículos a vaga não iria a lugar nenhum (desde 2026-11-25)', () => {
+        expect(optionsTabErrors({ ...validForm(), mustSendInGroups: false, frequencyType: 'none' }, true, now)).toEqual([USELESS_POSITION]);
+        expect(optionsTabErrors({ ...validForm(), mustSendInGroups: true, frequencyType: 'none' }, true, now)).toEqual([]);
+        expect(optionsTabErrors({ ...validForm(), mustSendInGroups: false, frequencyType: 'byTheCandidates' }, true, now)).toEqual([]);
     });
 
     it('valida os contatos como o backend', () => {

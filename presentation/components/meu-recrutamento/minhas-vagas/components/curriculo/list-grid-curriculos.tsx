@@ -100,7 +100,7 @@ export const ListGridCurriculo = ({curriculo}: {curriculo: Curriculo[]}) => {
                                 <div className="absolute -bottom-4 flex w-full flex-col gap-2 p-6 ltr:left-0 rtl:right-0">
                                     <div className="flex flex-row gap-2">
                                         <div className="btn btn-outline-primary w-1/2">
-                                            <Link href={`/meu-recrutamento/minhas-vagas/editar/${item.id}`} className="flex flex-row gap-2">
+                                            <Link href={`/curriculos/minhas-vagas/editar/${item.id}`} className="flex flex-row gap-2">
                                                 <IconNotesEdit className="h-4.5 w-4.5" />
                                                 Download
                                             </Link>
@@ -111,7 +111,7 @@ export const ListGridCurriculo = ({curriculo}: {curriculo: Curriculo[]}) => {
                                         </button>
                                     </div>
                                     <div>
-                                        <Link href="/meu-recrutamento/minhas-vagas/curriculo" className="btn btn-outline-success flex w-full gap-2">
+                                        <Link href="/curriculos/minhas-vagas/curriculo" className="btn btn-outline-success flex w-full gap-2">
                                             <IconUsersGroup className="h-4.5 w-4.5" />
                                            Ver detalhes
                                         </Link>

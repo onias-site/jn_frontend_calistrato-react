@@ -18,7 +18,6 @@ import { AddAsFilterButton } from './AddAsFilterButton';
 import { PublishInGroupsCheckBox } from './PublishInGroupsCheckBox';
 import { HOME_OFFICE, TODAS_AS_REGIOES } from '@/presentation/menus/areaLeft/MenuLeftMyData/SubMenuMyResume/tabs/TabFilter/RegioesComponent';
 import IconFile from '@/presentation/icons/icon-file';
-import IconGlobe from '@/presentation/icons/icon-globe';
 import IconGithub from '@/presentation/icons/icon-github';
 import IconSettings from '@/presentation/icons/icon-settings';
 import IconFilter from '@/presentation/icons/icon-filter';
@@ -48,6 +47,8 @@ import {
     languageLevelOptions,
     languagesTabErrors,
     optionsTabErrors,
+    optionsTabFieldErrors,
+    USELESS_POSITION,
     filtersTabErrors,
     pendingRequirements,
     positionOf,
@@ -55,6 +56,7 @@ import {
     positionTabFieldErrors,
     requestBodyOf,
     resumesEmailError,
+    salaryErrors,
     salaryTabErrors,
     sendsTheResumes,
     seniorityOptions,
@@ -86,10 +88,16 @@ type PositionFormModalProps = {
     // "Copiar" (desde 2026-11-24): sem vaga (position null, é uma vaga nova), mas com o formulário e as habilidades desta,
     // menos o título e o período (copyFormOf)
     template?: Position | null;
+    // "Contactar candidatos aderentes" da tela Currículos -> Buscar (desde 2026-11-25): uma vaga nova com os filtros da
+    // busca (positionFormOfTheSearch) e, numa busca de tecnologia, as listas de habilidades dela, já lidas do texto
+    fromSearch?: { form: PositionForm; skillGroups: any[]; skillsContext: any } | null;
 };
 
 const resumeTypeOptions = resumeTypes.map((type) => ({ value: String(type.id), label: type.label }));
-const regionOptions = [{ value: TODAS_AS_REGIOES, label: 'Qualquer estado / cidade' }, ...dddRegions.filter((region) => region.id != HOME_OFFICE).map((region) => ({ value: region.id, label: region.nome }))];
+const regionOptions = [
+    { value: TODAS_AS_REGIOES, label: 'Qualquer estado / cidade' },
+    ...dddRegions.filter((region) => region.id != HOME_OFFICE).map((region) => ({ value: region.id, label: region.nome })),
+];
 const allRegions = regionOptions.map((option) => option.value).filter((value) => value != TODAS_AS_REGIOES);
 const languageOptions = languages.map((language) => ({ value: language.name, label: language.name }));
 const fieldLabel = 'mb-1.5 block font-semibold text-dark dark:text-white-light';
@@ -102,7 +110,7 @@ const READING_THE_SKILLS = 'Aguarde: as habilidades da descrição ainda estão 
 // vaga, de onde saem as listas
 const skillsSourceOf = (description: string): SkillsSource => ({
     text: description,
-    textMissing: 'Para sugerir uma habilidade, preencha a descrição da vaga na aba Vaga: só por ela dá para conferir que a habilidade consta na vaga.',
+    textMissing: 'Para sugerir uma habilidade, preencha a descrição da vaga na aba Requisitos: só por ela dá para conferir que a habilidade consta na vaga.',
     owner: 'da vaga',
     inText: 'na descrição da vaga',
 });
@@ -110,7 +118,7 @@ const skillsSourceOf = (description: string): SkillsSource => ({
 // a coluna de acordeões da aba Habilidades da vaga (desde 2026-11-22): os termos abrangentes demais da descrição, que o
 // skills/fromText devolve em broadSkill, cada um com todas as habilidades abaixo dele na hierarquia; cada uma com o botão
 // que a acrescenta como filtro (às obrigatórias)
-const broadSkillsViewOf = (store: SkillStore): SkillsAccordionView => ({
+export const broadSkillsViewOf = (store: SkillStore): SkillsAccordionView => ({
     title: 'Ferramentas abrangentes',
     helpTitle: 'O que são ferramentas abrangentes?',
     tooltip: 'Clique aqui para saber o que são ferramentas abrangentes',
@@ -142,7 +150,7 @@ const broadSkillsViewOf = (store: SkillStore): SkillsAccordionView => ({
 // todas as regiões mais o home office: as regiões da vaga simplificada
 const allDddsWithHomeOffice = [...dddRegions.map((region) => region.id).filter((id) => id != HOME_OFFICE), HOME_OFFICE];
 
-export const PositionFormModal = ({ position, onSaved, onCancel, simplified = false, openOnResumes = false, template = null }: PositionFormModalProps) => {
+export const PositionFormModal = ({ position, onSaved, onCancel, simplified = false, openOnResumes = false, template = null, fromSearch = null }: PositionFormModalProps) => {
     // a vaga de onde vêm os dados: a editada ou, numa cópia, o molde
     const source = position ?? template;
     // a vaga simplificada mostra só Vaga e Salários até o usuário abrir a lista de currículos pelo link da contagem
@@ -160,6 +168,7 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
     const [form, setForm] = useState<PositionForm>(() => {
         if (position != null) return formOf(position);
         if (template != null) return copyFormOf(template);
+        if (fromSearch != null) return fromSearch.form;
         if (!simplified) return emptyForm();
         const logged: any = JnAjax.getLogin() || {};
         return simplifiedFormOf(allDddsWithHomeOffice, logged.email || '');
@@ -190,10 +199,18 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
     const [saving, setSaving] = useState(false);
     // o erro de cada campo da aba Vaga só aparece depois da primeira tentativa de avançar ou salvar
     const [attempted, setAttempted] = useState(false);
-    const [goToTab, setGoToTab] = useState<{ index: number } | undefined>(undefined);
+    const [goToTab, setGoToTab] = useState<{ index: number; showErrors?: boolean } | undefined>(undefined);
+    // salvar com pendências (desde 2026-11-25): os campos das abas Filtros e Salários também passam a mostrar o erro
+    const [saveAttempted, setSaveAttempted] = useState(false);
     // a store das habilidades deste modal; na edição de uma vaga de tecnologia, já com as habilidades gravadas
     const [skillStore] = useState(() => {
         const store = createSkillStore();
+        // vindas da busca: as listas como estavam lá (o contexto guarda o hash do texto, que é a descrição, e não o relê)
+        if (fromSearch != null && fromSearch.form.resumeType == '1' && fromSearch.skillGroups.some((group) => group.list.length > 0)) {
+            store.getState().setGroups(fromSearch.skillGroups, getImplicitSkills);
+            store.getState().setContext(fromSearch.skillsContext);
+            return store;
+        }
         if (source == null || String(source.resumeType) != '1') return store;
         const { groups, context } = skillGroupsOfThePosition(source.skill, sha1(source.description.trim()));
         store.getState().setGroups(groups as any, getImplicitSkills);
@@ -233,6 +250,8 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
     // abas anteriores (a de Habilidades vai e vem), por isso o render guarda aqui onde ela entra
     const [resumesTabShown, setResumesTabShown] = useState(false);
     const resumesTabIndex = React.useRef(0);
+    // a aba Opções: onde abre o modal vindo da busca de currículos
+    const optionsTabIndex = React.useRef(0);
     const seeTheResumes = () => {
         const logged: any = JnAjax.getLogin() || {};
         // sem login, o modal de login; ao entrar, repete o clique
@@ -255,6 +274,10 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
     useEffect(() => {
         if (openOnResumes) seeTheResumes();
     }, []);
+    // vindo da busca de currículos (desde 2026-11-25): os filtros já estão preenchidos, o modal abre na última aba
+    useEffect(() => {
+        if (fromSearch != null) setGoToTab({ index: optionsTabIndex.current });
+    }, []);
     const resumesMessage = <ResumesOfTheFiltersMessage request={filtersRequest} {...resumesOfTheFilters} onSeeTheResumes={seeTheResumes} />;
     const [hasTabSkills, setHasTabSkills] = useState(skillGroups.some((group) => group.list.length > 0));
     // o skills/fromText ainda lê a descrição (desde 2026-11-23): o avançar e a aba Habilidades ficam desabilitados e
@@ -269,7 +292,21 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
         if (!loggedEmail || form.resumesEmail) return;
         set({ resumesEmail: loggedEmail });
     }, [loggedEmail]);
-    const fieldErrors = attempted || titleInUse ? positionTabFieldErrors(form, creating, new Date(), titleInUse) : {};
+    const fieldErrors = attempted ? positionTabFieldErrors(form) : {};
+    // os contatos e o período, na aba Opções desde 2026-11-25: o erro de cada um aparece depois da primeira tentativa de
+    // avançar ou salvar
+    // o título também, desde 2026-11-25 (já usado, o erro aparece logo)
+    const optionsFieldErrors = attempted || titleInUse ? optionsTabFieldErrors(form, creating, new Date(), titleInUse) : {};
+    // desmarcar a divulgação nos grupos com "Não receber currículos" deixaria a vaga sem destino: o modal não deixa
+    const setMustSendInGroups = (mustSendInGroups: boolean) => {
+        if (!mustSendInGroups && form.frequencyType == 'none') {
+            notify({ summary: 'Divulgação nos grupos', detail: USELESS_POSITION, severity: 'warn' });
+            return;
+        }
+        set({ mustSendInGroups });
+    };
+    // sem a divulgação nos grupos, "Não receber currículos" fica indisponível, pelo mesmo motivo
+    const frequencyData = frequencyOptions.map((option) => ({ ...option, disabled: option.value == 'none' && !form.mustSendInGroups }));
 
     // a ordem dos currículos (desde 2026-11-23): um critério por linha, só os que a vaga pede, e a padrão enquanto o usuário
     // não mexer nela; as habilidades desejáveis da aba Habilidades viram critérios, uma a uma
@@ -294,7 +331,7 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
         // a pendência segura o usuário na aba Vaga (que não a repete em notificação: os campos mostram as suas)
         if (loadingSkills) return [READING_THE_SKILLS];
         setAttempted(true);
-        const errors = positionTabErrors(form, creating, new Date(), titleInUse);
+        const errors = [...positionTabErrors(form), ...languagesTabErrors(form)];
         if (errors.length) return errors;
         // só a vaga de Tecnologia da Informação vai ao skills/fromText (e só ela tem a aba Habilidades)
         if (!isTechPosition(form)) return [];
@@ -332,13 +369,13 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
 
     const tabs: any[] = [
         {
-            label: 'Vaga',
+            // desde 2026-11-25 (antes, "Vaga"): a área, a descrição e os idiomas, que tinham aba própria
+            label: 'Requisitos',
             icon: <IconFile className="h-4 w-4" />,
-            getPendingRequirements: () => positionTabErrors(form, creating, new Date(), titleInUse),
+            getPendingRequirements: () => [...positionTabErrors(form), ...languagesTabErrors(form)],
             onMoveOnFowardTabs: loadSkillsFromText,
             fieldsShowPendingRequirements: true,
         },
-        { label: 'Idiomas', icon: <IconGlobe className="h-4 w-4" />, getPendingRequirements: () => languagesTabErrors(form), onMoveOnFowardTabs: () => languagesTabErrors(form) },
         { label: 'Filtros', icon: <IconFilter className="h-4 w-4" />, getPendingRequirements: () => filtersTabErrors(form), onMoveOnFowardTabs: () => filtersTabErrors(form) },
         { label: 'Salários', icon: <IconDollarSign className="h-4 w-4" />, getPendingRequirements: () => salaryTabErrors(form), onMoveOnFowardTabs: () => salaryTabErrors(form) },
         // a última antes de gravar: o avançar dela salva a vaga (com a aba dos currículos aderentes aberta numa vaga nova, só
@@ -346,17 +383,34 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
         {
             label: 'Opções',
             icon: <IconSettings className="h-4 w-4" />,
-            getPendingRequirements: () => optionsTabErrors(form),
-            onMoveOnFowardTabs: () => (resumesTabShown && !savedOnce ? optionsTabErrors(form) : save()),
+            getPendingRequirements: () => optionsTabErrors(form, creating, new Date(), titleInUse),
+            onMoveOnFowardTabs: () => {
+                setAttempted(true);
+                return resumesTabShown && !savedOnce ? optionsTabErrors(form, creating, new Date(), titleInUse) : save();
+            },
         },
     ];
 
     // devolve as pendências de todas as abas; sem nenhuma, envia e devolve vazio (a convenção do Tabs)
+    // a primeira aba com pendência (desde 2026-11-25): salvar com erro leva a ela, com o erro à vista e o foco no campo
+    const goToTheFirstError = (outdatedSkills: boolean) => {
+        setSaveAttempted(true);
+        const index = outdatedSkills ? 0 : tabs.findIndex((tab) => (tab.getPendingRequirements ? tab.getPendingRequirements() : []).length > 0);
+        if (index < 0) return;
+        setGoToTab({ index, showErrors: true });
+    };
     const save = (): string[] => {
         setAttempted(true);
-        if (skillsOutdated()) return ['Aba Vaga: a descrição mudou. Avance até a aba Habilidades para conferir as habilidades encontradas nela antes de salvar.'];
+        if (skillsOutdated()) {
+            goToTheFirstError(true);
+            // a descrição ainda inválida (ex.: vazia, vinda da busca sem o texto da vaga): o erro dela, não o da releitura
+            const requirementsErrors = positionTabErrors(form);
+            if (requirementsErrors.length) return requirementsErrors;
+            return ['Aba Requisitos: a descrição mudou. Avance até a aba Habilidades para conferir as habilidades encontradas nela antes de salvar.'];
+        }
         const skillErrors = showTabSkills ? [...requiredSkillsErrors(), ...skillStore.getState().getPendingRequirements()] : [];
         const errors = [...pendingRequirements(form, creating, new Date(), titleInUse), ...skillErrors];
+        if (errors.length) goToTheFirstError(false);
         if (errors.length || saving) return errors;
         setSaving(true);
         const body = requestBodyOf({ ...form, sort: shownSort }, skillStore.getState().loadSkillsContext());
@@ -391,7 +445,9 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
             setSaving(false);
             notify({
                 summary: 'Título mantido',
-                detail: `Candidatos já enviaram o currículo pela vaga "${stored ? stored.title : ''}", por isso o título dela não pode mudar. Volte ao título anterior para gravar as outras alterações.`,
+                detail: `Candidatos já enviaram o currículo pela vaga "${
+                    stored ? stored.title : ''
+                }", por isso o título dela não pode mudar. Volte ao título anterior para gravar as outras alterações.`,
                 severity: 'error',
             });
         };
@@ -427,9 +483,8 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
         return [];
     };
 
-    // a aba Habilidades toma o lugar da aba Idiomas (Vaga, Habilidades, Filtros, Salários, Opções), com os idiomas no topo
-    // dela e o número de habilidades da vaga (desejáveis e obrigatórias: as encontradas começam todas nas desejáveis); sem
-    // ela, a aba Idiomas continua
+    // a aba Habilidades, só na vaga de tecnologia, entra depois de Requisitos (Requisitos, Habilidades, Filtros, Salários,
+    // Opções), com o número de habilidades da vaga (desejáveis e obrigatórias: as encontradas começam todas nas desejáveis)
     const skillsCount = skillGroups.filter((group) => group.name == REQUIRED_SKILLS || group.name == DESIRED_SKILLS).reduce((total, group) => total + group.list.length, 0);
     // mais obrigatórias do que o backend aceita (uma vaga gravada antes do limite): bloqueia até o recrutador retirar as que sobram
     const requiredSkillsErrors = () => {
@@ -437,16 +492,17 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
         if (required.length <= REQUIRED_SKILLS_MAX) return [];
         return [`Aba Habilidades: a vaga aceita no máximo ${REQUIRED_SKILLS_MAX} habilidades obrigatórias; retire ${required.length - REQUIRED_SKILLS_MAX}.`];
     };
-    const skillsTabErrors = () => [...languagesTabErrors(form), ...requiredSkillsErrors(), ...skillStore.getState().getPendingRequirements()];
+    const skillsTabErrors = () => [...requiredSkillsErrors(), ...skillStore.getState().getPendingRequirements()];
     const tabSkills = {
         label: loadingSkills ? 'Lendo as habilidades...' : `${skillsCount} Habilidades`,
         loading: loadingSkills,
         icon: <IconGithub className="h-4 w-4" />,
-        title: 'Caso as habilidades estiverem desatualizadas / incorretas, volte à aba Vaga e corrija a descrição, para que possamos atualizar corretamente a lista de habilidades',
+        title: 'Caso as habilidades estiverem desatualizadas / incorretas, volte à aba Requisitos e corrija a descrição, para que possamos atualizar corretamente a lista de habilidades',
         getPendingRequirements: skillsTabErrors,
         onMoveOnFowardTabs: skillsTabErrors,
     };
-    showTabSkills && tabs.splice(1, 1, tabSkills);
+    showTabSkills && tabs.splice(1, 0, tabSkills);
+    optionsTabIndex.current = tabs.findIndex((tab) => tab.label == 'Opções');
     // depois de Opções, a dos currículos aderentes, a última; antes de gravar o botão dela salva, depois fecha o modal
     resumesTabIndex.current = tabs.length;
     const tabResumes = {
@@ -460,8 +516,13 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
         },
     };
     resumesTabShown && tabs.push(tabResumes);
-    // a vaga simplificada recolhida: só Vaga e Salários, e o avançar de Salários salva
-    const salaryTabOfTheSimplified = { ...tabs.find((tab) => tab.label == 'Salários'), onMoveOnFowardTabs: save };
+    // a vaga simplificada recolhida: só Requisitos e Salários, e o avançar de Salários salva
+    const salaryTabOfTheSimplified = {
+        ...tabs.find((tab) => tab.label == 'Salários'),
+        // o título, os contatos e o período, que numa vaga completa estão na aba Opções, ficam no fim desta
+        getPendingRequirements: () => [...salaryTabErrors(form), ...Object.values(optionsTabFieldErrors(form, creating, new Date(), titleInUse))],
+        onMoveOnFowardTabs: save,
+    };
     const shownTabs = collapsed ? [tabs[0], salaryTabOfTheSimplified] : tabs;
 
     const removeButton = (onClick: () => void, disabled = false) => (
@@ -470,103 +531,18 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
         </button>
     );
 
-    // ---- aba Vaga
-    const positionTab = (
-        // largura limitada, como na aba Currículo: um campo de uma linha muito largo é desconfortável de ler e de preencher
-        <div className="max-w-4xl">
-            <LabelComponent
-                explanation={`O título identifica a vaga para você e para os candidatos (de ${LIMITS.titleMin} a ${LIMITS.titleMax} caracteres). Não pode repetir o de outra vaga sua criada no mesmo mês. Pode ser alterado depois, menos numa vaga pela qual candidatos já enviaram o currículo.`}
-                labelValue="Título da vaga:"
-                property="title"
-                errors={fieldErrors}
-            >
-                <TextInput id="title" error={!!fieldErrors.title} value={form.title} maxLength={LIMITS.titleMax} onChange={(event) => set({ title: event.currentTarget.value })} />
-            </LabelComponent>
-            <LabelComponent
-                explanation="Obrigatória: a área dos currículos procurados. A vaga de tecnologia da informação (TI) ganha a aba 'Habilidades', com as habilidades encontradas na descrição."
-                labelValue="Área da vaga:"
-                property="resumeType"
-                errors={fieldErrors}
-            >
-                {/* obrigatória e sem valor padrão desde 2026-11-24: começa vazia, e a aba Vaga não avança sem ela */}
-                <Select
-                    id="resumeType"
-                    required
-                    aria-required
-                    placeholder="Escolha a área da vaga"
-                    error={!!fieldErrors.resumeType}
-                    data={resumeTypeOptions}
-                    value={form.resumeType || null}
-                    allowDeselect={false}
-                    comboboxProps={inside}
-                    onChange={(value) => set({ resumeType: value || '' })}
-                />
-            </LabelComponent>
-            {resumesMessage}
-            <LabelComponent
-                explanation={`O texto completo da vaga: atividades, requisitos, benefícios e o que mais o candidato precisa saber (de ${LIMITS.descriptionMin} a ${LIMITS.descriptionMax.toLocaleString('pt-BR')} caracteres). Numa vaga de tecnologia, é deste texto que saem as listas da aba 'Habilidades' mais à frente.`}
-                labelValue={`Descrição da vaga (${form.description.trim().length} caracteres):`}
-                property="description"
-                errors={fieldErrors}
-            >
-                <Textarea
-                    id="description"
-                    error={!!fieldErrors.description}
-                    value={form.description}
-                    maxLength={LIMITS.descriptionMax}
-                    placeholder="Cole aqui o texto da vaga."
-                    autosize
-                    minRows={10}
-                    maxRows={25}
-                    onChange={(event) => set({ description: event.currentTarget.value })}
-                />
-            </LabelComponent>
-            <LabelComponent
-                explanation="Por onde os candidatos falam com você sobre a vaga: WhatsApp (com DDD, ex.: +5511999998888), e-mail ou um link (começando com http). Informe ao menos um."
-                labelValue="Contatos para os candidatos:"
-                property="contact"
-                errors={fieldErrors}
-            >
-                {form.contact.map((contact, index) => (
-                    <div key={index} className="mb-2 grid grid-cols-1 items-start gap-2 sm:grid-cols-[1fr_2fr_auto]">
-                        <Select data={contactTypeOptions} value={contact.type} allowDeselect={false} comboboxProps={inside} onChange={(value) => setContact(index, { type: (value as Contact['type']) || 'email' })} />
-                        <TextInput
-                            error={!!fieldErrors.contact}
-                            value={contact.value}
-                            maxLength={LIMITS.contactValueMax}
-                            placeholder={contact.type == 'whatsapp' ? '+5511999998888' : contact.type == 'email' ? 'rh@empresa.com.br' : 'https://empresa.com.br/vaga'}
-                            onChange={(event) => setContact(index, { value: event.currentTarget.value })}
-                        />
-                        {removeButton(() => set({ contact: form.contact.filter((_, i) => i != index) }), form.contact.length == 1)}
-                    </div>
-                ))}
-                <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => set({ contact: [...form.contact, { type: 'email', value: '' }] })}>
-                    Acrescentar contato
-                </button>
-            </LabelComponent>
-            <LabelComponent
-                explanation="A vaga recebe currículos do início até o fim do dia escolhido no fim. Depois disso ela vai para a aba das vagas expiradas, de onde pode ser reativada. Uma vaga nova não pode começar antes de hoje."
-                labelValue="Período da vaga (início e fim):"
-                property="expiration"
-                errors={fieldErrors}
-            >
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <TextInput type="date" aria-label="Início da vaga" error={!!fieldErrors.expiration} value={form.expirationMin} min={creating ? today() : undefined} onChange={(event) => set({ expirationMin: event.currentTarget.value })} />
-                    <TextInput type="date" aria-label="Fim da vaga" error={!!fieldErrors.expiration} value={form.expirationMax} min={form.expirationMin || undefined} onChange={(event) => set({ expirationMax: event.currentTarget.value })} />
-                </div>
-            </LabelComponent>
-        </div>
-    );
-
-    // ---- aba Idiomas (como a do currículo: o checkbox abre a lista, e cada idioma escolhido pede o nível)
-    const selectLanguages = (names: string[]) =>
-        set({ spokenLanguage: names.map((name) => form.spokenLanguage.filter((language) => language.name == name)[0] || { name, level: 1 }) });
+    // ---- os idiomas (como os do currículo: o checkbox abre a lista, e cada idioma escolhido pede o nível): na aba
+    // Requisitos desde 2026-11-25 (antes, aba própria ou o topo da aba Habilidades); fora da vaga simplificada recolhida
+    const selectLanguages = (names: string[]) => set({ spokenLanguage: names.map((name) => form.spokenLanguage.filter((language) => language.name == name)[0] || { name, level: 1 }) });
     const setLanguageLevel = (name: string, level: number) => set({ spokenLanguage: form.spokenLanguage.map((language) => (language.name == name ? { ...language, level } : language)) });
-    // os campos de idiomas: numa vaga com a aba Habilidades (desde 2026-11-23) ficam no topo dela, sem aba própria
     const languagesFields = (
         <div>
             <div className="mb-5">
-                <Checkbox checked={form.hasLanguages} onChange={(event) => set({ hasLanguages: event.currentTarget.checked })} label="A vaga exige conhecimento em outro(s) idioma(s) além do português" />
+                <Checkbox
+                    checked={form.hasLanguages}
+                    onChange={(event) => set({ hasLanguages: event.currentTarget.checked })}
+                    label="A vaga exige conhecimento em outro(s) idioma(s) além do português"
+                />
             </div>
             {form.hasLanguages && (
                 <div className="mb-6">
@@ -589,15 +565,140 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
                 form.spokenLanguage.map((language) => (
                     <div key={language.name} className="mb-4 md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] md:items-start md:gap-4">
                         <label className="mb-1.5 block font-semibold text-dark dark:text-white-light md:mb-0 md:pt-2">O nível exigido em idioma {language.name} é:</label>
-                        <Select data={languageLevelOptions} value={String(language.level)} allowDeselect={false} comboboxProps={inside} onChange={(value) => value && setLanguageLevel(language.name, Number(value))} />
+                        <Select
+                            data={languageLevelOptions}
+                            value={String(language.level)}
+                            allowDeselect={false}
+                            comboboxProps={inside}
+                            onChange={(value) => value && setLanguageLevel(language.name, Number(value))}
+                        />
                     </div>
                 ))}
         </div>
     );
-    const languagesTab = (
-        <div>
+    // ---- aba Requisitos (antes, Vaga): a área, a descrição e os idiomas
+    const positionTab = (
+        // largura limitada, como na aba Currículo: um campo de uma linha muito largo é desconfortável de ler e de preencher
+        <div className="max-w-4xl">
+            <LabelComponent
+                explanation="Obrigatória: a área dos currículos procurados. A vaga de tecnologia da informação (TI) ganha a aba 'Habilidades', com as habilidades encontradas na descrição."
+                labelValue="Área da vaga:"
+                property="resumeType"
+                errors={fieldErrors}
+            >
+                {/* obrigatória; desde 2026-11-25 já vem com tecnologia da informação */}
+                <Select
+                    id="resumeType"
+                    required
+                    aria-required
+                    placeholder="Escolha a área da vaga"
+                    error={!!fieldErrors.resumeType}
+                    data={resumeTypeOptions}
+                    value={form.resumeType || null}
+                    allowDeselect={false}
+                    comboboxProps={inside}
+                    onChange={(value) => set({ resumeType: value || '' })}
+                />
+            </LabelComponent>
             {resumesMessage}
-            {languagesFields}
+            <LabelComponent
+                explanation={`O texto completo da vaga: atividades, requisitos, benefícios e o que mais o candidato precisa saber (de ${LIMITS.descriptionMin} a ${LIMITS.descriptionMax.toLocaleString(
+                    'pt-BR'
+                )} caracteres). Numa vaga de tecnologia, é deste texto que saem as listas da aba 'Habilidades' mais à frente.`}
+                labelValue={`Descrição da vaga (${form.description.trim().length} caracteres):`}
+                property="description"
+                errors={fieldErrors}
+            >
+                <Textarea
+                    id="description"
+                    error={!!fieldErrors.description}
+                    value={form.description}
+                    maxLength={LIMITS.descriptionMax}
+                    placeholder="Cole aqui o texto da vaga."
+                    autosize
+                    minRows={10}
+                    maxRows={25}
+                    onChange={(event) => set({ description: event.currentTarget.value })}
+                />
+            </LabelComponent>
+            {!collapsed && languagesFields}
+        </div>
+    );
+
+    // ---- os contatos (só com a divulgação nos grupos, onde aparecem) e o período da vaga: na aba Opções desde 2026-11-25
+    // (antes, na aba Vaga); na vaga simplificada recolhida, no fim da aba Salários
+    const titleField = (
+        <div className="max-w-4xl">
+            <LabelComponent
+                explanation={`O título (ou a sua referência interna) identifica a vaga para você e para os candidatos (de ${LIMITS.titleMin} a ${LIMITS.titleMax} caracteres). Não pode repetir o de outra vaga sua criada no mesmo mês. Pode ser alterado depois, menos numa vaga pela qual candidatos já enviaram o currículo.`}
+                labelValue="Título / Referência dessa vaga:"
+                property="title"
+                errors={optionsFieldErrors}
+            >
+                <TextInput id="title" error={!!optionsFieldErrors.title} value={form.title} maxLength={LIMITS.titleMax} onChange={(event) => set({ title: event.currentTarget.value })} />
+            </LabelComponent>
+        </div>
+    );
+    const contactsFields = (
+        <div>
+            <LabelComponent
+                explanation="Por onde os candidatos falam com você sobre a vaga, mostrados na divulgação nos grupos: WhatsApp (com DDD, ex.: +5511999998888), e-mail ou um link (começando com http). Informe ao menos um. Só aparecem (e só são pedidos) com a divulgação nos grupos marcada."
+                labelValue="Contatos para os candidatos dos grupos de vagas:"
+                property="contact"
+                errors={optionsFieldErrors}
+            >
+                {form.contact.map((contact, index) => (
+                    <div key={index} className="mb-2 grid grid-cols-1 items-start gap-2 sm:grid-cols-[1fr_2fr_auto]">
+                        <Select
+                            data={contactTypeOptions}
+                            value={contact.type}
+                            allowDeselect={false}
+                            comboboxProps={inside}
+                            onChange={(value) => setContact(index, { type: (value as Contact['type']) || 'email' })}
+                        />
+                        <TextInput
+                            error={!!optionsFieldErrors.contact}
+                            value={contact.value}
+                            maxLength={LIMITS.contactValueMax}
+                            placeholder={contact.type == 'whatsapp' ? '+5511999998888' : contact.type == 'email' ? 'rh@empresa.com.br' : 'https://empresa.com.br/vaga'}
+                            onChange={(event) => setContact(index, { value: event.currentTarget.value })}
+                        />
+                        {removeButton(() => set({ contact: form.contact.filter((_, i) => i != index) }), form.contact.length == 1)}
+                    </div>
+                ))}
+                <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => set({ contact: [...form.contact, { type: 'email', value: '' }] })}>
+                    Acrescentar contato
+                </button>
+            </LabelComponent>
+        </div>
+    );
+    const periodField = (
+        <div>
+            <LabelComponent
+                explanation="Do início até o fim do dia escolhido no fim, a vaga recebe currículos e é divulgada nos grupos (conforme as opções acima). Depois disso ela vai para a aba das vagas expiradas, de onde pode ser reativada. Uma vaga nova não pode começar antes de hoje."
+                labelValue="Receber currículos e/ou enviar esta vaga no período:"
+                property="expiration"
+                errors={optionsFieldErrors}
+            >
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <TextInput
+                        type="date"
+                        aria-label="Início da vaga"
+                        error={!!optionsFieldErrors.expiration}
+                        value={form.expirationMin}
+                        min={creating ? today() : undefined}
+                        onChange={(event) => set({ expirationMin: event.currentTarget.value })}
+                    />
+                    <TextInput
+                        type="date"
+                        aria-label="Fim da vaga"
+                        error={!!optionsFieldErrors.expiration}
+                        value={form.expirationMax}
+                        min={form.expirationMin || undefined}
+                        onChange={(event) => set({ expirationMax: event.currentTarget.value })}
+                    />
+                </div>
+            </LabelComponent>
         </div>
     );
 
@@ -645,7 +746,7 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
                     explanation="As senioridades dos currículos procurados: escolha uma ou mais. O currículo entra quando os anos de experiência dele estão na faixa de qualquer uma delas."
                     labelValue="Senioridades da vaga:"
                     property="seniority"
-                    errors={{}}
+                    errors={saveAttempted && !form.seniority.length ? { seniority: 'Escolha ao menos uma senioridade' } : {}}
                 >
                     {/* escolha múltipla desde 2026-11-23, sempre na ordem das opções (de estágio a especialista) */}
                     <MultiSelect
@@ -653,6 +754,7 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
                         data={seniorityOptions}
                         value={form.seniority}
                         placeholder={form.seniority.length ? undefined : 'Escolha uma ou mais senioridades'}
+                        error={saveAttempted && !form.seniority.length}
                         comboboxProps={inside}
                         onChange={(values) => set({ seniority: seniorityOptions.filter((option) => values.includes(option.value)).map((option) => option.value) })}
                     />
@@ -697,6 +799,8 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
         <div>
             {/* a contagem e o link da lista dos currículos aderentes, como nas outras abas */}
             {resumesMessage}
+            {/* o primeiro campo da aba (desde 2026-11-25; antes, na aba Vaga) */}
+            {titleField}
             <div className="mb-5">
                 {/* com exceção de "Não receber currículos", a frequência pede, ao lado, o e-mail que recebe os currículos */}
                 <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
@@ -706,7 +810,14 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
                         property="frequencyType"
                         errors={{}}
                     >
-                        <Select id="frequencyType" data={frequencyOptions} value={form.frequencyType} allowDeselect={false} comboboxProps={inside} onChange={(value) => set({ frequencyType: value || 'daily' })} />
+                        <Select
+                            id="frequencyType"
+                            data={frequencyData}
+                            value={form.frequencyType}
+                            allowDeselect={false}
+                            comboboxProps={inside}
+                            onChange={(value) => set({ frequencyType: value || 'daily' })}
+                        />
                     </LabelComponent>
                     {sendsTheResumes(form) && (
                         <LabelComponent
@@ -730,13 +841,8 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
                         </LabelComponent>
                     )}
                 </div>
-                <PublishInGroupsCheckBox
-                    setValue={(mustSendInGroups) => set({ mustSendInGroups })}
-                    value={form.mustSendInGroups}
-                    resumeType={form.resumeType}
-                    seniority={form.seniority}
-                    ddd={form.ddd}
-                />
+                <PublishInGroupsCheckBox setValue={setMustSendInGroups} value={form.mustSendInGroups} resumeType={form.resumeType} seniority={form.seniority} ddd={form.ddd} />
+                {form.mustSendInGroups && contactsFields}
             </div>
             <LabelComponent
                 explanation="A ordem em que os currículos encontrados aparecem para você: o primeiro critério decide, e cada critério seguinte só desempata o anterior. Só aparecem os critérios que a vaga pede (a pretensão CLT ou PJ informada, os idiomas exigidos, as habilidades da vaga de tecnologia, a disponibilidade e o trabalho temporário quando informados); cada habilidade desejável pode virar um critério."
@@ -749,7 +855,12 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
                     const usedByOthers = shownSort.filter((_, i) => i != index).map(sortKeyOf);
                     const available = sortCriteria.filter((criterion) => criterion.key == key || !usedByOthers.includes(criterion.key));
                     const current = sortCriteria.find((criterion) => criterion.key == key);
-                    const typeOptions = current ? [{ value: 'asc', label: current.types.asc }, { value: 'desc', label: current.types.desc }] : [];
+                    const typeOptions = current
+                        ? [
+                              { value: 'asc', label: current.types.asc },
+                              { value: 'desc', label: current.types.desc },
+                          ]
+                        : [];
                     // o sentido padrão do critério aparece primeiro no combo
                     current && current.defaultType == 'desc' && typeOptions.reverse();
                     return (
@@ -765,7 +876,13 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
                                     chosen && setSort(index, sortRuleOf(chosen));
                                 }}
                             />
-                            <Select data={typeOptions} value={rule.type} allowDeselect={false} comboboxProps={inside} onChange={(value) => setSort(index, { ...rule, type: (value as SortRule['type']) || rule.type })} />
+                            <Select
+                                data={typeOptions}
+                                value={rule.type}
+                                allowDeselect={false}
+                                comboboxProps={inside}
+                                onChange={(value) => setSort(index, { ...rule, type: (value as SortRule['type']) || rule.type })}
+                            />
                             {removeButton(() => editSort(shownSort.filter((_, i) => i != index)), shownSort.length == 1)}
                         </div>
                     );
@@ -782,6 +899,8 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
                     Acrescentar critério
                 </button>
             </LabelComponent>
+            {/* o último campo da aba */}
+            {periodField}
         </div>
     );
 
@@ -796,7 +915,8 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
                 <Checkbox className="min-w-0" checked={!offered} onChange={(event) => set(changes(!event.currentTarget.checked, min, max))} label={`Não ofereço contratação ${name}`} />
             </div>
             {offered && (
-                // o recuo alinha os campos com o texto do checkbox, como no IntegerFieldComponent
+                // o recuo alinha os campos com o texto do checkbox, como no IntegerFieldComponent; o erro da faixa aparece
+                // embaixo dos campos depois de salvar com pendência
                 <div className="mt-2 grid max-w-xl grid-cols-1 gap-3 pl-[3.75rem] sm:grid-cols-2">
                     <NumberInput
                         label={`Budget ${name} de (R$)`}
@@ -808,6 +928,7 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
                         decimalSeparator=","
                         allowDecimal={false}
                         allowNegative={false}
+                        error={saveAttempted && salaryErrors(name, min, max).length > 0}
                         onChange={(value) => set(changes(offered, value === '' ? '' : Number(value), max))}
                     />
                     <NumberInput
@@ -820,8 +941,10 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
                         decimalSeparator=","
                         allowDecimal={false}
                         allowNegative={false}
+                        error={saveAttempted && salaryErrors(name, min, max).length > 0}
                         onChange={(value) => set(changes(offered, min, value === '' ? '' : Number(value)))}
                     />
+                    {saveAttempted && salaryErrors(name, min, max).length > 0 && <p className="text-sm text-danger sm:col-span-2">{salaryErrors(name, min, max)[0]}</p>}
                 </div>
             )}
         </div>
@@ -855,12 +978,17 @@ export const PositionFormModal = ({ position, onSaved, onCancel, simplified = fa
             forwardLoading={loadingSkills}
         >
             {positionTab}
-            {collapsed && salaryTab}
-            {!collapsed && !showTabSkills && languagesTab}
+            {collapsed && (
+                <div>
+                    {salaryTab}
+                    {titleField}
+                    {form.mustSendInGroups && contactsFields}
+                    {periodField}
+                </div>
+            )}
             {!collapsed && showTabSkills && (
                 <div>
                     {resumesMessage}
-                    <div className="mb-6 border-b border-white-light pb-2 dark:border-[#1b2e4b]">{languagesFields}</div>
                     <TabSkills2 store={skillStore} getAccordionList={getImplicitSkills} source={skillsSourceOf(form.description)} accordionView={broadSkillsView} withMoveAll />
                 </div>
             )}

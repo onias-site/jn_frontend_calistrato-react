@@ -1,6 +1,9 @@
 import { emptyForm, PositionForm } from './positionsData';
 import { filtersRequestOf, foundResumesMessage, recruiterDomainOf } from './resumesOfTheFilters';
 
+// a habilidade obrigatória como a vaga a guarda
+const skill = (name: string) => ({ skill: name, word: name, type: 'skillsFromResume', category: 'skillsFromText' });
+
 const form = (changes: Partial<PositionForm> = {}): PositionForm => ({ ...emptyForm(new Date(2026, 10, 22)), resumeType: '1', ...changes });
 
 describe('resumesOfTheFilters', () => {
@@ -11,6 +14,12 @@ describe('resumesOfTheFilters', () => {
     it('sem área ou sem região ainda não conta', () => {
         expect(filtersRequestOf(form({ resumeType: '' }), [])).toBeNull();
         expect(filtersRequestOf(form({ ddd: [] }), [])).toBeNull();
+    });
+
+    it('na busca de currículos (desde 2026-11-25) a região não é exigida: nenhuma é todas', () => {
+        expect(filtersRequestOf(form({ ddd: [] }), [], null, false)).toEqual({ resumeType: 1 });
+        expect(filtersRequestOf(form({ ddd: ['11'] }), [], null, false)).toEqual({ resumeType: 1, ddd: [11] });
+        expect(filtersRequestOf(form({ resumeType: '' }), [], null, false)).toBeNull();
     });
 
     it('leva cada filtro informado', () => {
@@ -41,7 +50,7 @@ describe('resumesOfTheFilters', () => {
             disponibility: 15,
             temporallyJobTime: 6,
             seniority: ['junior', 'pleno'],
-            skill: ['JAVA', 'BACKEND'],
+            skill: [skill('JAVA'), skill('BACKEND')],
             spokenLanguage: [{ name: 'Inglês', level: 2 }],
             negotiableClaim: true,
             pcd: true,
@@ -62,7 +71,7 @@ describe('resumesOfTheFilters', () => {
     });
 
     it('as habilidades vão sem as repetidas (maiúsculas ou não) e, acima de 100, não conta (o backend recusaria com 422)', () => {
-        expect(filtersRequestOf(form(), ['SPRING', 'JAVA', 'spring'])).toEqual({ resumeType: 1, skill: ['SPRING', 'JAVA'] });
+        expect(filtersRequestOf(form(), ['SPRING', 'JAVA', 'spring'])).toEqual({ resumeType: 1, skill: [skill('SPRING'), skill('JAVA')] });
         const hundred = Array.from({ length: 100 }, (_, index) => `SKILL${index}`);
         expect(filtersRequestOf(form(), [...hundred, 'skill0'])?.skill).toHaveLength(100);
         expect(filtersRequestOf(form(), [...hundred, 'SKILL100'])).toBeNull();

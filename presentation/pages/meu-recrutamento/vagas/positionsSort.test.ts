@@ -11,6 +11,7 @@ describe('ordem dos currículos da vaga', () => {
             'spokenLanguage:Inglês:desc',
             'spokenLanguage:Espanhol:desc',
             'experience:desc',
+            'ddd:asc',
             'skillsTotal:desc',
             'shouldSkillsTotal:desc',
             'disponibility:asc',
@@ -20,7 +21,7 @@ describe('ordem dos currículos da vaga', () => {
 
     it('só PJ: a pretensão PJ vem primeiro; fora de TI não há critérios de habilidade', () => {
         const form = { ...emptyForm(), resumeType: '4', hasClt: false, hasPj: true };
-        expect(keysOf(defaultSortOf(form, ['Java']))).toEqual(['pj:asc', 'experience:desc']);
+        expect(keysOf(defaultSortOf(form, ['Java']))).toEqual(['pj:asc', 'experience:desc', 'ddd:asc']);
         expect(sortCriteriaOf(form, ['Java']).map((criterion) => criterion.key)).toEqual(['pj', 'experience', 'ddd']);
     });
 
@@ -44,12 +45,14 @@ describe('ordem dos currículos da vaga', () => {
         expect(keysOf(sortToShow({ ...form, hasPj: false }, []))).toEqual(keysOf(defaultSortOf({ ...form, hasPj: false }, [])));
     });
 
-    it('o DDD (desde 2026-11-24) é sempre uma opção, fora da padrão, os menores primeiro', () => {
+    it('o DDD é sempre uma opção e (desde 2026-11-25) entra na padrão depois das pretensões e da experiência, os menores primeiro', () => {
         const ddd = sortCriteriaOf({ ...emptyForm(), resumeType: '4' }, []).find((criterion) => criterion.key == 'ddd')!;
-        expect(ddd.inDefault).toBe(false);
+        expect(ddd.inDefault).toBe(true);
         expect(ddd.defaultType).toBe('asc');
         expect(ddd.types).toEqual({ asc: 'DDDs menores primeiro', desc: 'DDDs maiores primeiro' });
-        expect(keysOf(defaultSortOf({ ...emptyForm(), resumeType: '1' }, []))).not.toContain('ddd:asc');
+        expect(keysOf(defaultSortOf({ ...emptyForm(), resumeType: '1' }, [])).slice(0, 3)).toEqual(['clt:asc', 'experience:desc', 'ddd:asc']);
+        // a vaga nova já nasce com a padrão
+        expect(keysOf(emptyForm().sort)).toEqual(keysOf(defaultSortOf({ ...emptyForm(), resumeType: '1' }, [])));
     });
 
     it('a ordem gravada antes, com vários critérios numa regra, vira um critério por regra', () => {

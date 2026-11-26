@@ -14,21 +14,24 @@ describe('vaga simplificada', () => {
         expect(form.frequencyType).toBe('byTheCandidates');
         expect(form.mustSendInGroups).toBe(true);
         expect(form.resumesEmail).toBe('rh@empresa.com.br');
-        // as abas escondidas não seguram a gravação
+        // as abas escondidas não seguram a gravação; os contatos (com a divulgação marcada) ficam no fim da aba Salários
         expect(filtersTabErrors(form)).toEqual([]);
-        expect(optionsTabErrors({ ...form, sort: simplifiedSortOf(form) })).toEqual([]);
+        const withContact = { ...form, title: 'Vaga simplificada de teste', contact: [{ type: 'email' as const, value: 'rh@empresa.com.br' }] };
+        expect(optionsTabErrors({ ...withContact, sort: simplifiedSortOf(form) })).toEqual([]);
     });
 
-    it('ordena pelas pretensões informadas, as mais baratas primeiro, e pela experiência', () => {
+    it('ordena pelas pretensões informadas, as mais baratas primeiro, pela experiência e pelo DDD', () => {
         const form = simplifiedFormOf(allDdds, 'rh@empresa.com.br');
         expect(simplifiedSortOf({ ...form, hasClt: true, hasPj: true })).toEqual([
             { type: 'asc', field: ['clt'] },
             { type: 'asc', field: ['pj'] },
             { type: 'desc', field: ['experience'] },
+            { type: 'asc', field: ['ddd'] },
         ]);
         expect(simplifiedSortOf({ ...form, hasClt: false, hasPj: true })).toEqual([
             { type: 'asc', field: ['pj'] },
             { type: 'desc', field: ['experience'] },
+            { type: 'asc', field: ['ddd'] },
         ]);
     });
 

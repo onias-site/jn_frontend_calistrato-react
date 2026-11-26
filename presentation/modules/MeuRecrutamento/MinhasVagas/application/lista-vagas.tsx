@@ -164,7 +164,7 @@ const ListaDeVagas: React.FC<ListaVagasProps> = ({ tipo }) => {
         <div className="panel mt-6 ">
             <div className="mb-4.5 flex flex-col justify-between gap-5 md:flex-row md:items-center">
                 <div className="flex w-full flex-wrap items-center">
-                    <Link href="/meu-recrutamento/minhas-vagas/nova-vaga">
+                    <Link href="/curriculos/minhas-vagas/nova-vaga">
                         <button type="button" className="btn btn-primary btn-sm m-1">
                             <IconCircleCheck className="ltr:mr-2 rtl:ml-2" />
                             Nova Vaga
@@ -245,12 +245,12 @@ const ListaDeVagas: React.FC<ListaVagasProps> = ({ tipo }) => {
                                 render: ({ id }) => (
                                     <div className="mx-auto flex w-max items-center gap-4">
                                         <Tippy content="Ver currículos" delay={[1000, 0]}>
-                                            <Link href="/meu-recrutamento/minhas-vagas/curriculo" className="flex hover:text-info">
+                                            <Link href="/curriculos/minhas-vagas/curriculo" className="flex hover:text-info">
                                                 <IconNotesEdit className="h-4.5 w-4.5" />
                                             </Link>
                                         </Tippy>
                                         <Tippy content="Editar vaga" delay={[1000, 0]}>
-                                            <Link href={`/meu-recrutamento/minhas-vagas/editar/${id}`} className="flex hover:text-primary">
+                                            <Link href={`/curriculos/minhas-vagas/editar/${id}`} className="flex hover:text-primary">
                                                 <IconPencil />
                                             </Link>
                                         </Tippy>
@@ -343,13 +343,13 @@ const ListaDeVagas: React.FC<ListaVagasProps> = ({ tipo }) => {
                                     <div className="absolute -bottom-4 flex w-full flex-col gap-2 p-6 ltr:left-0 rtl:right-0">
                                         <div className="flex flex-row gap-2">
                                             <div className="btn btn-outline-primary w-1/2">
-                                                <Link href={`/meu-recrutamento/minhas-vagas/editar/${item.id}`} className="flex flex-row gap-2">
+                                                <Link href={`/curriculos/minhas-vagas/editar/${item.id}`} className="flex flex-row gap-2">
                                                     <IconNotesEdit className="h-4.5 w-4.5" />
                                                     Editar
                                                 </Link>
                                             </div>
                                             <div className="btn btn-outline-success w-1/2">
-                                                <Link href="/meu-recrutamento/minhas-vagas/curriculo" className="flex flex-row gap-1">
+                                                <Link href="/curriculos/minhas-vagas/curriculo" className="flex flex-row gap-1">
                                                     <IconUsersGroup className="h-4.5 w-4.5" />
                                                     Candidatos
                                                 </Link>

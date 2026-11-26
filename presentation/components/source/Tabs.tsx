@@ -33,8 +33,10 @@ export interface TabsProps {
     lastButtonSiblings?: React.ReactNode;
     // cada mudança deste valor leva de volta à primeira aba (ex.: depois de salvar)
     resetSignal?: number;
-    // cada objeto novo leva à aba do índice dado (ex.: à aba que aparece depois de salvar)
-    goToTab?: { index: number };
+    // cada objeto novo leva à aba do índice dado (ex.: à aba que aparece depois de salvar); com showErrors (desde
+    // 2026-11-25), a aba abre já com as pendências à vista e o foco no primeiro campo em erro (ou, sem campo marcado, na
+    // caixa das pendências)
+    goToTab?: { index: number; showErrors?: boolean };
     // atalho mostrado à esquerda do botão de avançar em todas as abas menos a última (ex.: salvar sem passar pelas
     // demais abas); devolve as pendências, mostradas como as do avançar
     shortcutButton?: TabsShortcutButton;
@@ -77,8 +79,13 @@ export const Tabs: React.FC<TabsProps> = ({
     React.useEffect(() => {
         resetSignal && goTo(0);
     }, [resetSignal]);
+    const focusTheError = React.useRef(false);
     React.useEffect(() => {
-        goToTab && tabs[goToTab.index] && goTo(goToTab.index);
+        if (!goToTab || !tabs[goToTab.index]) return;
+        goTo(goToTab.index);
+        if (!goToTab.showErrors) return;
+        setAttempted(true);
+        focusTheError.current = true;
     }, [goToTab]);
     // a aba nova abre do começo: sem isto, quem avança pelo botão do fim da aba (num modal ou numa página com rolagem)
     // cai no fim da aba seguinte e não vê o que fica no topo dela (ex.: a contagem de currículos da aba Opções da vaga)
@@ -91,6 +98,25 @@ export const Tabs: React.FC<TabsProps> = ({
         }
         top.current && top.current.scrollIntoView({ block: 'start' });
     }, [activeIndex]);
+    // depois de a aba com o erro aparecer (e de o topo dela rolar para a vista): o campo em erro, ou a caixa das pendências
+    React.useEffect(() => {
+        if (!focusTheError.current) return;
+        // a cada renderização o temporizador recomeça: o foco vai quando a aba para de mudar
+        const timer = setTimeout(() => {
+            focusTheError.current = false;
+            const area = top.current;
+            if (!area) return;
+            const field = area.querySelector<HTMLElement>('[aria-invalid="true"]');
+            if (field) {
+                field.scrollIntoView({ block: 'center' });
+                field.focus({ preventScroll: true });
+                return;
+            }
+            const box = area.querySelector<HTMLElement>('[role="alert"]');
+            box && box.scrollIntoView({ block: 'center' });
+        }, 50);
+        return () => clearTimeout(timer);
+    });
     // "Voltar" e "Avançar" (até 2026-11-08 os botões levavam o nome da aba vizinha, o que confundia: "Idiomas" parecia um atalho)
     const previousLabel = activeIndex > 0 ? 'Voltar' : firstButtonLabel;
     const nextLabel = tabs[activeIndex + 1] ? 'Avançar' : lastButtonLabel;
@@ -201,7 +227,9 @@ export const Tabs: React.FC<TabsProps> = ({
                                 setAttempted(true);
                                 showErrors(shortcutButton.onClick());
                             }}
-                            type="button" className="btn btn-success shrink-0 gap-2 whitespace-nowrap">
+                            type="button"
+                            className="btn btn-success shrink-0 gap-2 whitespace-nowrap"
+                        >
                             {shortcutButton.icon}
                             {shortcutButton.label}
                         </button>

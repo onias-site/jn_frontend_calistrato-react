@@ -12,7 +12,8 @@ export type ResumesOfTheFiltersState = { loading: boolean; found: ResumesOfTheFi
 /**
  * A contagem dos currículos que atendem aos filtros da vaga (desde 2026-11-22), uma só para o modal inteiro: a cada
  * filtro preenchido ou mudado, em qualquer aba (área, regiões, senioridade, habilidades obrigatórias, idiomas, salários
- * e as caixas), espera meio segundo e pergunta ao POST positions/resumes-of-the-filters. Fica no modal, e não em cada
+ * e as caixas), espera meio segundo e pergunta ao POST resume-filter (desde 2026-11-25, que responde do cache os mesmos
+ * filtros pedidos na última hora; a tela curriculos/buscar usa o mesmo hook). Fica no modal, e não em cada
  * aba, porque o Tabs só monta a aba aberta: trocar de aba não repete o pedido nem apaga o número. Só a resposta do
  * último pedido vale.
  */
@@ -54,7 +55,7 @@ export const useResumesOfTheFilters = (request: Record<string, any> | null): Res
             };
             callbacks[422] = failure;
             callbacks['onUnexpectedHttpStatus'] = failure;
-            JnAjax.doAnAjaxRequest('positions/resumes-of-the-filters', callbacks, 'POST', request, {}, 'http://localhost:8081');
+            JnAjax.doAnAjaxRequest('resume-filter', callbacks, 'POST', request, {}, 'http://localhost:8081');
         }, DEBOUNCE_MILLISECONDS);
         return () => clearTimeout(timer);
     }, [requestKey]);
