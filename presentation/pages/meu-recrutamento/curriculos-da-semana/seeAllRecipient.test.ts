@@ -1,4 +1,4 @@
-import { decideSeeAll, getRecipientFromQuery, getSeeAllTitle, prefillTheLoginWithTheRecipient } from './seeAllRecipient';
+import { decideSeeAll, getRecipientFromQuery, getSeeAllTitle, needsTheRecipientConfirmation, prefillTheLoginWithTheRecipient } from './seeAllRecipient';
 
 describe('tela Ver todos: título com o recrutador', () => {
     it('com a lista carregada: o e-mail da lista', () => {
@@ -56,5 +56,25 @@ describe('tela Ver todos: modal de login preenchido com o destinatário', () => 
         const filled: string[] = [];
         prefillTheLoginWithTheRecipient('', (email) => filled.push(email));
         expect(filled).toEqual([]);
+    });
+});
+
+// pedido de 2026-11-26: robôs que abrem os links dos e-mails gravavam o login e as respostas do destinatário
+describe('tela Ver todos: confirmação do destinatário antes de agir', () => {
+    it('ninguém logado: pede a confirmação', () => {
+        expect(needsTheRecipientConfirmation('onias85@gmail.com', '')).toBe(true);
+        expect(needsTheRecipientConfirmation('onias85@gmail.com', undefined)).toBe(true);
+    });
+
+    it('outra conta logada: pede a confirmação', () => {
+        expect(needsTheRecipientConfirmation('onias85@gmail.com', 'onias86@gmail.com')).toBe(true);
+    });
+
+    it('logado como o destinatário, em qualquer caixa: não pede', () => {
+        expect(needsTheRecipientConfirmation('onias85@gmail.com', 'Onias85@Gmail.com')).toBe(false);
+    });
+
+    it('link antigo, sem destinatário: não pede', () => {
+        expect(needsTheRecipientConfirmation('', '')).toBe(false);
     });
 });

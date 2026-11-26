@@ -43,3 +43,16 @@ export const decideSeeAll = (recipient: string, loggedEmail: string | null | und
     if (!expected || !logged) return 'load';
     return expected == logged ? 'load' : 'wrongAccount';
 };
+
+/**
+ * Se a tela pede a confirmação do destinatário antes de agir (pedido de 2026-11-26): os robôs que leem e-mails e abrem
+ * os links (verificadores de links dos provedores) carregavam a tela, que gravava o e-mail de login (jn_login_email) e as
+ * respostas do pré-cadastro (js_login_answers) do destinatário sem que ele tivesse clicado. Agora nada é gravado nem
+ * buscado até o clique em "Ver os currículos". Não pede quando o link não traz destinatário (nada é gravado) nem quando
+ * a conta logada já é a do destinatário (quem está logado é gente, e o cadastro já existe).
+ */
+export const needsTheRecipientConfirmation = (recipient: string, loggedEmail: string | null | undefined): boolean => {
+    const expected = normalize(recipient);
+    if (!expected) return false;
+    return expected != normalize(loggedEmail);
+};
