@@ -410,11 +410,16 @@ export const ResumesSearch = () => {
             >
                 {positionFromTheSearch && <PositionFormModal position={null} fromSearch={positionFromTheSearch} onSaved={() => {}} onCancel={() => setPositionFromTheSearch(null)} />}
             </Modal>
-            {resumesShown && resumesOfTheFilters.found && (
-                <div className="panel">
-                    <ResumesOfThePositionFilters ids={resumesOfTheFilters.found.ids} sort={[]} desiredSkills={[]} />
-                </div>
-            )}
+            {/* a lista dos currículos encontrados num modal (desde 2026-11-26; antes, no pé da tela): aberto também logo depois
+                do login que o link pede, quando a lista no pé da tela parecia não ter vindo */}
+            <Modal
+                visible={resumesShown && !!resumesOfTheFilters.found}
+                setVisible={(visible) => !visible && setResumesShown(false)}
+                title={`Currículos encontrados (${resumesOfTheFilters.found?.ids.length || 0})`}
+                size="90%"
+            >
+                {resumesShown && resumesOfTheFilters.found && <ResumesOfThePositionFilters ids={resumesOfTheFilters.found.ids} sort={[]} desiredSkills={[]} />}
+            </Modal>
         </div>
     );
 };
