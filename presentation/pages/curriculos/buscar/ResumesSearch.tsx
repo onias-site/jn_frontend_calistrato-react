@@ -62,6 +62,10 @@ const STICKY_TOP = 56;
 // o title e a explicação do link que abre o modal do descritivo da vaga
 const ADD_SKILLS_EXPLANATION = 'Clique para adicionar um descritivo do tipo de currículo que você precisa';
 
+// o link e o título do modal das habilidades (desde 2026-11-27): "Editar habilidades" quando a vaga já tem descritivo
+const ADD_SKILLS_LABEL = 'Adicionar habilidades';
+const EDIT_SKILLS_LABEL = 'Editar Habilidades';
+
 // a sugestão de habilidade das listas: a habilidade sugerida precisa constar no texto da vaga, de onde saem as listas
 const skillsSourceOf = (text: string): SkillsSource => ({
     text,
@@ -194,11 +198,13 @@ export const ResumesSearch = () => {
         };
         callbacks['onUnexpectedHttpStatus'] = () => {
             setLoadingSkills(false);
-            notify({ summary: 'Habilidades não encontradas', detail: 'Não foi possível ler as habilidades do texto agora. Abra "Adicionar habilidades" e clique em "Ok" para tentar outra vez.', severity: 'error' });
+            notify({ summary: 'Habilidades não encontradas', detail: `Não foi possível ler as habilidades do texto agora. Abra "${EDIT_SKILLS_LABEL}" e clique em "Ok" para tentar outra vez.`, severity: 'error' });
         };
         setLoadingSkills(true);
         JnAjax.doAnAjaxRequest('skills/fromText', callbacks, 'POST', requestSkillsToBackEnd, {}, 'http://localhost:8081');
     };
+
+    const skillsLabel = skillsText.trim() ? EDIT_SKILLS_LABEL : ADD_SKILLS_LABEL;
 
     const openTheDescriptionModal = () => {
         setDescriptionDraft(skillsText);
@@ -457,7 +463,7 @@ export const ResumesSearch = () => {
                             <div className="flex min-w-0 items-center gap-2">
                                 <HelpButton title={ADD_SKILLS_EXPLANATION} explanation={ADD_SKILLS_EXPLANATION} />
                                 <button type="button" className="font-semibold text-primary underline hover:no-underline" title={ADD_SKILLS_EXPLANATION} onClick={openTheDescriptionModal} disabled={loadingSkills}>
-                                    Adicionar habilidades
+                                    {skillsLabel}
                                 </button>
                             </div>
                             {tooManySkills && (
@@ -492,7 +498,7 @@ export const ResumesSearch = () => {
                     </button>
                 </div>
             </div>
-            <Modal visible={descriptionModalOpened} setVisible={setDescriptionModalOpened} title="Adicionar habilidades" size="lg">
+            <Modal visible={descriptionModalOpened} setVisible={setDescriptionModalOpened} title={skillsLabel} size="lg">
                 <LabelComponent
                     explanation="Cole o texto da vaga ou descreva as habilidades que procura. Ao clicar em Ok, as habilidades encontradas nele aparecem nas listas da tela, como no cadastro de vaga: as obrigatórias filtram os currículos (o currículo precisa ter todas); as desejáveis não filtram. Arraste as habilidades entre as listas."
                     labelValue="Texto da vaga ou descritivo das habilidades requeridas:"
