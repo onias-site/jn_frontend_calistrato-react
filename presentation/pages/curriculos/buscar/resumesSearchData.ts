@@ -125,11 +125,10 @@ const yearsOf = (value: number) => `${value.toLocaleString('pt-BR', { maximumFra
 /**
  * A mensagem que "Copiar este link para enviar para alguém" põe na área de transferência (desde 2026-11-27): "Foram
  * encontrados N currículos (média CLT R$ X, média PJ R$ Y, média de experiência Z anos), veja os em <link>". Só entram as
- * médias que os currículos encontrados informaram; sem nenhuma, sem os parênteses. Um currículo só fica no singular, e
- * nenhum vira o convite para ver a busca.
+ * médias que os currículos encontrados informaram; sem nenhuma, sem os parênteses. Um currículo só fica no singular. Sem
+ * currículos o botão não aparece.
  */
 export const sharedSearchMessage = (found: { resumes: number; cltAverage?: number; pjAverage?: number; experienceAverage?: number }, link: string) => {
-    if (!found.resumes) return `Nenhum currículo foi encontrado para estes filtros, veja a busca em ${link}`;
     const averages = [
         found.cltAverage != null && `média CLT ${reais(found.cltAverage)}`,
         found.pjAverage != null && `média PJ ${reais(found.pjAverage)}`,

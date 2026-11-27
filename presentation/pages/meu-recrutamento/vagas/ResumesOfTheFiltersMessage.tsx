@@ -93,7 +93,7 @@ export const ResumesOfTheFiltersMessage = ({ request, loading, found, failed, on
                         {found.resumes > 0 && (
                             <span>
                                 <button type="button" className="text-primary underline hover:no-underline" onClick={onSeeTheResumes}>
-                                    Ver quais são estes currículos
+                                    {found.resumes == 1 ? 'Ver qual é este currículo' : 'Ver quais são estes currículos'}
                                 </button>{' '}
                                 ou preencha / altere filtros para uma listagem mais assertiva à sua necessidade
                             </span>

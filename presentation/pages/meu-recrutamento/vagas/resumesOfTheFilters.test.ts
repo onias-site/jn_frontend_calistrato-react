@@ -91,7 +91,7 @@ describe('resumesOfTheFilters', () => {
         expect(message).toContain('média PJ R$');
         expect(message).toContain('12.500');
         expect(message).not.toContain('experiência');
-        expect(foundResumesMessage({ ids: ['a'], resumes: 1, experienceAverage: 6.46 })).toBe('Foram encontrados 1 currículos (média de experiência 6,5 anos)');
+        expect(foundResumesMessage({ ids: ['a'], resumes: 1, experienceAverage: 6.46 })).toBe('Foi encontrado 1 currículo (média de experiência 6,5 anos)');
         expect(foundResumesMessage({ ids: ['a'], resumes: 1, experienceAverage: 6 })).toContain('média de experiência 6 anos');
     });
 });

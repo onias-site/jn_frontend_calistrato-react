@@ -481,9 +481,12 @@ export const ResumesSearch = () => {
                 )}
                 {/* no fim da tela (desde 2026-11-25): compartilhar a busca e abrir uma vaga para os candidatos dela */}
                 <div className="mt-6 flex flex-wrap gap-3">
-                    <button type="button" className="btn btn-outline-primary" onClick={copyTheLink} disabled={!filterId}>
-                        Copiar este link para enviar para alguém
-                    </button>
+                    {/* só com currículos encontrados (desde 2026-11-27): sem nenhum, não há o que mandar a alguém */}
+                    {(resumesOfTheFilters.found?.resumes || 0) > 0 && (
+                        <button type="button" className="btn btn-outline-primary" onClick={copyTheLink} disabled={!filterId}>
+                            Copiar este link para enviar para alguém
+                        </button>
+                    )}
                     <button type="button" className="btn btn-primary" onClick={contactTheCandidates}>
                         Contactar candidatos aderentes
                     </button>

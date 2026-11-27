@@ -59,9 +59,7 @@ describe('resumesSearchData', () => {
         expect(sharedSearchMessage({ resumes: 3, cltAverage: 8000, experienceAverage: 4 }, link)).toBe('Foram encontrados 3 currículos (média CLT R$ 8.000, média de experiência 4 anos), veja os em ' + link);
         expect(sharedSearchMessage({ resumes: 2, experienceAverage: 1 }, link)).toBe('Foram encontrados 2 currículos (média de experiência 1 ano), veja os em ' + link);
         expect(sharedSearchMessage({ resumes: 2 }, link)).toBe('Foram encontrados 2 currículos, veja os em ' + link);
-        expect(sharedSearchMessage({ resumes: 1, cltAverage: 7000 }, link)).toBe('Foi encontrado 1 currículo (média CLT R$ 7.000), veja o em ' + link);
-        expect(sharedSearchMessage({ resumes: 0 }, link)).toBe('Nenhum currículo foi encontrado para estes filtros, veja a busca em ' + link);
-    });
+        expect(sharedSearchMessage({ resumes: 1, cltAverage: 7000 }, link)).toBe('Foi encontrado 1 currículo (média CLT R$ 7.000), veja o em ' + link);    });
 
     it('o GET dos filtros leva o e-mail do link só quando ele veio', () => {
         expect(resumeFilterPath('-56af')).toBe('resume-filter/-56af');

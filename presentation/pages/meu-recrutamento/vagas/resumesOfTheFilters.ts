@@ -86,6 +86,7 @@ export const foundResumesMessage = (found: ResumesOfTheFilters) => {
         found.pjAverage != null && `média PJ ${money(found.pjAverage)}`,
         found.experienceAverage != null && `média de experiência ${years(found.experienceAverage)}`,
     ].filter(Boolean);
-    const count = `Foram encontrados ${found.resumes} currículos`;
+    // um currículo só, no singular (desde 2026-11-27; antes, "Foram encontrados 1 currículos")
+    const count = found.resumes == 1 ? 'Foi encontrado 1 currículo' : `Foram encontrados ${found.resumes} currículos`;
     return averages.length ? `${count} (${averages.join(', ')})` : count;
 };
