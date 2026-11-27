@@ -64,7 +64,7 @@ const ADD_SKILLS_EXPLANATION = 'Clique para adicionar um descritivo do tipo de c
 
 // o link e o título do modal das habilidades (desde 2026-11-27): "Editar habilidades" quando a vaga já tem descritivo
 const ADD_SKILLS_LABEL = 'Adicionar habilidades';
-const EDIT_SKILLS_LABEL = 'Editar Habilidades';
+const EDIT_SKILLS_LABEL = 'Editar habilidades';
 
 // a sugestão de habilidade das listas: a habilidade sugerida precisa constar no texto da vaga, de onde saem as listas
 const skillsSourceOf = (text: string): SkillsSource => ({
