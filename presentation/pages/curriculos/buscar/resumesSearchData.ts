@@ -99,3 +99,23 @@ export const addressWithTheFilter = (href: string, filterId: string) => {
     url.searchParams.set(FILTER_PARAMETER, filterId);
     return url.pathname + url.search + url.hash;
 };
+
+// o parâmetro do endereço com o e-mail de quem compartilhou o link com o descritivo da vaga (desde 2026-11-26)
+export const EMAIL_PARAMETER = 'email';
+
+// o descritivo só vai no link com o tamanho que o backend aceita (o mesmo da descrição da vaga)
+export const SHARED_DESCRIPTION_MIN = 100;
+
+/**
+ * O link para enviar a alguém (desde 2026-11-26): a tela só com o id dos filtros ou, com o descritivo da vaga gravado em
+ * vis_resume_filter_description, também com o e-mail de quem o gravou. Os outros parâmetros do endereço ficam de fora.
+ */
+export const linkToShare = (href: string, filterId: string, email?: string) => {
+    const url = new URL(href);
+    const link = `${url.origin}${url.pathname}?${FILTER_PARAMETER}=${encodeURIComponent(filterId)}`;
+    return email ? `${link}&${EMAIL_PARAMETER}=${encodeURIComponent(email).replace('%40', '@')}` : link;
+};
+
+/** O caminho do GET dos filtros do id; com o e-mail do link, os filtros voltam com o descritivo gravado por ele. */
+export const resumeFilterPath = (filterId: string, email?: string | null) =>
+    `resume-filter/${encodeURIComponent(filterId)}${email ? `?${EMAIL_PARAMETER}=${encodeURIComponent(email)}` : ''}`;

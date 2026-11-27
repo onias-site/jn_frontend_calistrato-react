@@ -1,6 +1,6 @@
 import { filtersRequestOf } from '@/presentation/pages/meu-recrutamento/vagas/resumesOfTheFilters';
 import { positionTabErrors, languagesTabErrors, filtersTabErrors, seniorityOptions } from '@/presentation/pages/meu-recrutamento/vagas/positionsData';
-import { addressWithTheFilter, emptySearch, positionFormOfTheSearch, searchFormOf } from './resumesSearchData';
+import { addressWithTheFilter, emptySearch, linkToShare, positionFormOfTheSearch, resumeFilterPath, searchFormOf } from './resumesSearchData';
 
 describe('resumesSearchData', () => {
     it('a busca vazia filtra só pela área de tecnologia, em todas as regiões', () => {
@@ -42,6 +42,18 @@ describe('resumesSearchData', () => {
     it('o id dos filtros vai para o endereço', () => {
         expect(addressWithTheFilter('http://localhost:3000/curriculos/buscar', 'abc')).toBe('/curriculos/buscar?filtro=abc');
         expect(addressWithTheFilter('http://localhost:3000/curriculos/buscar?filtro=old&x=1', 'abc')).toBe('/curriculos/buscar?filtro=abc&x=1');
+    });
+
+    it('o link para enviar leva só o id dos filtros ou, com o descritivo gravado, também o e-mail de quem o gravou', () => {
+        const href = 'https://onias.site/curriculos/buscar?filtro=old&email=outro@x.com&x=1';
+        expect(linkToShare(href, '56af')).toBe('https://onias.site/curriculos/buscar?filtro=56af');
+        expect(linkToShare(href, '56af', 'rh+vagas@empresa.com.br')).toBe('https://onias.site/curriculos/buscar?filtro=56af&email=rh%2Bvagas@empresa.com.br');
+    });
+
+    it('o GET dos filtros leva o e-mail do link só quando ele veio', () => {
+        expect(resumeFilterPath('-56af')).toBe('resume-filter/-56af');
+        expect(resumeFilterPath('56af', null)).toBe('resume-filter/56af');
+        expect(resumeFilterPath('56af', 'rh@empresa.com.br')).toBe('resume-filter/56af?email=rh%40empresa.com.br');
     });
 
     it('contactar os candidatos abre a vaga com os filtros da busca, e o que ela deixa livre vem com todos', () => {

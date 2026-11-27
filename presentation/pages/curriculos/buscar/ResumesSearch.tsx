@@ -5,6 +5,7 @@ import { sha1 } from 'js-sha1';
 import JnAjax from '@/app/JnAjax';
 import { LabelComponent } from '@/presentation/components/source/LabelComponent';
 import { Modal } from '@/presentation/components/source/Modal';
+import { ConfirmModal } from '@/presentation/components/source/ConfirmModal';
 import { HelpButton } from '@/presentation/components/source/HelpButton';
 import { CheckBoxComponent } from '@/presentation/components/source/CheckBoxComponent';
 import { IntegerFieldComponent } from '@/presentation/components/source/IntegerFieldComponent';
@@ -32,7 +33,18 @@ import { broadSkillsViewOf, PositionFormModal } from '@/presentation/pages/meu-r
 import { filtersRequestOf } from '@/presentation/pages/meu-recrutamento/vagas/resumesOfTheFilters';
 import { ResumesOfTheFiltersMessage, useResumesOfTheFilters } from '@/presentation/pages/meu-recrutamento/vagas/ResumesOfTheFiltersMessage';
 import { ResumesOfThePositionFilters } from '@/presentation/pages/meu-recrutamento/vagas/ResumesOfThePositionFilters';
-import { addressWithTheFilter, emptySearch, FILTER_PARAMETER, positionFormOfTheSearch, ResumesSearch as Search, searchFormOf } from './resumesSearchData';
+import {
+    addressWithTheFilter,
+    EMAIL_PARAMETER,
+    emptySearch,
+    FILTER_PARAMETER,
+    linkToShare,
+    positionFormOfTheSearch,
+    resumeFilterPath,
+    ResumesSearch as Search,
+    searchFormOf,
+    SHARED_DESCRIPTION_MIN,
+} from './resumesSearchData';
 
 const resumeTypeOptions = resumeTypes.map((type) => ({ value: String(type.id), label: type.label }));
 const regionOptions = [
@@ -46,6 +58,8 @@ const languageOptions = languages.map((language) => ({ value: language.name, lab
 const fieldLabel = 'mb-1.5 block font-semibold text-dark dark:text-white-light';
 // a altura do header fixo: onde a contagem gruda ao rolar a tela
 const STICKY_TOP = 56;
+// o title e a explicação do link que abre o modal do descritivo da vaga
+const ADD_SKILLS_EXPLANATION = 'Clique para adicionar um descritivo do tipo de currículo que você precisa';
 
 // a sugestão de habilidade das listas: a habilidade sugerida precisa constar no texto da vaga, de onde saem as listas
 const skillsSourceOf = (text: string): SkillsSource => ({
@@ -91,10 +105,21 @@ export const ResumesSearch = () => {
     const [loadingSkills, setLoadingSkills] = useState(false);
     const showSkillLists = skillGroups.some((group) => group.list.length > 0) || (skillsContext.broadSkill || []).length > 0;
 
-    // aberta com o id dos filtros no endereço: os campos ficam como estavam
+    // o modal do descritivo da vaga ("Adicionar habilidades") e o texto que está sendo digitado nele
+    const [descriptionModalOpened, setDescriptionModalOpened] = useState(false);
+    const [descriptionDraft, setDescriptionDraft] = useState('');
+    // a pergunta, a quem não está logado, se o descritivo vai junto no link
+    const [askToShareTheDescription, setAskToShareTheDescription] = useState(false);
+    // o id dos filtros com que a tela foi aberta: o e-mail do endereço só vale para ele
+    const [filterIdOfTheAddress, setFilterIdOfTheAddress] = useState<string | null>(null);
+
+    // aberta com o id dos filtros no endereço: os campos ficam como estavam; com o e-mail também (desde 2026-11-26), o
+    // descritivo gravado por ele volta ao campo e as seções de habilidades aparecem, como ao clicar em "Ok" no modal
     useEffect(() => {
-        const filterId = new URLSearchParams(window.location.search).get(FILTER_PARAMETER);
+        const parameters = new URLSearchParams(window.location.search);
+        const filterId = parameters.get(FILTER_PARAMETER);
         if (!filterId) return;
+        setFilterIdOfTheAddress(filterId);
         setReadingTheFilters(true);
         const callbacks: any = {};
         callbacks['setLoading'] = () => {};
@@ -105,12 +130,16 @@ export const ResumesSearch = () => {
             setSearch(restored);
             skillStore.getState().setGroups(groupsOfTheRequiredSkills(restored.requiredSkills) as any, getImplicitSkills);
             setReadingTheFilters(false);
+            const description = (filters.description || '').trim();
+            if (!description) return;
+            setSkillsText(description);
+            loadSkillsFromText(description);
         };
         // sem os filtros (expiraram 24 horas depois da última busca deles) a tela fica como está
         callbacks[404] = () => setReadingTheFilters(false);
         callbacks[422] = () => setReadingTheFilters(false);
         callbacks['onUnexpectedHttpStatus'] = () => setReadingTheFilters(false);
-        JnAjax.doAnAjaxRequest(`resume-filter/${encodeURIComponent(filterId)}`, callbacks, 'GET', null as any, {}, 'http://localhost:8081');
+        JnAjax.doAnAjaxRequest(resumeFilterPath(filterId, parameters.get(EMAIL_PARAMETER)), callbacks, 'GET', null as any, {}, 'http://localhost:8081');
     }, []);
 
     const login: any = JnAjax.getLogin() || {};
@@ -122,20 +151,21 @@ export const ResumesSearch = () => {
     // o id dos filtros contados vai para o endereço, sem recarregar a tela
     useEffect(() => {
         if (!filterId) return;
-        window.history.replaceState(null, '', addressWithTheFilter(window.location.href, filterId));
+        const url = new URL(window.location.origin + addressWithTheFilter(window.location.href, filterId));
+        // outros filtros: o descritivo do e-mail do endereço era dos filtros com que a tela foi aberta
+        if (filterId != filterIdOfTheAddress) url.searchParams.delete(EMAIL_PARAMETER);
+        window.history.replaceState(null, '', url.pathname + url.search + url.hash);
     }, [filterId]);
 
     // o texto da vaga limpo: as três seções de habilidades somem, e as obrigatórias deixam de filtrar
-    const changeSkillsText = (text: string) => {
-        setSkillsText(text);
-        if (text.trim()) return;
+    const clearTheSkillsOfTheText = () => {
         skillStore.getState().setGroups(groupsOfTheRequiredSkills([]) as any, getImplicitSkills);
         skillStore.getState().setContext({});
     };
 
-    // ao sair do texto da vaga, como ao sair da aba Vaga do modal: as habilidades do texto, só quando ele mudou
-    const loadSkillsFromText = () => {
-        const text = skillsText.trim();
+    // "Ok" no modal do descritivo, como ao sair da aba Vaga do modal da vaga: as habilidades do texto, só quando ele mudou
+    const loadSkillsFromText = (typedText: string) => {
+        const text = typedText.trim();
         if (!text || loadingSkills) return;
         const cacheHash = sha1(text);
         const skillState = skillStore.getState();
@@ -151,23 +181,70 @@ export const ResumesSearch = () => {
         callbacks[401] = () => {
             setLoadingSkills(false);
             JnAjax.setNotLoading()();
-            JnAjax.getHandler401(loadSkillsFromText)();
+            JnAjax.getHandler401(() => loadSkillsFromText(text))();
         };
         callbacks['onUnexpectedHttpStatus'] = () => {
             setLoadingSkills(false);
-            notify({ summary: 'Habilidades não encontradas', detail: 'Não foi possível ler as habilidades do texto agora. Saia do campo de novo para tentar outra vez.', severity: 'error' });
+            notify({ summary: 'Habilidades não encontradas', detail: 'Não foi possível ler as habilidades do texto agora. Abra "Adicionar habilidades" e clique em "Ok" para tentar outra vez.', severity: 'error' });
         };
         setLoadingSkills(true);
         JnAjax.doAnAjaxRequest('skills/fromText', callbacks, 'POST', requestSkillsToBackEnd, {}, 'http://localhost:8081');
     };
 
-    // "Copiar este link para enviar para alguém": o endereço com o id dos filtros, que reabre a busca como está
-    const copyTheLink = () => {
-        if (!filterId) return;
-        const link = window.location.origin + addressWithTheFilter(window.location.href, filterId);
-        const copied = () => notify({ summary: 'Link copiado', detail: 'Cole o link para quem deve ver esta busca: os filtros valem por 24 horas.', severity: 'success' });
+    const openTheDescriptionModal = () => {
+        setDescriptionDraft(skillsText);
+        setDescriptionModalOpened(true);
+    };
+
+    // "Ok": o texto vai ao campo da tela e dele saem as seções de habilidades; vazio, elas somem
+    const confirmTheDescription = () => {
+        const text = descriptionDraft.trim();
+        setSkillsText(descriptionDraft);
+        setDescriptionModalOpened(false);
+        if (!text) return clearTheSkillsOfTheText();
+        loadSkillsFromText(text);
+    };
+
+    const copyToTheClipboard = (link: string, detail: string) => {
+        const copied = () => notify({ summary: 'Link copiado', detail, severity: 'success' });
         const failed = () => notify({ summary: 'Não foi possível copiar', detail: link, severity: 'warn' });
         navigator.clipboard.writeText(link).then(copied, failed);
+    };
+
+    // cenários A, B2 e C: o endereço só com o id dos filtros, que reabre a busca como está
+    const copyTheLinkWithoutTheDescription = () => {
+        if (!filterId) return;
+        copyToTheClipboard(linkToShare(window.location.href, filterId), 'Cole o link para quem deve ver esta busca: os filtros valem por 24 horas.');
+    };
+
+    // cenários B1 e D: o descritivo gravado sob o id dos filtros e o e-mail do usuário logado, que vai no link; sem login, o
+    // modal de login e, ao entrar, a gravação de novo
+    const copyTheLinkWithTheDescription = () => {
+        const description = skillsText.trim();
+        if (!filterId) return;
+        if (description.length < SHARED_DESCRIPTION_MIN) {
+            notify({ summary: 'Descritivo curto demais para o link', detail: `O descritivo precisa de pelo menos ${SHARED_DESCRIPTION_MIN} caracteres (tem ${description.length}) para ir no link. O link foi copiado só com os filtros.`, severity: 'warn' });
+            return copyTheLinkWithoutTheDescription();
+        }
+        const callbacks: any = {};
+        callbacks['retryAfterAuthentication'] = copyTheLinkWithTheDescription;
+        callbacks[200] = () => {
+            const logged: any = JnAjax.getLogin() || {};
+            copyToTheClipboard(linkToShare(window.location.href, filterId, logged.email), 'Cole o link para quem deve ver esta busca: ele abre os filtros, por 24 horas, com o descritivo da vaga.');
+        };
+        callbacks[422] = () => notify({ summary: 'Descritivo não gravado', detail: 'O descritivo precisa ter de 100 a 5.000 caracteres.', severity: 'warn' });
+        callbacks['onUnexpectedHttpStatus'] = () => notify({ summary: 'Descritivo não gravado', detail: 'Não foi possível gravar o descritivo agora. Tente copiar o link de novo.', severity: 'error' });
+        JnAjax.doAnAjaxRequest('recruiter/{email}/resume-filter-description', callbacks, 'POST', { filterId, description }, {}, 'http://localhost:8081');
+    };
+
+    // "Copiar este link para enviar para alguém" (desde 2026-11-26): sem descritivo, só os filtros (A e C); com ele e logado,
+    // o descritivo vai junto (D); com ele e sem login, a pergunta se o descritivo vai junto (B1 sim, B2 não)
+    const copyTheLink = () => {
+        if (!filterId) return;
+        if (!skillsText.trim()) return copyTheLinkWithoutTheDescription();
+        const logged: any = JnAjax.getLogin() || {};
+        if (logged.email) return copyTheLinkWithTheDescription();
+        setAskToShareTheDescription(true);
     };
 
     // "Contactar candidatos aderentes": o modal de vaga nova com os filtros desta busca
@@ -357,32 +434,27 @@ export const ResumesSearch = () => {
                     value={form.negotiableClaim}
                 />
                 <div className="max-w-4xl">
+                    {/* o texto da vaga num modal (desde 2026-11-26; antes, um campo da tela que lia as habilidades ao sair dele) */}
                     {isTechPosition(form) && (
-                        <LabelComponent
-                            explanation="Cole o texto da vaga ou descreva as habilidades que procura. Ao sair do campo, as habilidades encontradas nele aparecem nas listas abaixo, como no cadastro de vaga: as obrigatórias filtram os currículos (o currículo precisa ter todas); as desejáveis não filtram. Arraste as habilidades entre as listas."
-                            labelValue="Texto da vaga ou descritivo das habilidades requeridas:"
-                            property="skillsText"
-                            errors={tooManySkills ? { skillsText: `No máximo ${REQUIRED_SKILLS_MAX} habilidades obrigatórias; retire ${requiredSkills.length - REQUIRED_SKILLS_MAX}.` } : {}}
-                        >
-                            <Textarea
-                                id="skillsText"
-                                value={skillsText}
-                                maxLength={LIMITS.descriptionMax}
-                                placeholder="Cole aqui o texto da vaga ou descreva as habilidades requeridas."
-                                autosize
-                                minRows={5}
-                                maxRows={20}
-                                disabled={loadingSkills}
-                                onChange={(event) => changeSkillsText(event.currentTarget.value)}
-                                onBlur={loadSkillsFromText}
-                            />
+                        <div className="mb-5">
+                            <div className="flex min-w-0 items-center gap-2">
+                                <HelpButton title={ADD_SKILLS_EXPLANATION} explanation={ADD_SKILLS_EXPLANATION} />
+                                <button type="button" className="font-semibold text-primary underline hover:no-underline" title={ADD_SKILLS_EXPLANATION} onClick={openTheDescriptionModal} disabled={loadingSkills}>
+                                    Adicionar habilidades
+                                </button>
+                            </div>
+                            {tooManySkills && (
+                                <p className="mt-1 pl-[2.25rem] text-sm text-danger">
+                                    No máximo {REQUIRED_SKILLS_MAX} habilidades obrigatórias; retire {requiredSkills.length - REQUIRED_SKILLS_MAX}.
+                                </p>
+                            )}
                             {loadingSkills && (
-                                <div className="mt-2 flex items-center gap-2 text-sm">
+                                <div className="mt-2 flex items-center gap-2 pl-[2.25rem] text-sm">
                                     <Loader size="xs" />
                                     <span>Lendo as habilidades do texto...</span>
                                 </div>
                             )}
-                        </LabelComponent>
+                        </div>
                     )}
                 </div>
                 {isTechPosition(form) && showSkillLists && (
@@ -400,6 +472,44 @@ export const ResumesSearch = () => {
                     </button>
                 </div>
             </div>
+            <Modal visible={descriptionModalOpened} setVisible={setDescriptionModalOpened} title="Adicionar habilidades" size="lg">
+                <LabelComponent
+                    explanation="Cole o texto da vaga ou descreva as habilidades que procura. Ao clicar em Ok, as habilidades encontradas nele aparecem nas listas da tela, como no cadastro de vaga: as obrigatórias filtram os currículos (o currículo precisa ter todas); as desejáveis não filtram. Arraste as habilidades entre as listas."
+                    labelValue="Texto da vaga ou descritivo das habilidades requeridas:"
+                    property="skillsText"
+                    errors={{}}
+                >
+                    <Textarea
+                        id="skillsText"
+                        value={descriptionDraft}
+                        maxLength={LIMITS.descriptionMax}
+                        placeholder="Cole aqui o texto da vaga ou descreva as habilidades requeridas."
+                        autosize
+                        minRows={8}
+                        maxRows={20}
+                        data-autofocus
+                        onChange={(event) => setDescriptionDraft(event.currentTarget.value)}
+                    />
+                </LabelComponent>
+                <div className="mt-4 flex justify-end gap-2">
+                    <button type="button" className="btn btn-outline-dark" onClick={() => setDescriptionModalOpened(false)}>
+                        Cancelar
+                    </button>
+                    <button type="button" className="btn btn-primary" onClick={confirmTheDescription}>
+                        Ok
+                    </button>
+                </div>
+            </Modal>
+            <ConfirmModal
+                visible={askToShareTheDescription}
+                onHide={() => setAskToShareTheDescription(false)}
+                header="Incluir o descritivo da vaga no link?"
+                message="Quer que o descritivo da vaga seja incluído no link, para ser carregado quando o link for aberto? Para isso, você precisará entrar com o seu e-mail, que irá no link."
+                acceptLabel="Sim, incluir"
+                rejectLabel="Não, só os filtros"
+                accept={copyTheLinkWithTheDescription}
+                reject={copyTheLinkWithoutTheDescription}
+            />
             <Modal
                 visible={positionFromTheSearch != null}
                 setVisible={(visible) => !visible && setPositionFromTheSearch(null)}
