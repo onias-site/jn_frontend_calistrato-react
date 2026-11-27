@@ -44,6 +44,7 @@ import {
     ResumesSearch as Search,
     searchFormOf,
     SHARED_DESCRIPTION_MIN,
+    sharedSearchMessage,
 } from './resumesSearchData';
 
 const resumeTypeOptions = resumeTypes.map((type) => ({ value: String(type.id), label: type.label }));
@@ -87,9 +88,14 @@ const groupsOfTheRequiredSkills = (skills: string[]) => [desiredSkillsGroup([]),
 export const ResumesSearch = () => {
     const [search, setSearch] = useState<Search>(emptySearch);
     const [readingTheFilters, setReadingTheFilters] = useState(false);
+    // o id do endereço não tem mais filtros (404, desde 2026-11-27): o aviso fica até o primeiro filtro mudado
+    const [filterExpired, setFilterExpired] = useState(false);
     const [resumesShown, setResumesShown] = useState(false);
     const { form } = search;
-    const set = (changes: Partial<PositionForm>) => setSearch((current) => ({ ...current, form: { ...current.form, ...changes } }));
+    const set = (changes: Partial<PositionForm>) => {
+        setFilterExpired(false);
+        setSearch((current) => ({ ...current, form: { ...current.form, ...changes } }));
+    };
     // as listas de habilidades, numa store só desta tela, como no modal da vaga
     const [skillStore] = useState(() => {
         const store = createSkillStore();
@@ -135,8 +141,11 @@ export const ResumesSearch = () => {
             setSkillsText(description);
             loadSkillsFromText(description);
         };
-        // sem os filtros (expiraram 24 horas depois da última busca deles) a tela fica como está
-        callbacks[404] = () => setReadingTheFilters(false);
+        // sem os filtros (expiraram 24 horas depois da última busca deles) a tela fica vazia, com o aviso
+        callbacks[404] = () => {
+            setFilterExpired(true);
+            setReadingTheFilters(false);
+        };
         callbacks[422] = () => setReadingTheFilters(false);
         callbacks['onUnexpectedHttpStatus'] = () => setReadingTheFilters(false);
         JnAjax.doAnAjaxRequest(resumeFilterPath(filterId, parameters.get(EMAIL_PARAMETER)), callbacks, 'GET', null as any, {}, 'http://localhost:8081');
@@ -205,16 +214,19 @@ export const ResumesSearch = () => {
         loadSkillsFromText(text);
     };
 
+    // a mensagem com a contagem, as médias e o link (desde 2026-11-27; antes, só o link)
     const copyToTheClipboard = (link: string, detail: string) => {
-        const copied = () => notify({ summary: 'Link copiado', detail, severity: 'success' });
-        const failed = () => notify({ summary: 'Não foi possível copiar', detail: link, severity: 'warn' });
-        navigator.clipboard.writeText(link).then(copied, failed);
+        const found = resumesOfTheFilters.found || { resumes: 0 };
+        const message = sharedSearchMessage(found, link);
+        const copied = () => notify({ summary: 'Mensagem copiada', detail, severity: 'success' });
+        const failed = () => notify({ summary: 'Não foi possível copiar', detail: message, severity: 'warn' });
+        navigator.clipboard.writeText(message).then(copied, failed);
     };
 
     // cenários A, B2 e C: o endereço só com o id dos filtros, que reabre a busca como está
     const copyTheLinkWithoutTheDescription = () => {
         if (!filterId) return;
-        copyToTheClipboard(linkToShare(window.location.href, filterId), 'Cole o link para quem deve ver esta busca: os filtros valem por 24 horas.');
+        copyToTheClipboard(linkToShare(window.location.href, filterId), 'Cole a mensagem para quem deve ver esta busca: os filtros do link valem por 24 horas.');
     };
 
     // cenários B1 e D: o descritivo gravado sob o id dos filtros e o e-mail do usuário logado, que vai no link; sem login, o
@@ -230,7 +242,7 @@ export const ResumesSearch = () => {
         callbacks['retryAfterAuthentication'] = copyTheLinkWithTheDescription;
         callbacks[200] = () => {
             const logged: any = JnAjax.getLogin() || {};
-            copyToTheClipboard(linkToShare(window.location.href, filterId, logged.email), 'Cole o link para quem deve ver esta busca: ele abre os filtros, por 24 horas, com o descritivo da vaga.');
+            copyToTheClipboard(linkToShare(window.location.href, filterId, logged.email), 'Cole a mensagem para quem deve ver esta busca: o link abre os filtros, por 24 horas, com o descritivo da vaga.');
         };
         callbacks[422] = () => notify({ summary: 'Descritivo não gravado', detail: 'O descritivo precisa ter de 100 a 5.000 caracteres.', severity: 'warn' });
         callbacks['onUnexpectedHttpStatus'] = () => notify({ summary: 'Descritivo não gravado', detail: 'Não foi possível gravar o descritivo agora. Tente copiar o link de novo.', severity: 'error' });
@@ -336,6 +348,11 @@ export const ResumesSearch = () => {
                 <div className="sticky z-20 -mx-5 -mt-5 mb-4 bg-white px-5 pb-1 pt-5 dark:bg-[#0e1726]" style={{ top: STICKY_TOP }}>
                     <ResumesOfTheFiltersMessage request={request} {...resumesOfTheFilters} onSeeTheResumes={seeTheResumes} />
                 </div>
+                {filterExpired && (
+                    <div role="alert" className="mb-4 flex items-start gap-2 rounded-md border border-warning/30 bg-warning-light px-3 py-2.5 text-sm font-semibold leading-snug text-warning dark:bg-warning-dark-light">
+                        Este filtro está expirado!
+                    </div>
+                )}
                 <div className="max-w-4xl">
                     <LabelComponent
                         explanation="Obrigatória: a área dos currículos procurados. A área de tecnologia da informação (TI) permite filtrar também pelas habilidades."

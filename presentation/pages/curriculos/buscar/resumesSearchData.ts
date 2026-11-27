@@ -116,6 +116,31 @@ export const linkToShare = (href: string, filterId: string, email?: string) => {
     return email ? `${link}&${EMAIL_PARAMETER}=${encodeURIComponent(email).replace('%40', '@')}` : link;
 };
 
+// os reais sem centavos e com espaço comum depois do R$ (o toLocaleString de moeda põe um espaço não separável)
+const reais = (value: number) => `R$ ${value.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`;
+
+// os anos com uma casa decimal só quando ela existe: "6 anos", "6,5 anos"
+const yearsOf = (value: number) => `${value.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} ${value == 1 ? 'ano' : 'anos'}`;
+
+/**
+ * A mensagem que "Copiar este link para enviar para alguém" põe na área de transferência (desde 2026-11-27): "Foram
+ * encontrados N currículos (média CLT R$ X, média PJ R$ Y, média de experiência Z anos), veja os em <link>". Só entram as
+ * médias que os currículos encontrados informaram; sem nenhuma, sem os parênteses. Um currículo só fica no singular, e
+ * nenhum vira o convite para ver a busca.
+ */
+export const sharedSearchMessage = (found: { resumes: number; cltAverage?: number; pjAverage?: number; experienceAverage?: number }, link: string) => {
+    if (!found.resumes) return `Nenhum currículo foi encontrado para estes filtros, veja a busca em ${link}`;
+    const averages = [
+        found.cltAverage != null && `média CLT ${reais(found.cltAverage)}`,
+        found.pjAverage != null && `média PJ ${reais(found.pjAverage)}`,
+        found.experienceAverage != null && `média de experiência ${yearsOf(found.experienceAverage)}`,
+    ].filter(Boolean);
+    const one = found.resumes == 1;
+    const count = one ? 'Foi encontrado 1 currículo' : `Foram encontrados ${found.resumes} currículos`;
+    const withTheAverages = averages.length ? `${count} (${averages.join(', ')})` : count;
+    return `${withTheAverages}, veja ${one ? 'o' : 'os'} em ${link}`;
+};
+
 /** O caminho do GET dos filtros do id; com o e-mail do link, os filtros voltam com o descritivo gravado por ele. */
 export const resumeFilterPath = (filterId: string, email?: string | null) =>
     `resume-filter/${encodeURIComponent(filterId)}${email ? `?${EMAIL_PARAMETER}=${encodeURIComponent(email)}` : ''}`;

@@ -1,6 +1,6 @@
 import { filtersRequestOf } from '@/presentation/pages/meu-recrutamento/vagas/resumesOfTheFilters';
 import { positionTabErrors, languagesTabErrors, filtersTabErrors, seniorityOptions } from '@/presentation/pages/meu-recrutamento/vagas/positionsData';
-import { addressWithTheFilter, emptySearch, linkToShare, positionFormOfTheSearch, resumeFilterPath, searchFormOf } from './resumesSearchData';
+import { addressWithTheFilter, emptySearch, linkToShare, positionFormOfTheSearch, resumeFilterPath, searchFormOf, sharedSearchMessage } from './resumesSearchData';
 
 describe('resumesSearchData', () => {
     it('a busca vazia filtra só pela área de tecnologia, em todas as regiões', () => {
@@ -48,6 +48,19 @@ describe('resumesSearchData', () => {
         const href = 'https://onias.site/curriculos/buscar?filtro=old&email=outro@x.com&x=1';
         expect(linkToShare(href, '56af')).toBe('https://onias.site/curriculos/buscar?filtro=56af');
         expect(linkToShare(href, '56af', 'rh+vagas@empresa.com.br')).toBe('https://onias.site/curriculos/buscar?filtro=56af&email=rh%2Bvagas@empresa.com.br');
+    });
+
+    it('a mensagem copiada traz a contagem, só as médias informadas e o link', () => {
+        const link = 'https://onias.site/curriculos/buscar?filtro=56af';
+        expect(sharedSearchMessage({ resumes: 12, cltAverage: 9500, pjAverage: 14000.4, experienceAverage: 6.5 }, link)).toBe(
+            'Foram encontrados 12 currículos (média CLT R$ 9.500, média PJ R$ 14.000, média de experiência 6,5 anos), veja os em ' + link,
+        );
+        expect(sharedSearchMessage({ resumes: 3, pjAverage: 12000, experienceAverage: 4 }, link)).toBe('Foram encontrados 3 currículos (média PJ R$ 12.000, média de experiência 4 anos), veja os em ' + link);
+        expect(sharedSearchMessage({ resumes: 3, cltAverage: 8000, experienceAverage: 4 }, link)).toBe('Foram encontrados 3 currículos (média CLT R$ 8.000, média de experiência 4 anos), veja os em ' + link);
+        expect(sharedSearchMessage({ resumes: 2, experienceAverage: 1 }, link)).toBe('Foram encontrados 2 currículos (média de experiência 1 ano), veja os em ' + link);
+        expect(sharedSearchMessage({ resumes: 2 }, link)).toBe('Foram encontrados 2 currículos, veja os em ' + link);
+        expect(sharedSearchMessage({ resumes: 1, cltAverage: 7000 }, link)).toBe('Foi encontrado 1 currículo (média CLT R$ 7.000), veja o em ' + link);
+        expect(sharedSearchMessage({ resumes: 0 }, link)).toBe('Nenhum currículo foi encontrado para estes filtros, veja a busca em ' + link);
     });
 
     it('o GET dos filtros leva o e-mail do link só quando ele veio', () => {
